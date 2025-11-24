@@ -1,3 +1,0 @@
-click.wav = https://freesound.org/people/chenan55/sounds/506839/
-ding.wav = https://freesound.org/people/CJspellsfish/sounds/676401/
-bell.wav = https://freesound.org/people/LittleRobotSoundFactory/sounds/274181/
