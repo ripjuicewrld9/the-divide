@@ -1,0 +1,346 @@
+import Matter from 'matter-js';
+import { binPayouts, type RowCount } from '../lib/constants';
+import { RiskLevel } from '../types';
+
+interface BallData {
+  betAmount: number;
+  expectedBinIndex?: number;
+  gameResult?: any; // Full result from backend including binIndex, multiplier, profit, etc.
+}
+
+const Bodies = Matter.Bodies;
+const Body = Matter.Body;
+const Events = Matter.Events;
+const Composite = Matter.Composite;
+
+export class PlinkoEngine {
+  static readonly WIDTH = 760;
+  static readonly HEIGHT = 570;
+
+  private static readonly PADDING_X = 52;
+  private static readonly PADDING_TOP = 36;
+  private static readonly PADDING_BOTTOM = 28;
+
+  private static readonly PIN_CATEGORY = 0x0001;
+  private static readonly BALL_CATEGORY = 0x0002;
+
+  private static readonly ballFrictions = {
+    friction: 0.5,
+    frictionAirByRowCount: {
+      8: 0.0395,
+      9: 0.041,
+      10: 0.038,
+      11: 0.0355,
+      12: 0.0414,
+      13: 0.0437,
+      14: 0.0401,
+      15: 0.0418,
+      16: 0.0364,
+    } as Record<RowCount, number>,
+  };
+
+  private canvas: HTMLCanvasElement;
+  private engine: Matter.Engine;
+  private render: Matter.Render;
+  private runner: Matter.Runner;
+  private sensor: Matter.Body;
+
+  private pins: Matter.Body[] = [];
+  private walls: Matter.Body[] = [];
+  private pinsLastRowXCoords: number[] = [];
+
+  private rowCount: RowCount;
+  private riskLevel: RiskLevel;
+  private ballDataMap = new Map<Matter.Body, BallData>();
+
+  private onBallInBin: ((binIndex: number, betAmount: number, gameResult?: any) => void) | null = null;
+
+  constructor(canvas: HTMLCanvasElement, rowCount: RowCount = 8, riskLevel: RiskLevel = 'low') {
+    this.canvas = canvas;
+    this.rowCount = rowCount;
+    this.riskLevel = riskLevel;
+
+    this.engine = Matter.Engine.create({
+      timing: { timeScale: 1 },
+    });
+
+    this.render = Matter.Render.create({
+      engine: this.engine,
+      canvas: this.canvas,
+      options: {
+        width: PlinkoEngine.WIDTH,
+        height: PlinkoEngine.HEIGHT,
+        background: 'rgb(15, 23, 40)',
+        wireframes: false,
+      },
+    });
+
+    this.runner = Matter.Runner.create();
+
+    // No sensor needed - we'll land the ball programmatically
+    this.placePinsAndWalls();
+  }
+
+  start() {
+    Matter.Render.run(this.render);
+    Matter.Runner.run(this.runner, this.engine);
+  }
+
+  stop() {
+    Matter.Render.stop(this.render);
+    Matter.Runner.stop(this.runner);
+  }
+
+  setRowCount(rowCount: RowCount) {
+    if (rowCount === this.rowCount) return;
+    this.removeAllBalls();
+    this.rowCount = rowCount;
+    this.placePinsAndWalls();
+  }
+
+  setRiskLevel(riskLevel: RiskLevel) {
+    this.riskLevel = riskLevel;
+  }
+
+  dropBall(betAmount: number, expectedBinIndex?: number, gameResult?: any) {
+    // IMPORTANT: This is PURELY VISUAL - no game logic here
+    // The backend already determined the outcome (expectedBinIndex)
+    // We just animate the ball to show the backend's decision
+    
+    const ballRadius = this.pinRadius * 2;
+
+    // Create ball at top center
+    const ball = Bodies.circle(
+      this.canvas.width / 2,
+      0,
+      ballRadius,
+      {
+        restitution: 0.8,
+        friction: 0.5,
+        frictionAir: 0.03,
+        collisionFilter: {
+          category: PlinkoEngine.BALL_CATEGORY,
+          mask: PlinkoEngine.PIN_CATEGORY,
+        },
+        render: {
+          fillStyle: '#ff0000',
+        },
+      }
+    );
+
+    // Store the game result with this ball
+    this.ballDataMap.set(ball, { betAmount, expectedBinIndex, gameResult });
+    Composite.add(this.engine.world, ball);
+    
+    // Schedule the ball to land after a delay (visual animation time)
+    // This gives the appearance of falling through pins
+    setTimeout(() => {
+      this.landBall(ball);
+    }, 1500); // 1.5 seconds for visual fall animation
+  }
+
+  private landBall(ball: Matter.Body) {
+    const data = this.ballDataMap.get(ball);
+    if (!data) {
+      Composite.remove(this.engine.world, ball);
+      this.ballDataMap.delete(ball);
+      return;
+    }
+
+    // Get the backend-determined bin index (the ONLY source of truth)
+    const binIndex = data.expectedBinIndex;
+
+    if (binIndex !== undefined && binIndex >= 0 && binIndex < this.rowCount + 1) {
+      // Calculate the visual X position for this bin
+      const binCenterX = this.getBinCenterX(binIndex);
+      
+      // Snap ball to the final bin position
+      Body.setPosition(ball, { x: binCenterX, y: this.canvas.height - 30 });
+      Body.setVelocity(ball, { x: 0, y: 0 });
+      
+      console.log(`[PlinkoEngine] Ball landed: binIndex=${binIndex}, X=${binCenterX}, gameResult=${JSON.stringify(data.gameResult)}`);
+      
+      // Callback with the result
+      this.onBallInBin?.(binIndex, data.betAmount, data.gameResult);
+    }
+
+    Composite.remove(this.engine.world, ball);
+    this.ballDataMap.delete(ball);
+  }
+
+  setOnBallInBin(callback: (binIndex: number, betAmount: number, gameResult?: any) => void) {
+    this.onBallInBin = callback;
+  }
+
+  get binsWidthPercentage(): number {
+    const lastPinX = this.pinsLastRowXCoords[this.pinsLastRowXCoords.length - 1];
+    return (lastPinX - this.pinsLastRowXCoords[0]) / PlinkoEngine.WIDTH;
+  }
+
+  private get pinDistanceX(): number {
+    const lastRowPinCount = 3 + this.rowCount - 1;
+    return (this.canvas.width - PlinkoEngine.PADDING_X * 2) / (lastRowPinCount - 1);
+  }
+
+  private get pinRadius(): number {
+    return (24 - this.rowCount) / 2;
+  }
+
+  private handleBallEnterBin(ball: Matter.Body) {
+    const data = this.ballDataMap.get(ball);
+    if (!data) {
+      Composite.remove(this.engine.world, ball);
+      this.ballDataMap.delete(ball);
+      return;
+    }
+
+    // The backend's binIndex is the ONLY source of truth
+    const binIndex = data.expectedBinIndex;
+
+    console.log(`[PlinkoEngine] handleBallEnterBin: binIndex=${binIndex}, rowCount=${this.rowCount}, riskLevel=${this.riskLevel}`);
+    console.log(`[PlinkoEngine] pinsLastRowXCoords length=${this.pinsLastRowXCoords.length}, numBins would be=${this.pinsLastRowXCoords.length - 1}`);
+    console.log(`[PlinkoEngine] gameResult binIndex=${data.gameResult?.binIndex}, multiplier=${data.gameResult?.multiplier}`);
+
+    if (binIndex !== undefined && binIndex >= 0 && binIndex < binPayouts[this.rowCount][this.riskLevel].length) {
+      // Move the ball to the correct bin position visually
+      const binCenterX = this.getBinCenterX(binIndex);
+      console.log(`[PlinkoEngine] Moving ball to bin ${binIndex}, X=${binCenterX}`);
+      Body.setPosition(ball, { x: binCenterX, y: ball.position.y });
+      Body.setVelocity(ball, { x: 0, y: 0 });
+      
+      // Trigger the result callback with the backend's bin and game result
+      this.onBallInBin?.(binIndex, data.betAmount, data.gameResult);
+    } else {
+      console.error(`[PlinkoEngine] Invalid binIndex: ${binIndex}, binPayouts length: ${binPayouts[this.rowCount]?.[this.riskLevel]?.length}`);
+    }
+
+    Composite.remove(this.engine.world, ball);
+    this.ballDataMap.delete(ball);
+  }
+
+  private getBinCenterX(binIndex: number): number {
+    // Simple approach: distribute bins evenly across the canvas width
+    // The visual bins are displayed with equal spacing, so we should place
+    // the ball at the center of the bin's visual area
+    
+    const numBins = this.rowCount + 1; // e.g., 17 bins for rowCount=16
+    
+    // Clamp to valid range
+    if (binIndex < 0) binIndex = 0;
+    if (binIndex >= numBins) binIndex = numBins - 1;
+    
+    // The visual bins use `gap-[1%]` and `flex-1` which means:
+    // - They fill the available width (binsWidthPercentage * 100%)
+    // - Each bin has equal width
+    // - There are gaps between them
+    
+    // Calculate the center X of this bin
+    // Assuming bins are centered in the binsWidthPercentage area
+    const binsStart = PlinkoEngine.PADDING_X;
+    const binsEnd = PlinkoEngine.WIDTH - PlinkoEngine.PADDING_X;
+    const binsWidth = binsEnd - binsStart;
+    const binWidth = binsWidth / numBins;
+    const binCenterX = binsStart + (binIndex + 0.5) * binWidth;
+    
+    console.log(`[PlinkoEngine] getBinCenterX: binIndex=${binIndex}, numBins=${numBins}, binWidth=${binWidth}, centerX=${binCenterX}`);
+    
+    return binCenterX;
+  }
+
+  private placePinsAndWalls() {
+    const { PADDING_X, PADDING_TOP, PADDING_BOTTOM, PIN_CATEGORY, BALL_CATEGORY } = PlinkoEngine;
+
+    if (this.pins.length > 0) {
+      Composite.remove(this.engine.world, this.pins);
+      this.pins = [];
+    }
+    if (this.pinsLastRowXCoords.length > 0) {
+      this.pinsLastRowXCoords = [];
+    }
+    if (this.walls.length > 0) {
+      Composite.remove(this.engine.world, this.walls);
+      this.walls = [];
+    }
+
+    for (let row = 0; row < this.rowCount; ++row) {
+      const rowY =
+        PADDING_TOP +
+        ((this.canvas.height - PADDING_TOP - PADDING_BOTTOM) / (this.rowCount - 1)) * row;
+
+      const rowPaddingX = PADDING_X + ((this.rowCount - 1 - row) * this.pinDistanceX) / 2;
+
+      for (let col = 0; col < 3 + row; ++col) {
+        const colX = rowPaddingX + ((this.canvas.width - rowPaddingX * 2) / (3 + row - 1)) * col;
+        const pin = Bodies.circle(colX, rowY, this.pinRadius, {
+          isStatic: true,
+          render: { fillStyle: '#ffffff' },
+          collisionFilter: {
+            category: PIN_CATEGORY,
+            mask: BALL_CATEGORY,
+          },
+        });
+        this.pins.push(pin);
+
+        if (row === this.rowCount - 1) {
+          this.pinsLastRowXCoords.push(colX);
+        }
+      }
+    }
+
+    Composite.add(this.engine.world, this.pins);
+
+    const firstPinX = this.pins[0].position.x;
+    const lastRowFirstPinX = this.pinsLastRowXCoords[0];
+    const lastRowLastPinX = this.pinsLastRowXCoords[this.pinsLastRowXCoords.length - 1];
+
+    const leftWallAngle = Math.atan2(
+      firstPinX - lastRowFirstPinX,
+      this.canvas.height - PADDING_TOP - PADDING_BOTTOM
+    );
+    const leftWallX = firstPinX - (firstPinX - lastRowFirstPinX) / 2 - this.pinDistanceX * 0.25;
+
+    const leftWall = Bodies.rectangle(
+      leftWallX,
+      this.canvas.height / 2,
+      10,
+      this.canvas.height,
+      {
+        isStatic: true,
+        angle: leftWallAngle,
+        render: { visible: false },
+      }
+    );
+
+    const rightWall = Bodies.rectangle(
+      this.canvas.width - leftWallX,
+      this.canvas.height / 2,
+      10,
+      this.canvas.height,
+      {
+        isStatic: true,
+        angle: -leftWallAngle,
+        render: { visible: false },
+      }
+    );
+
+    this.walls.push(leftWall, rightWall);
+    Composite.add(this.engine.world, this.walls);
+  }
+
+  private removeAllBalls() {
+    Composite.allBodies(this.engine.world).forEach((body) => {
+      if (body.collisionFilter.category === PlinkoEngine.BALL_CATEGORY) {
+        Composite.remove(this.engine.world, body);
+        this.ballDataMap.delete(body);
+      }
+    });
+  }
+
+  destroy() {
+    this.stop();
+    Matter.Render.stop(this.render);
+    if (this.render.controller.view) {
+      this.render.controller.view.remove?.();
+    }
+  }
+}

@@ -1,0 +1,495 @@
+/**
+ * BATTLE ARENA MAIN STYLES
+ * Master styles for the Universal Battle Arena
+ * Layout, controls, status, winners display
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&display=swap');
+/* Dark Neon Theme */
+@import '../../styles/themes/darkNeon.css';
+
+.battle-arena-container {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  background: var(--bg-base);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+/* =====================================
+   ARENA WRAPPER
+   ===================================== */
+
+.arena-wrapper {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* =====================================
+   BATTLE CONTROLS
+   ===================================== */
+
+.battle-controls {
+  display: flex;
+  gap: 16px;
+  margin-top: 40px;
+  z-index: 100;
+  animation: slide-in 0.5s ease;
+}
+
+.battle-controls .btn-primary,
+.battle-controls .btn-secondary {
+  font-size: 16px;
+  padding: 14px 32px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
+}
+
+.battle-controls .btn-primary {
+  background: linear-gradient(135deg, #00f0ff, #8b5cf6);
+  border: 2px solid #00f0ff;
+  color: #000;
+  font-weight: 900;
+}
+
+.battle-controls .btn-primary:hover {
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 0 60px #00f0ff, inset 0 0 20px rgba(255, 255, 255, 0.2);
+  text-shadow: 0 0 10px #00f0ff;
+}
+
+.battle-controls .btn-secondary {
+  background: rgba(0, 240, 255, 0.15);
+  border: 2px solid #00f0ff;
+  color: #00f0ff;
+}
+
+.battle-controls .btn-secondary:hover {
+  background: rgba(0, 240, 255, 0.25);
+  box-shadow: 0 0 50px #00f0ff, inset 0 0 15px rgba(0, 240, 255, 0.3);
+  transform: translateY(-3px);
+}
+
+.battle-controls .btn-primary:active,
+.battle-controls .btn-secondary:active {
+  transform: translateY(-1px) scale(0.98);
+}
+
+/* =====================================
+   BATTLE STATUS
+   ===================================== */
+
+.battle-status {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  border: 2px solid var(--primary-cyan);
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--primary-cyan);
+  text-shadow: 0 0 10px var(--primary-cyan);
+  box-shadow: 0 0 20px var(--primary-cyan);
+  z-index: 200;
+  animation: fade-in 0.3s ease;
+}
+
+.battle-status.phase-setup {
+  border-color: var(--primary-cyan);
+  color: var(--primary-cyan);
+}
+
+.battle-status.phase-revealing {
+  border-color: var(--primary-magenta);
+  color: var(--primary-magenta);
+  text-shadow: 0 0 10px var(--primary-magenta);
+  box-shadow: 0 0 20px var(--primary-magenta);
+  animation: glow-pulse 1s ease-in-out infinite;
+}
+
+.battle-status.phase-results {
+  border-color: var(--primary-gold);
+  color: var(--primary-gold);
+  text-shadow: 0 0 10px var(--primary-gold);
+  box-shadow: 0 0 20px var(--primary-gold);
+}
+
+.battle-status.phase-complete {
+  border-color: var(--primary-gold);
+  color: var(--primary-gold);
+  animation: legendary-pulse 1.5s ease-in-out infinite;
+}
+
+.status-text {
+  letter-spacing: 0.5px;
+}
+
+/* =====================================
+   WINNERS BANNER
+   ===================================== */
+
+.winners-banner {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--glass-bg-thick);
+  backdrop-filter: blur(20px);
+  border: 2px solid var(--primary-gold);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 0 50px rgba(251, 191, 36, 0.5);
+  z-index: 200;
+  animation: slide-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  max-width: 90vw;
+}
+
+.winners-title {
+  font-size: 24px;
+  font-weight: 900;
+  color: var(--primary-gold);
+  text-shadow: 0 0 20px var(--primary-gold);
+  text-align: center;
+  margin-bottom: 20px;
+  letter-spacing: 2px;
+}
+
+.winners-list {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.winner-card {
+  background: var(--bg-layer-1);
+  border: 2px solid var(--primary-gold);
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+  min-width: 120px;
+  box-shadow: 0 0 20px rgba(251, 191, 36, 0.3);
+  transition: all 0.3s ease;
+}
+
+.winner-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 0 40px rgba(251, 191, 36, 0.6);
+}
+
+.winner-rank {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--primary-gold);
+  margin-bottom: 8px;
+}
+
+.winner-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 2px solid var(--primary-gold);
+  margin: 0 auto 8px;
+  object-fit: cover;
+  box-shadow: 0 0 15px rgba(251, 191, 36, 0.4);
+}
+
+.winner-name {
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.winner-total {
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--primary-gold);
+  text-shadow: 0 0 10px var(--primary-gold);
+}
+
+/* =====================================
+   SOUND CONTROL
+   ===================================== */
+
+.sound-control {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 200;
+}
+
+.sound-control button {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 2px solid var(--primary-cyan);
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+}
+
+.sound-control button:hover {
+  box-shadow: 0 0 20px var(--primary-cyan);
+  border-color: var(--primary-magenta);
+  transform: scale(1.05);
+}
+
+.sound-control button:active {
+  transform: scale(0.98);
+}
+
+/* =====================================
+   BACKGROUND EFFECTS
+   ===================================== */
+
+.battle-arena-container::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(
+    circle at 30% 50%,
+    rgba(0, 240, 255, 0.05) 0%,
+    transparent 50%
+  ),
+  radial-gradient(
+    circle at 70% 50%,
+    rgba(139, 92, 246, 0.05) 0%,
+    transparent 50%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* =====================================
+   RESPONSIVE DESIGN
+   ===================================== */
+
+@media (max-width: 1024px) {
+  .battle-arena-container {
+    padding: 16px;
+  }
+
+  .arena-wrapper {
+    max-width: 100%;
+  }
+
+  .battle-controls {
+    gap: 12px;
+    margin-top: 30px;
+  }
+
+  .battle-controls .btn-primary,
+  .battle-controls .btn-secondary {
+    padding: 12px 24px;
+    font-size: 14px;
+  }
+
+  .battle-status {
+    top: 16px;
+    font-size: 13px;
+    padding: 10px 20px;
+  }
+
+  .winners-banner {
+    bottom: 16px;
+    padding: 20px;
+  }
+
+  .winners-title {
+    font-size: 20px;
+  }
+
+  .winners-list {
+    gap: 16px;
+  }
+
+  .winner-card {
+    min-width: 100px;
+    padding: 12px;
+  }
+
+  .winner-rank {
+    font-size: 18px;
+  }
+
+  .winner-avatar {
+    width: 50px;
+    height: 50px;
+  }
+
+  .winner-name {
+    font-size: 12px;
+  }
+
+  .winner-total {
+    font-size: 14px;
+  }
+
+  .sound-control button {
+    width: 45px;
+    height: 45px;
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .battle-arena-container {
+    padding: 12px;
+    min-height: auto;
+    padding-top: 80px;
+    padding-bottom: 120px;
+  }
+
+  .arena-wrapper {
+    margin-top: 20px;
+  }
+
+  .battle-controls {
+    gap: 10px;
+    margin-top: 24px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .battle-controls .btn-primary,
+  .battle-controls .btn-secondary {
+    padding: 10px 20px;
+    font-size: 12px;
+  }
+
+  .battle-status {
+    top: 12px;
+    font-size: 12px;
+    padding: 8px 16px;
+  }
+
+  .winners-banner {
+    bottom: 12px;
+    padding: 16px;
+    max-width: 95vw;
+  }
+
+  .winners-title {
+    font-size: 18px;
+    margin-bottom: 16px;
+  }
+
+  .winners-list {
+    gap: 12px;
+  }
+
+  .winner-card {
+    min-width: 90px;
+    padding: 10px;
+  }
+
+  .sound-control {
+    top: 12px;
+    right: 12px;
+  }
+
+  .sound-control button {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .battle-arena-container {
+    padding: 8px;
+    padding-top: 70px;
+    padding-bottom: 100px;
+  }
+
+  .battle-controls {
+    gap: 8px;
+    margin-top: 16px;
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .battle-controls .btn-primary,
+  .battle-controls .btn-secondary {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 11px;
+  }
+
+  .battle-status {
+    top: 8px;
+    font-size: 11px;
+    padding: 6px 12px;
+    border-width: 1px;
+  }
+
+  .winners-banner {
+    bottom: 8px;
+    padding: 12px;
+  }
+
+  .winners-title {
+    font-size: 16px;
+    margin-bottom: 12px;
+  }
+
+  .winners-list {
+    gap: 8px;
+    flex-direction: column;
+  }
+
+  .winner-card {
+    width: 100%;
+    min-width: auto;
+    padding: 8px;
+  }
+
+  .winner-avatar {
+    width: 40px;
+    height: 40px;
+    margin: 0 auto 6px;
+  }
+
+  .winner-name {
+    font-size: 11px;
+  }
+
+  .winner-total {
+    font-size: 12px;
+  }
+
+  .sound-control button {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+    border-width: 1px;
+  }
+}

@@ -1,0 +1,312 @@
+/**
+ * WINNER SCREEN STYLES
+ * Cinematic overlay with 3D effects and animations
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&display=swap');
+@import '../../styles/themes/darkNeon.css';
+
+.winner-screen-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  backdrop-filter: blur(5px);
+}
+
+/* =====================================
+   SHOCKWAVE EFFECT
+   ===================================== */
+
+.shockwave-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 0;
+  height: 0;
+  border: 3px solid #00f0ff;
+  border-radius: 50%;
+  box-shadow: 0 0 30px #00f0ff, inset 0 0 30px rgba(0, 240, 255, 0.3);
+  pointer-events: none;
+}
+
+/* =====================================
+   WINNER CONTENT
+   ===================================== */
+
+.winner-screen-content {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+  perspective: 1000px;
+}
+
+.winner-title-section {
+  margin-bottom: 40px;
+}
+
+.winner-title-main {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 80px;
+  font-weight: 900;
+  color: #00f0ff;
+  margin: 0;
+  letter-spacing: 4px;
+  text-shadow: 
+    0 0 20px #00f0ff,
+    0 0 40px #8b5cf6,
+    0 0 60px rgba(139, 92, 246, 0.5);
+  animation: title-glow 1s ease-in-out infinite;
+}
+
+@keyframes title-glow {
+  0%, 100% {
+    text-shadow: 
+      0 0 20px #00f0ff,
+      0 0 40px #8b5cf6,
+      0 0 60px rgba(139, 92, 246, 0.5);
+  }
+  50% {
+    text-shadow: 
+      0 0 30px #00f0ff,
+      0 0 60px #8b5cf6,
+      0 0 80px rgba(139, 92, 246, 0.8);
+  }
+}
+
+.winner-names {
+  font-size: 28px;
+  font-weight: 700;
+  color: #ffd700;
+  letter-spacing: 2px;
+  text-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+  margin-top: 16px;
+}
+
+/* =====================================
+   POT DISPLAY
+   ===================================== */
+
+.pot-display {
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.1), rgba(139, 92, 246, 0.1));
+  border: 2px solid #00f0ff;
+  border-radius: 12px;
+  padding: 20px 40px;
+  margin: 30px 0;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 0 30px rgba(0, 240, 255, 0.2);
+}
+
+.pot-label {
+  font-size: 14px;
+  color: #00f0ff;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+}
+
+.pot-value {
+  font-size: 48px;
+  font-weight: 900;
+  color: #ffd700;
+  text-shadow: 0 0 30px rgba(255, 215, 0, 0.6);
+}
+
+/* =====================================
+   WINNER CARDS
+   ===================================== */
+
+.winner-cards-list {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  margin: 30px 0;
+  flex-wrap: wrap;
+}
+
+.winner-detail-card {
+  position: relative;
+  background: rgba(0, 240, 255, 0.1);
+  border: 2px solid #00f0ff;
+  border-radius: 8px;
+  padding: 16px 24px;
+  min-width: 200px;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.winner-detail-card:hover {
+  background: rgba(0, 240, 255, 0.2);
+  box-shadow: 0 0 40px rgba(0, 240, 255, 0.4);
+  transform: translateY(-4px);
+}
+
+.winner-rank-badge {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #ffd700, #ffed4e);
+  color: #000;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 18px;
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+}
+
+.winner-info {
+  text-align: center;
+}
+
+.winner-username {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 8px;
+}
+
+.winner-winnings {
+  font-size: 24px;
+  font-weight: 900;
+  color: #00f0ff;
+  text-shadow: 0 0 15px #00f0ff;
+}
+
+/* =====================================
+   ACTION BUTTONS
+   ===================================== */
+
+.winner-actions {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  margin-top: 40px;
+}
+
+.winner-actions .btn-primary,
+.winner-actions .btn-secondary {
+  padding: 16px 40px;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.winner-actions .btn-primary {
+  background: linear-gradient(135deg, #00f0ff, #8b5cf6);
+  color: #000;
+  box-shadow: 0 0 30px rgba(0, 240, 255, 0.4);
+}
+
+.winner-actions .btn-primary:hover {
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 0 60px #00f0ff, inset 0 0 20px rgba(255, 255, 255, 0.2);
+}
+
+.winner-actions .btn-secondary {
+  background: rgba(0, 240, 255, 0.15);
+  color: #00f0ff;
+  border: 2px solid #00f0ff;
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.2);
+}
+
+.winner-actions .btn-secondary:hover {
+  background: rgba(0, 240, 255, 0.25);
+  box-shadow: 0 0 40px rgba(0, 240, 255, 0.4);
+  transform: translateY(-3px);
+}
+
+/* =====================================
+   PARTICLE BURST
+   ===================================== */
+
+.particle-burst-container {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.particle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: radial-gradient(circle, #00f0ff, #8b5cf6);
+  border-radius: 50%;
+  box-shadow: 0 0 10px currentColor;
+  animation: burst-float var(--delay, 1s) ease-out forwards;
+}
+
+@keyframes burst-float {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(var(--tx, 0) * 100px), calc(var(--ty, 0) * 100px)) scale(0);
+  }
+}
+
+/* =====================================
+   RESPONSIVE
+   ===================================== */
+
+@media (max-width: 768px) {
+  .winner-title-main {
+    font-size: 48px;
+    letter-spacing: 2px;
+  }
+
+  .winner-names {
+    font-size: 20px;
+  }
+
+  .pot-display {
+    padding: 16px 24px;
+  }
+
+  .pot-value {
+    font-size: 36px;
+  }
+
+  .winner-cards-list {
+    gap: 12px;
+  }
+
+  .winner-detail-card {
+    min-width: 160px;
+    padding: 12px 16px;
+  }
+
+  .winner-actions {
+    gap: 12px;
+    flex-direction: column;
+  }
+
+  .winner-actions .btn-primary,
+  .winner-actions .btn-secondary {
+    width: 100%;
+    padding: 14px 24px;
+    font-size: 14px;
+  }
+}
