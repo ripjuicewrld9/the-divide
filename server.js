@@ -23,7 +23,7 @@ import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
-import { paytables, configured } from './paytable-data.js';
+// import { paytables, configured } from './paytable-data.js';
 import http from 'http';
 import registerRugged from './routes/rugged-pure-rng.js';
 import registerCaseBattles from './routes/caseBattles.js';
