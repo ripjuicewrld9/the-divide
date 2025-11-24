@@ -1,0 +1,194 @@
+[
+  {
+    "id": "case-blankets-premium",
+    "name": "Premium Blanket Bundle",
+    "description": "Luxury textiles for summer 2025",
+    "category": "textiles",
+    "thumbnail": "https://via.placeholder.com/200?text=Blankets",
+    "totalValue": 50000,
+    "items": [
+      {
+        "id": "blanket-cotton",
+        "name": "Egyptian Cotton Throw",
+        "value": 5000,
+        "chance": 30,
+        "tier": "common",
+        "image": "https://via.placeholder.com/100?text=Cotton",
+        "description": "Soft Egyptian cotton, 50x70 inches"
+      },
+      {
+        "id": "blanket-linen",
+        "name": "Irish Linen Weave",
+        "value": 8000,
+        "chance": 30,
+        "tier": "common",
+        "image": "https://via.placeholder.com/100?text=Linen",
+        "description": "Breathable Irish linen"
+      },
+      {
+        "id": "blanket-wool",
+        "name": "Merino Wool Blend",
+        "value": 15000,
+        "chance": 20,
+        "tier": "uncommon",
+        "image": "https://via.placeholder.com/100?text=Wool",
+        "description": "Premium wool blend, temperature regulating"
+      },
+      {
+        "id": "blanket-down",
+        "name": "Down Comforter",
+        "value": 12000,
+        "chance": 15,
+        "tier": "uncommon",
+        "image": "https://via.placeholder.com/100?text=Down",
+        "description": "Hungarian goose down"
+      },
+      {
+        "id": "blanket-silk",
+        "name": "Mulberry Silk Coverlet",
+        "value": 25000,
+        "chance": 4,
+        "tier": "rare",
+        "image": "https://via.placeholder.com/100?text=Silk",
+        "description": "100% mulberry silk, hypoallergenic"
+      },
+      {
+        "id": "blanket-cashmere",
+        "name": "Cashmere Dream",
+        "value": 45000,
+        "chance": 1,
+        "tier": "legendary",
+        "image": "https://via.placeholder.com/100?text=Cashmere",
+        "description": "Pure cashmere, limited edition"
+      }
+    ]
+  },
+  {
+    "id": "case-toys-kids",
+    "name": "Kids Toy Mystery Box",
+    "description": "Assorted educational and fun toys",
+    "category": "toys",
+    "thumbnail": "https://via.placeholder.com/200?text=Toys",
+    "totalValue": 10000,
+    "items": [
+      {
+        "id": "toy-blocks",
+        "name": "Wooden Block Set",
+        "value": 500,
+        "chance": 35,
+        "tier": "common",
+        "image": "https://via.placeholder.com/100?text=Blocks",
+        "description": "100-piece wooden building blocks"
+      },
+      {
+        "id": "toy-puzzle",
+        "name": "1000-Piece Puzzle",
+        "value": 1500,
+        "chance": 30,
+        "tier": "common",
+        "image": "https://via.placeholder.com/100?text=Puzzle",
+        "description": "Map of the world, 1000 pieces"
+      },
+      {
+        "id": "toy-robot",
+        "name": "Programming Robot",
+        "value": 3000,
+        "chance": 20,
+        "tier": "uncommon",
+        "image": "https://via.placeholder.com/100?text=Robot",
+        "description": "Beginner coding robot with app"
+      },
+      {
+        "id": "toy-telescope",
+        "name": "Kids Telescope",
+        "value": 2500,
+        "chance": 12,
+        "tier": "uncommon",
+        "image": "https://via.placeholder.com/100?text=Telescope",
+        "description": "40x60 beginner telescope"
+      },
+      {
+        "id": "toy-drone",
+        "name": "Mini Drone Kit",
+        "value": 5000,
+        "chance": 2.5,
+        "tier": "rare",
+        "image": "https://via.placeholder.com/100?text=Drone",
+        "description": "HD camera, 4K video, 12-min flight"
+      },
+      {
+        "id": "toy-console",
+        "name": "Gaming Console Bundle",
+        "value": 9000,
+        "chance": 0.5,
+        "tier": "legendary",
+        "image": "https://via.placeholder.com/100?text=Console",
+        "description": "Latest handheld + 5 games"
+      }
+    ]
+  },
+  {
+    "id": "case-collectibles-nft",
+    "name": "Digital Collectibles Mystery Box",
+    "description": "NFT-style digital collectibles",
+    "category": "digital",
+    "thumbnail": "https://via.placeholder.com/200?text=NFTs",
+    "totalValue": 100000,
+    "items": [
+      {
+        "id": "nft-common",
+        "name": "Common NFT",
+        "value": 1000,
+        "chance": 40,
+        "tier": "common",
+        "image": "https://via.placeholder.com/100?text=Common",
+        "description": "Base collection piece"
+      },
+      {
+        "id": "nft-uncommon",
+        "name": "Uncommon NFT",
+        "value": 5000,
+        "chance": 35,
+        "tier": "uncommon",
+        "image": "https://via.placeholder.com/100?text=Uncommon",
+        "description": "Limited series 1/100"
+      },
+      {
+        "id": "nft-rare",
+        "name": "Rare NFT",
+        "value": 15000,
+        "chance": 15,
+        "tier": "rare",
+        "image": "https://via.placeholder.com/100?text=Rare",
+        "description": "Limited series 1/25"
+      },
+      {
+        "id": "nft-epic",
+        "name": "Epic NFT",
+        "value": 35000,
+        "chance": 8,
+        "tier": "epic",
+        "image": "https://via.placeholder.com/100?text=Epic",
+        "description": "Limited series 1/10"
+      },
+      {
+        "id": "nft-legendary",
+        "name": "Legendary NFT",
+        "value": 75000,
+        "chance": 1.8,
+        "tier": "legendary",
+        "image": "https://via.placeholder.com/100?text=Legendary",
+        "description": "Limited series 1/3"
+      },
+      {
+        "id": "nft-mythic",
+        "name": "Mythic Genesis NFT",
+        "value": 100000,
+        "chance": 0.2,
+        "tier": "mythic",
+        "image": "https://via.placeholder.com/100?text=Mythic",
+        "description": "One-of-a-kind genesis piece"
+      }
+    ]
+  }
+]

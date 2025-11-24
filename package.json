@@ -1,0 +1,34 @@
+{
+  "dependencies": {
+    "axios": "^1.4.0",
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.19.2",
+    "multer": "^1.4.5-lts.1",
+    "nanoid": "^5.1.6",
+    "seedrandom": "^3.0.5",
+    "socket.io": "^4.8.1"
+  },
+  "name": "the-divide",
+  "version": "1.0.0",
+  "description": "",
+  "main": "admin-react.js",
+  "type": "module",
+  "scripts": {
+    "test": "node node_modules/mocha/bin/_mocha --exit tests/integration/**/*.js",
+    "test:trace": "node --trace-warnings node_modules/mocha/bin/_mocha --exit tests/integration/**/*.js",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "mocha": "^11.7.5",
+    "mongodb-memory-server": "^8.16.1",
+    "node-fetch": "^2.7.0",
+    "supertest": "^7.1.4"
+  }
+}

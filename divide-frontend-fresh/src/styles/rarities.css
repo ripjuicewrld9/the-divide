@@ -1,0 +1,198 @@
+/* Rarity Color System - Professional Case Battle Styling */
+
+:root {
+  /* Rarity Colors - Exact hex codes from major case sites */
+  --rarity-common: #808080;
+  --rarity-uncommon: #1eff00;
+  --rarity-rare: #0070dd;
+  --rarity-mythic: #a335ee;
+  --rarity-legendary: #ff8000;
+
+  /* Rarity Glows - For shadow/glow effects */
+  --rarity-common-glow: rgba(128, 128, 128, 0.4);
+  --rarity-uncommon-glow: rgba(30, 255, 0, 0.4);
+  --rarity-rare-glow: rgba(0, 112, 221, 0.4);
+  --rarity-mythic-glow: rgba(163, 53, 238, 0.4);
+  --rarity-legendary-glow: rgba(255, 128, 0, 0.4);
+
+  /* Rarity Dark Backgrounds */
+  --rarity-common-bg: rgba(128, 128, 128, 0.15);
+  --rarity-uncommon-bg: rgba(30, 255, 0, 0.15);
+  --rarity-rare-bg: rgba(0, 112, 221, 0.15);
+  --rarity-mythic-bg: rgba(163, 53, 238, 0.15);
+  --rarity-legendary-bg: rgba(255, 128, 0, 0.15);
+}
+
+/* Item Card Base Styles */
+.item-card {
+  border-radius: 8px;
+  padding: 16px;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.item-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.item-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* Common Rarity */
+.item-card.rarity-common {
+  border: 2px solid var(--rarity-common);
+  background-color: var(--rarity-common-bg);
+}
+
+.item-card.rarity-common:hover {
+  border-color: var(--rarity-common);
+  box-shadow: 0 0 20px var(--rarity-common-glow), 0 12px 24px rgba(0, 0, 0, 0.3);
+  background-color: rgba(128, 128, 128, 0.25);
+}
+
+.item-card.rarity-common .rarity-badge {
+  color: var(--rarity-common);
+}
+
+/* Uncommon Rarity */
+.item-card.rarity-uncommon {
+  border: 2px solid var(--rarity-uncommon);
+  background-color: var(--rarity-uncommon-bg);
+}
+
+.item-card.rarity-uncommon:hover {
+  border-color: var(--rarity-uncommon);
+  box-shadow: 0 0 20px var(--rarity-uncommon-glow), 0 12px 24px rgba(0, 0, 0, 0.3);
+  background-color: rgba(30, 255, 0, 0.25);
+}
+
+.item-card.rarity-uncommon .rarity-badge {
+  color: var(--rarity-uncommon);
+}
+
+/* Rare Rarity */
+.item-card.rarity-rare {
+  border: 2px solid var(--rarity-rare);
+  background-color: var(--rarity-rare-bg);
+}
+
+.item-card.rarity-rare:hover {
+  border-color: var(--rarity-rare);
+  box-shadow: 0 0 20px var(--rarity-rare-glow), 0 12px 24px rgba(0, 0, 0, 0.3);
+  background-color: rgba(0, 112, 221, 0.25);
+}
+
+.item-card.rarity-rare .rarity-badge {
+  color: var(--rarity-rare);
+}
+
+/* Mythic Rarity */
+.item-card.rarity-mythic {
+  border: 2px solid var(--rarity-mythic);
+  background-color: var(--rarity-mythic-bg);
+}
+
+.item-card.rarity-mythic:hover {
+  border-color: var(--rarity-mythic);
+  box-shadow: 0 0 20px var(--rarity-mythic-glow), 0 12px 24px rgba(0, 0, 0, 0.3);
+  background-color: rgba(163, 53, 238, 0.25);
+}
+
+.item-card.rarity-mythic .rarity-badge {
+  color: var(--rarity-mythic);
+}
+
+/* Legendary Rarity */
+.item-card.rarity-legendary {
+  border: 2px solid var(--rarity-legendary);
+  background-color: var(--rarity-legendary-bg);
+}
+
+.item-card.rarity-legendary:hover {
+  border-color: var(--rarity-legendary);
+  box-shadow: 0 0 20px var(--rarity-legendary-glow), 0 12px 24px rgba(0, 0, 0, 0.3);
+  background-color: rgba(255, 128, 0, 0.25);
+}
+
+.item-card.rarity-legendary .rarity-badge {
+  color: var(--rarity-legendary);
+}
+
+/* Item Card Content */
+.item-name {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  line-height: 1.3;
+}
+
+.item-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1eff00;
+  margin: 8px 0;
+}
+
+.rarity-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 4px 8px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  margin-top: 8px;
+}
+
+/* Item Probability Info (shown on hover) */
+.item-probability {
+  font-size: 12px;
+  color: #bbb;
+  margin-top: 8px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.item-card:hover .item-probability {
+  opacity: 1;
+}
+
+/* Confetti Animation */
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(-10vh) rotateZ(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotateZ(720deg);
+    opacity: 0;
+  }
+}
+
+.confetti {
+  position: fixed;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.confetti-piece {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  animation: confetti-fall 3s ease-out forwards;
+}

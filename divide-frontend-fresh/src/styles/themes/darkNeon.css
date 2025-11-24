@@ -1,0 +1,456 @@
+/**
+ * DARK NEON CYBERPUNK THEME
+ * Cyberpunk 2077 meets Clash.gg meets Valorant
+ * Glassmorphism, depth, neon glow, 60fps animations
+ */
+
+:root {
+  /* PRIMARY COLORS */
+  --primary-cyan: #00f0ff;
+  --primary-magenta: #ff006e;
+  --primary-purple: #8b5cf6;
+  --primary-gold: #ffd700;
+  
+  /* RARITY COLORS */
+  --rarity-common: #ffffff;
+  --rarity-uncommon: #4ade80;
+  --rarity-rare: #3b82f6;
+  --rarity-epic: #a855f7;
+  --rarity-legendary: #fbbf24;
+  --rarity-mythic: #ec4899;
+  
+  /* BACKGROUND */
+  --bg-base: #0a0e27;
+  --bg-layer-1: #1a1f3a;
+  --bg-layer-2: #242d4a;
+  --bg-layer-3: #2d3558;
+  
+  /* GLASS EFFECT */
+  --glass-bg: rgba(26, 31, 58, 0.7);
+  --glass-border: rgba(0, 240, 255, 0.2);
+  --glass-border-hover: rgba(0, 240, 255, 0.4);
+  
+  /* TEXT */
+  --text-primary: #ffffff;
+  --text-secondary: #a0aec0;
+  --text-tertiary: #64748b;
+  
+  /* SHADOWS & GLOWS */
+  --shadow-glow: 0 0 20px rgba(0, 240, 255, 0.3);
+  --shadow-glow-strong: 0 0 40px rgba(0, 240, 255, 0.6);
+  --shadow-glow-magenta: 0 0 30px rgba(255, 0, 110, 0.5);
+  --shadow-glow-gold: 0 0 30px rgba(255, 215, 0, 0.4);
+  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.7);
+  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.9);
+  
+  /* TRANSITIONS */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 500ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* =====================================
+   BASE STYLES
+   ===================================== */
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* =====================================
+   GLASS MORPHISM UTILITIES
+   ===================================== */
+
+.glass-surface {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  transition: all var(--transition-base);
+}
+
+.glass-surface:hover {
+  border-color: var(--glass-border-hover);
+  background: rgba(26, 31, 58, 0.85);
+}
+
+.glass-surface-thick {
+  background: rgba(26, 31, 58, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+}
+
+.glass-glow {
+  box-shadow: 
+    var(--shadow-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.glass-glow-strong {
+  box-shadow: 
+    var(--shadow-glow-strong),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+/* =====================================
+   GLOWING BORDERS & EFFECTS
+   ===================================== */
+
+.neon-border {
+  position: relative;
+  border: 2px solid var(--primary-cyan);
+  box-shadow: 
+    0 0 10px var(--primary-cyan),
+    inset 0 0 10px rgba(0, 240, 255, 0.1);
+}
+
+.neon-border::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, var(--primary-cyan), var(--primary-magenta), var(--primary-cyan));
+  border-radius: inherit;
+  opacity: 0;
+  animation: neon-flicker 3s infinite;
+  pointer-events: none;
+  z-index: -1;
+}
+
+@keyframes neon-flicker {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 0.3; }
+}
+
+.glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 
+      0 0 20px rgba(0, 240, 255, 0.3),
+      0 0 40px rgba(0, 240, 255, 0.1);
+  }
+  50% {
+    box-shadow: 
+      0 0 40px rgba(0, 240, 255, 0.6),
+      0 0 80px rgba(0, 240, 255, 0.3);
+  }
+}
+
+.glow-pulse-fast {
+  animation: glow-pulse-fast 1s ease-in-out infinite;
+}
+
+@keyframes glow-pulse-fast {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 50px rgba(0, 240, 255, 0.8);
+  }
+}
+
+/* =====================================
+   RARITY GLOW SYSTEM
+   ===================================== */
+
+.rarity-common {
+  --rarity-glow: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 20px var(--rarity-glow);
+}
+
+.rarity-uncommon {
+  --rarity-glow: rgba(74, 222, 128, 0.4);
+  box-shadow: 0 0 20px var(--rarity-glow);
+}
+
+.rarity-rare {
+  --rarity-glow: rgba(59, 130, 246, 0.4);
+  box-shadow: 0 0 25px var(--rarity-glow);
+}
+
+.rarity-epic {
+  --rarity-glow: rgba(168, 85, 247, 0.5);
+  box-shadow: 0 0 30px var(--rarity-glow);
+}
+
+.rarity-legendary {
+  --rarity-glow: rgba(251, 191, 36, 0.6);
+  animation: legendary-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes legendary-pulse {
+  0%, 100% {
+    box-shadow: 0 0 30px rgba(251, 191, 36, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 50px rgba(251, 191, 36, 1);
+  }
+}
+
+.rarity-mythic {
+  --rarity-glow: rgba(236, 72, 153, 0.7);
+  animation: mythic-rainbow 2s ease-in-out infinite;
+}
+
+@keyframes mythic-rainbow {
+  0% {
+    box-shadow: 0 0 30px rgba(236, 72, 153, 0.7);
+  }
+  25% {
+    box-shadow: 0 0 35px rgba(168, 85, 247, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(59, 130, 246, 0.7);
+  }
+  75% {
+    box-shadow: 0 0 35px rgba(236, 72, 153, 0.7);
+  }
+  100% {
+    box-shadow: 0 0 30px rgba(236, 72, 153, 0.7);
+  }
+}
+
+/* =====================================
+   BUTTONS & INTERACTIONS
+   ===================================== */
+
+.btn-primary {
+  position: relative;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, var(--primary-cyan), var(--primary-purple));
+  color: var(--text-primary);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  overflow: hidden;
+  box-shadow: var(--shadow-glow);
+}
+
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transition: left 300ms;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow-strong);
+}
+
+.btn-primary:hover::before {
+  left: 100%;
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  padding: 12px 24px;
+  background: var(--glass-bg);
+  color: var(--primary-cyan);
+  border: 2px solid var(--primary-cyan);
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-secondary:hover {
+  background: rgba(0, 240, 255, 0.1);
+  box-shadow: 0 0 20px var(--primary-cyan);
+}
+
+/* =====================================
+   TEXT UTILITIES
+   ===================================== */
+
+.text-gradient {
+  background: linear-gradient(135deg, var(--primary-cyan), var(--primary-magenta));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-glow {
+  text-shadow: 0 0 20px var(--primary-cyan);
+}
+
+.text-glow-magenta {
+  text-shadow: 0 0 20px var(--primary-magenta);
+}
+
+/* =====================================
+   SCROLLBARS
+   ===================================== */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-layer-1);
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--primary-cyan), var(--primary-purple));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--primary-purple), var(--primary-magenta));
+}
+
+/* =====================================
+   FOCUS STATES (ACCESSIBILITY)
+   ===================================== */
+
+:focus-visible {
+  outline: 2px solid var(--primary-cyan);
+  outline-offset: 2px;
+}
+
+/* =====================================
+   ANIMATIONS LIBRARY
+   ===================================== */
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes spin-slow {
+  from {
+    transform: rotateZ(0deg);
+  }
+  to {
+    transform: rotateZ(360deg);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulse-scale {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.animate-slide-in {
+  animation: slide-in var(--transition-base);
+}
+
+.animate-fade-in {
+  animation: fade-in var(--transition-base);
+}
+
+.animate-spin {
+  animation: spin-slow 4s linear infinite;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-pulse-scale {
+  animation: pulse-scale 2s ease-in-out infinite;
+}
+
+/* =====================================
+   60FPS PERFORMANCE OPTIMIZATIONS
+   ===================================== */
+
+.will-animate {
+  will-change: transform, opacity;
+}
+
+.gpu-accelerated {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* =====================================
+   RESPONSIVE DESIGN
+   ===================================== */
+
+@media (max-width: 1024px) {
+  :root {
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    font-size: 14px;
+  }
+  
+  .glass-surface {
+    border-radius: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    font-size: 13px;
+  }
+  
+  .btn-primary,
+  .btn-secondary {
+    padding: 10px 16px;
+    font-size: 12px;
+  }
+}
