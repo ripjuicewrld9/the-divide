@@ -1,7 +1,7 @@
 // paytable-data.js for Keno backend
 // Exports authoritative paytables for all risk types
 
-exportconst paytables = {
+export const paytables = {
   classic: {
     1: { 1: 3.96 },
     2: { 1: 1.90, 2: 4.50 },
