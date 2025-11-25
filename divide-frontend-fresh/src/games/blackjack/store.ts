@@ -88,6 +88,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       newDeck = createDeck();
     }
 
+    const state = get();
     set({
       playerHands: [],
       dealerHand: { cards: [], bet: 0, sideBets: { perfectPairs: 0, twentyPlusThree: 0, blazingSevens: 0 }, betPlacementOrder: [], isDealerHand: true },
@@ -104,6 +105,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         twentyPlusThreeRatio: undefined,
         blazingSevenRatio: undefined,
       },
+      lastBets: state.lastBets // preserve lastBets for redo
     });
   },
 

@@ -145,7 +145,7 @@ export const BettingArea: React.FC<BettingAreaProps> = ({
       {/* Circular Betting Layout - Compact - Display Only */}
       <div style={{ position: 'relative', width: '100%', height: '130px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {/* 777 - Top Center, directly above main bet */}
-        {blazingSevensBet > 0 && (gamePhase === 'betting' || lastRoundResult?.blazingSevenResult === 'win') && (
+        {(
         <motion.div
           style={{
             position: 'absolute',
