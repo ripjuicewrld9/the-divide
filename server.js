@@ -23,7 +23,7 @@ import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
-// import { paytables, configured } from './paytable-data.js';
+import { paytables, configured } from './paytable-data.js';
 import http from 'http';
 import registerRugged from './routes/rugged-pure-rng.js';
 import registerCaseBattles from './routes/caseBattles.js';
@@ -119,6 +119,7 @@ function checkPlayRate(userId, { windowMs = 5000, max = 5 } = {}) {
 const allowedOrigins = [
   'https://betbro.club',
   'https://www.betbro.club',
+  'https://the-divide.onrender.com',
   'http://localhost:5173',
   'http://localhost:3000',
   'http://127.0.0.1:5173',
