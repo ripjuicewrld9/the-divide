@@ -116,20 +116,21 @@ function checkPlayRate(userId, { windowMs = 5000, max = 5 } = {}) {
 }
 
 // Configure CORS to allow the React dev server and allow credentials (cookies)
+const allowedOrigins = [
+  'https://betbro.club',
+  'https://www.betbro.club',
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:3000'
+];
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, curl requests, etc)
     if (!origin) return callback(null, true);
-
-    // Allow localhost on any port for development
-    if (origin.startsWith('http://localhost:')) return callback(null, true);
-    if (origin.startsWith('http://127.0.0.1:')) return callback(null, true);
-
-    // In production, use FRONTEND_ORIGIN env var
-    const allowedOrigin = process.env.FRONTEND_ORIGIN || 'http://localhost:5173';
-    if (origin === allowedOrigin) return callback(null, true);
-
-    callback(new Error('CORS not allowed'));
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
 };
@@ -1820,18 +1821,11 @@ console.log('startup: http server object created');
 const io = new Server(server, {
   cors: {
     origin: function (origin, callback) {
-      // Allow requests with no origin (mobile apps, curl requests, etc)
       if (!origin) return callback(null, true);
-
-      // Allow localhost on any port for development
-      if (origin.startsWith('http://localhost:')) return callback(null, true);
-      if (origin.startsWith('http://127.0.0.1:')) return callback(null, true);
-
-      // In production, use FRONTEND_ORIGIN env var
-      const allowedOrigin = process.env.FRONTEND_ORIGIN || 'http://localhost:5173';
-      if (origin === allowedOrigin) return callback(null, true);
-
-      callback(new Error('CORS not allowed'));
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error('Not allowed by CORS'));
     },
     methods: ["GET", "POST"],
     credentials: true
