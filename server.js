@@ -366,6 +366,10 @@ app.post('/divides/vote', auth, async (req, res) => {
       return res.status(400).json({ error: 'Divide not active' });
     }
 
+      // Enforce creator lock: creator can only vote on their chosen side
+      if (divide.isUserCreated && divide.creatorId === req.userId && divide.creatorSide && side !== divide.creatorSide) {
+        return res.status(400).json({ error: 'Creator is locked to their chosen side and cannot vote on the other side.' });
+      }
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
