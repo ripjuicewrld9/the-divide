@@ -1,8 +1,15 @@
 import React from 'react';
 
-// Simple hook to detect mobile screen size
+// Robust mobile detection that works on all devices including iPhones
 function useIsMobile() {
-  return window.innerWidth <= 768;
+  if (typeof window === 'undefined') return false;
+
+  // Check both screen width and user agent for better mobile detection
+  const isMobileWidth = window.innerWidth <= 768;
+  const isMobileDevice = typeof navigator !== 'undefined' &&
+    /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+  return isMobileWidth || isMobileDevice;
 }
 
 export default function ResponsiveLayout({ MobileComponent, DesktopComponent }) {
@@ -10,8 +17,14 @@ export default function ResponsiveLayout({ MobileComponent, DesktopComponent }) 
 
   React.useEffect(() => {
     function handleResize() {
-      setIsMobile(window.innerWidth <= 768);
+      const isMobileWidth = window.innerWidth <= 768;
+      const isMobileDevice = /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      setIsMobile(isMobileWidth || isMobileDevice);
     }
+
+    // Check immediately on mount to ensure correct initial state
+    handleResize();
+
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
