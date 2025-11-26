@@ -133,15 +133,29 @@ export default function KenoHUD({ balance, message, risk = 'classic' }) {
   //   return `${sci}% (~1 in ${oneIn.toLocaleString()})`;
   // }
 
+  // Responsive: use mobile-friendly layout and larger touch targets
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 600;
   return (
-    <div className="top-info" style={{ marginBottom: 12 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <div className={`balance ${pulse ? 'pulse' : ''}`}>Balance: ${displayBalance}</div>
-      </div>
-      <div className="message" style={{ color: '#999' }}>{message}</div>
-        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 6 }}>
-          <button className="hud-btn" style={{ marginRight: 8, background: 'linear-gradient(135deg, #00ffff, #ffd700)', color: '#1a1a1a', fontWeight: 600 }} onClick={() => { setShowLiveChart(s => !s); }}>{showLiveChart ? 'Hide Live Chart' : 'Live Chart'}</button>
-          <button className="hud-btn" title="Info" aria-label="Info" onClick={() => { setShowPaytables(true); }} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #00ffff, #ffd700)', color: '#1a1a1a', fontWeight: 600 }}>
+    <div className={isMobile ? 'top-info flex flex-col gap-4 mb-4 p-2 rounded-lg bg-gradient-to-b from-gray-900 to-gray-800 shadow-lg' : 'top-info'} style={isMobile ? { minWidth: 0 } : { marginBottom: 12 }}>
+        <div className={isMobile ? 'flex items-center justify-between gap-4' : ''} style={isMobile ? {} : { display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div className={`balance ${pulse ? 'pulse' : ''} ${isMobile ? 'text-lg font-bold text-cyan-300' : ''}`}>Balance: ${displayBalance}</div>
+        </div>
+        <div className={isMobile ? 'message text-base text-gray-400' : 'message'} style={isMobile ? {} : { color: '#999' }}>{message}</div>
+        <div className={isMobile ? 'flex gap-4 justify-center mt-2' : ''} style={isMobile ? {} : { display: 'flex', justifyContent: 'center', marginTop: 6 }}>
+          <button
+            className={isMobile ? 'hud-btn px-6 py-4 font-extrabold rounded-xl text-lg bg-cyan-500/30 text-gray-900' : 'hud-btn'}
+            style={isMobile ? {} : { marginRight: 8, background: 'linear-gradient(135deg, #00ffff, #ffd700)', color: '#1a1a1a', fontWeight: 600 }}
+            onClick={() => { setShowLiveChart(s => !s); }}
+          >
+            {showLiveChart ? 'Hide Live Chart' : 'Live Chart'}
+          </button>
+          <button
+            className={isMobile ? 'hud-btn px-6 py-4 font-extrabold rounded-xl text-lg bg-yellow-500/30 text-gray-900' : 'hud-btn'}
+            title="Info"
+            aria-label="Info"
+            onClick={() => { setShowPaytables(true); }}
+            style={isMobile ? {} : { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #00ffff, #ffd700)', color: '#1a1a1a', fontWeight: 600 }}
+          >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ verticalAlign: 'middle' }}>
               <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5" />
               <path d="M12 8h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -149,9 +163,8 @@ export default function KenoHUD({ balance, message, risk = 'classic' }) {
             </svg>
           </button>
         </div>
-
-      {/* small spacer */}
-      <div style={{ height: 6 }} />
+        {/* small spacer */}
+        <div style={isMobile ? { height: 12 } : { height: 6 }} />
 
       {/* Paytables modal (simple) */}
       {showPaytables ? (

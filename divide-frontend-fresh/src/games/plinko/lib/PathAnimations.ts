@@ -137,12 +137,8 @@ export function generatePathsForRows(rows: number): BallPath[] {
         }
         
         if (!hitPeg) {
-          // Pick peg closest to target as fallback
-          hitPeg = rowPegs.reduce((closest, peg) => {
-            const distToTarget = Math.abs(peg.x - targetX);
-            const closestDistToTarget = Math.abs(closest.x - targetX);
-            return distToTarget < closestDistToTarget ? peg : closest;
-          });
+            // No valid peg found, skip this path variation
+            throw new Error(`No valid peg found for row ${row}, bin ${binIndex}, variation ${variation}`);
         }
         
         // Calculate time to reach peg (using physics equations)

@@ -82,13 +82,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
   resetGame: () => {
     const state = get();
     let newDeck = state.deck;
-
     // Reshuffle if less than 50 cards remain
     if (newDeck.length < 50) {
       newDeck = createDeck();
     }
-
-    const state = get();
     set({
       playerHands: [],
       dealerHand: { cards: [], bet: 0, sideBets: { perfectPairs: 0, twentyPlusThree: 0, blazingSevens: 0 }, betPlacementOrder: [], isDealerHand: true },

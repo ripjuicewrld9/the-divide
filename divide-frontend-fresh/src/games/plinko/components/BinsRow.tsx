@@ -68,9 +68,19 @@ export const BinsRow: React.FC<BinsRowProps> = ({ rowCount, riskLevel, binsWidth
     }
   }, [winRecords, animationEnabled]);
 
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 600;
   return (
-    <div className="flex h-[clamp(10px,0.352px+2.609vw,16px)] w-full justify-center lg:h-7">
-      <div className="flex gap-[1%]" style={{ width: `${binsWidthPercentage * 100}%` }}>
+    <div
+      className={
+        isMobile
+          ? 'flex w-full justify-center py-2'
+          : 'flex h-[clamp(10px,0.352px+2.609vw,16px)] w-full justify-center lg:h-7'
+      }
+    >
+      <div
+        className={isMobile ? 'flex gap-2 w-full' : 'flex gap-[1%]'}
+        style={isMobile ? { width: '100%' } : { width: `${binsWidthPercentage * 100}%` }}
+      >
         {payouts.map((payout, idx) => {
           const binColor = generateGradientColor(payout, payouts);
           return (
@@ -79,20 +89,26 @@ export const BinsRow: React.FC<BinsRowProps> = ({ rowCount, riskLevel, binsWidth
               ref={(el) => {
                 binRefs.current[idx] = el;
               }}
-              className="flex min-w-0 flex-1 items-center justify-center rounded-xs text-[clamp(6px,2.784px+0.87vw,8px)] font-bold text-gray-950 shadow-[0_2px_0_rgba(0,0,0,0.3)] lg:rounded-md lg:text-[clamp(10px,-16.944px+2.632vw,12px)] lg:shadow-[0_3px_0_rgba(0,0,0,0.3)] transition-all relative cursor-help"
+              className={
+                isMobile
+                  ? 'flex min-w-0 flex-1 items-center justify-center rounded-lg text-base font-bold text-gray-950 shadow-md transition-all relative cursor-pointer py-4 px-1'
+                  : 'flex min-w-0 flex-1 items-center justify-center rounded-xs text-[clamp(6px,2.784px+0.87vw,8px)] font-bold text-gray-950 shadow-[0_2px_0_rgba(0,0,0,0.3)] lg:rounded-md lg:text-[clamp(10px,-16.944px+2.632vw,12px)] lg:shadow-[0_3px_0_rgba(0,0,0,0.3)] transition-all relative cursor-help'
+              }
               style={{
                 backgroundColor: binColor,
+                minHeight: isMobile ? 48 : undefined,
+                fontSize: isMobile ? '1.1rem' : undefined,
+                border: isMobile ? '2px solid #00ffff' : undefined,
               }}
               onMouseEnter={() => setHoveredBin(idx)}
               onMouseLeave={() => setHoveredBin(null)}
             >
               {payout}
               {payout < 100 ? '×' : ''}
-              
               {/* Tooltip showing odds */}
               {hoveredBin === idx && (
-                <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-cyan-300 text-xs px-2 py-1 rounded whitespace-nowrap border border-cyan-500 z-10 pointer-events-none">
-                  <div className="text-sm">{getOddsForBin(idx)}% odds</div>
+                <div className={isMobile ? 'absolute -top-12 left-1/2 -translate-x-1/2 bg-gray-900 text-cyan-300 text-base px-3 py-2 rounded-xl whitespace-nowrap border border-cyan-500 z-10 pointer-events-none' : 'absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-cyan-300 text-xs px-2 py-1 rounded whitespace-nowrap border border-cyan-500 z-10 pointer-events-none'}>
+                  <div className={isMobile ? 'text-base' : 'text-sm'}>{getOddsForBin(idx)}% odds</div>
                 </div>
               )}
             </div>

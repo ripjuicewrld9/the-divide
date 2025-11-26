@@ -657,7 +657,7 @@ export const BlackjackGame: React.FC = () => {
                     <>
                       <motion.button
                         onClick={() => gameState.placeBet()}
-                        disabled={gameState.betAmount <= 0 || gameState.betAmount > (gameState.balance / 100) || !gameState.betPlacementMode}
+                        disabled={gameState.betAmount <= 0 || gameState.betAmount > gameState.balance || !gameState.betPlacementMode}
                         className="w-full py-3 px-4 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded transition-colors"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}

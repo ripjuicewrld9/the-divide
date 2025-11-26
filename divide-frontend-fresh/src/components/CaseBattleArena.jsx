@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { isMobile } from '../utils/deviceDetect';
 import { useTickSound } from '../hooks/useTickSound';
 import { buildReelSystem, calculateSpinParams, generateTickPattern, isGoldTriggerWin } from '../utils/spinMechanics';
 import '../styles/CaseBattleArena.css';
@@ -254,90 +255,300 @@ export default function CaseBattleArena({
         </div>
       )}
 
-      {/* Compact Grid Layout - Responsive: side-by-side for 1v1/2v2, top-bottom for 3v3+ */}
-      <div className="compact-grid-container">
-        {isTopBottomLayout() ? (
-          // TOP-BOTTOM LAYOUT (3v3+)
-          <div className="compact-grid-topbottom">
-            {/* Top Row - Team 1 */}
-            <div className="team-section-top">
-              {players
-                .filter(p => p.team === 1)
-                .map((player, idx) => {
-                  
-                  const isCurrentUser = player.userId === user?.id;
-                  const isWinner = battleEnded && battle.winnerId === player.userId;
-                  
-                  return (
-                    <div key={idx} className="compact-player-card-wrapper">
-                      <div 
-                        className={`compact-player-card ${isWinner ? 'winner-card' : ''}`}
+      {/* Mobile Layout */}
+      {isMobile() ? (
+        <div className="compact-grid-mobile flex flex-col gap-4 px-2 py-2">
+          {players.map((player, idx) => {
+            const isCurrentUser = player.userId === user?.id;
+            const isWinner = battleEnded && battle.winnerId === player.userId;
+            return (
+              <div key={idx} className={`compact-player-card-mobile rounded-xl shadow-lg bg-gradient-to-br from-gray-900 to-gray-800 p-4 ${isWinner ? 'border-4 border-yellow-400' : 'border border-gray-700'}`}>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="text-3xl">{player.isBot ? '🤖' : '👤'}</div>
+                  <div className="flex flex-col">
+                    <span className="font-bold text-lg text-white">{player.username} {isCurrentUser && <span className="bg-blue-600 text-xs px-2 py-1 rounded ml-1">YOU</span>}</span>
+                    <span className="text-sm text-gray-300">${((displayedTotals[player.userId] ?? 0) / 100).toFixed(2)}</span>
+                  </div>
+                </div>
+                {/* Spin Animation - shown during spinning */}
+                {spinActive && displayItems.length > 0 && (
+                  <div className="spin-container-mobile my-2">
+                    <div className={`spin-window-mobile relative overflow-hidden h-16 bg-gray-900 rounded-lg border border-gray-700 ${spinActive ? 'animate-pulse' : ''} ${goldWinActive ? 'ring-4 ring-yellow-400' : (goldWinPending ? 'ring-2 ring-yellow-200' : '')}`}>
+                      <div
+                        className="spin-reel-mobile flex"
+                        data-spinning="true"
+                        data-hold={holdWinningItem}
+                        style={{
+                          transform: `translate3d(0, -${currentTranslate}px, 0)`,
+                        }}
                       >
-                        {/* Card Header - Avatar and Player Info */}
-                        <div className="compact-card-header">
-                          <div className="compact-player-avatar">
-                            {player.isBot ? '🤖' : '👤'}
+                        {displayItems.map((item, itemIdx) => (
+                          <div key={itemIdx} className={`spin-item-mobile flex flex-col items-center justify-center w-16 h-16 mx-1 rounded-lg bg-gray-800 border border-gray-700 text-white text-xs rarity-${item.rarity || 'common'}`}> 
+                            <div className="item-icon-mobile text-2xl">🎁</div>
+                            <div className="item-value-mobile font-bold">${(item.value / 100).toFixed(2)}</div>
                           </div>
-                          <div className="compact-player-details">
-                            <div className="compact-player-name">
-                              {player.username}
-                              {isCurrentUser && <span className="you-badge">(YOU)</span>}
+                        ))}
+                      </div>
+                      <div className="spin-indicator-line-mobile absolute left-0 right-0 top-1/2 h-1 bg-yellow-400 opacity-60" />
+                    </div>
+                  </div>
+                )}
+                {/* Cases Grid - shown when not spinning */}
+                {!spinActive && (
+                  <div className="compact-cases-grid-mobile flex gap-2 mt-2">
+                    {player.cases && player.cases.slice(0, 4).map((caseItem, caseIdx) => (
+                      <div key={caseIdx} className="compact-case-item-mobile flex flex-col items-center justify-center w-14 h-14 rounded-lg bg-gray-800 border border-gray-700 text-white">
+                        <div className="compact-case-icon text-xl">📦</div>
+                        <div className="compact-case-value text-xs font-bold">${(caseItem.value / 100).toFixed(2)}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {/* Total Amount Box */}
+                <div className="compact-total-box-mobile flex items-center justify-between mt-2 bg-gray-900 rounded-lg px-3 py-2">
+                  <span className="font-semibold text-gray-300">Total:</span>
+                  <span className="font-bold text-white text-lg">${((displayedTotals[player.userId] ?? 0) / 100).toFixed(2)}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        /* Desktop Layout (unchanged) */
+        <div className="compact-grid-container">
+          {isTopBottomLayout() ? (
+            // TOP-BOTTOM LAYOUT (3v3+)
+            <div className="compact-grid-topbottom">
+              {/* Top Row - Team 1 */}
+              <div className="team-section-top">
+                {players
+                  .filter(p => p.team === 1)
+                  .map((player, idx) => {
+                    const isCurrentUser = player.userId === user?.id;
+                    const isWinner = battleEnded && battle.winnerId === player.userId;
+                    return (
+                      <div key={idx} className="compact-player-card-wrapper">
+                        <div 
+                          className={`compact-player-card ${isWinner ? 'winner-card' : ''}`}
+                        >
+                          {/* Card Header - Avatar and Player Info */}
+                          <div className="compact-card-header">
+                            <div className="compact-player-avatar">
+                              {player.isBot ? '🤖' : '👤'}
                             </div>
-                            <div className="compact-player-value">
-                              ${((displayedTotals[player.userId] ?? 0) / 100).toFixed(2)}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Spin Animation - shown during spinning */}
-                        {spinActive && displayItems.length > 0 && (
-                          <div className="spin-container-compact">
-                            <div className={`spin-window-compact ${spinActive ? 'spinning' : ''} ${goldWinActive ? 'gold-win-active' : (goldWinPending ? 'gold-win-pending' : '')}`}>
-                              <div
-                                className="spin-reel-compact"
-                                data-spinning="true"
-                                data-hold={holdWinningItem}
-                                style={{
-                                  transform: `translate3d(0, -${currentTranslate}px, 0)`,
-                                }}
-                              >
-                                {displayItems.map((item, itemIdx) => (
-                                  <div key={itemIdx} className={`spin-item-compact rarity-${item.rarity || 'common'}`}>
-                                    <div className="item-icon-compact">🎁</div>
-                                    <div className="item-value-compact">${(item.value / 100).toFixed(2)}</div>
-                                  </div>
-                                ))}
+                            <div className="compact-player-details">
+                              <div className="compact-player-name">
+                                {player.username}
+                                {isCurrentUser && <span className="you-badge">(YOU)</span>}
                               </div>
-                              <div className="spin-indicator-line-compact" />
+                              <div className="compact-player-value">
+                                ${((displayedTotals[player.userId] ?? 0) / 100).toFixed(2)}
+                              </div>
                             </div>
                           </div>
-                        )}
-
-                        {/* Cases Grid - shown when not spinning */}
-                        {!spinActive && (
-                          <div className="compact-cases-grid">
-                            {player.cases && player.cases.slice(0, 4).map((caseItem, caseIdx) => (
-                              <div key={caseIdx} className="compact-case-item">
-                                <div className="compact-case-icon">📦</div>
-                                <div className="compact-case-value">
-                                  ${(caseItem.value / 100).toFixed(2)}
+                          {/* Spin Animation - shown during spinning */}
+                          {spinActive && displayItems.length > 0 && (
+                            <div className="spin-container-compact">
+                              <div className={`spin-window-compact ${spinActive ? 'spinning' : ''} ${goldWinActive ? 'gold-win-active' : (goldWinPending ? 'gold-win-pending' : '')}`}>
+                                <div
+                                  className="spin-reel-compact"
+                                  data-spinning="true"
+                                  data-hold={holdWinningItem}
+                                  style={{
+                                    transform: `translate3d(0, -${currentTranslate}px, 0)`,
+                                  }}
+                                >
+                                  {displayItems.map((item, itemIdx) => (
+                                    <div key={itemIdx} className={`spin-item-compact rarity-${item.rarity || 'common'}`}> 
+                                      <div className="item-icon-compact">🎁</div>
+                                      <div className="item-value-compact">${(item.value / 100).toFixed(2)}</div>
+                                    </div>
+                                  ))}
                                 </div>
+                                <div className="spin-indicator-line-compact" />
                               </div>
-                            ))}
+                            </div>
+                          )}
+                          {/* Cases Grid - shown when not spinning */}
+                          {!spinActive && (
+                            <div className="compact-cases-grid">
+                              {player.cases && player.cases.slice(0, 4).map((caseItem, caseIdx) => (
+                                <div key={caseIdx} className="compact-case-item">
+                                  <div className="compact-case-icon">📦</div>
+                                  <div className="compact-case-value">
+                                    ${(caseItem.value / 100).toFixed(2)}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {/* Total Amount Box */}
+                          <div className="compact-total-box">
+                            <span className="total-label">Total:</span>
+                            <span className="total-amount">
+                              ${((displayedTotals[player.userId] ?? 0) / 100).toFixed(2)}
+                            </span>
                           </div>
-                        )}
-
-                        {/* Total Amount Box */}
-                        <div className="compact-total-box">
-                          <span className="total-label">Total:</span>
-                          <span className="total-amount">
-                            ${((displayedTotals[player.userId] ?? 0) / 100).toFixed(2)}
-                          </span>
                         </div>
                       </div>
+                    );
+                  })}
+              </div>
+              {/* Bottom Row - Team 2 */}
+              <div className="team-section-bottom">
+                {players
+                  .filter(p => p.team === 2)
+                  .map((player, idx) => {
+                    const isCurrentUser = player.userId === user?.id;
+                    const isWinner = battleEnded && battle.winnerId === player.userId;
+                    return (
+                      <div key={idx} className="compact-player-card-wrapper">
+                        <div 
+                          className={`compact-player-card ${isWinner ? 'winner-card' : ''}`}
+                        >
+                          {/* Card Header - Avatar and Player Info */}
+                          <div className="compact-card-header">
+                            <div className="compact-player-avatar">
+                              {player.isBot ? '🤖' : '👤'}
+                            </div>
+                            <div className="compact-player-details">
+                              <div className="compact-player-name">
+                                {player.username}
+                                {isCurrentUser && <span className="you-badge">(YOU)</span>}
+                              </div>
+                              <div className="compact-player-value">
+                                ${((displayedTotals[player.userId] ?? 0) / 100).toFixed(2)}
+                              </div>
+                            </div>
+                          </div>
+                          {/* Spin Animation - shown during spinning */}
+                          {spinActive && displayItems.length > 0 && (
+                            <div className="spin-container-compact">
+                              <div className={`spin-window-compact ${spinActive ? 'spinning' : ''} ${goldWinActive ? 'gold-win-active' : (goldWinPending ? 'gold-win-pending' : '')}`}>
+                                <div
+                                  className="spin-reel-compact"
+                                  data-spinning="true"
+                                  data-hold={holdWinningItem}
+                                  style={{
+                                    transform: `translate3d(0, -${currentTranslate}px, 0)`,
+                                  }}
+                                >
+                                  {displayItems.map((item, itemIdx) => (
+                                    <div key={itemIdx} className={`spin-item-compact rarity-${item.rarity || 'common'}`}> 
+                                      <div className="item-icon-compact">🎁</div>
+                                      <div className="item-value-compact">${(item.value / 100).toFixed(2)}</div>
+                                    </div>
+                                  ))}
+                                </div>
+                                <div className="spin-indicator-line-compact" />
+                              </div>
+                            </div>
+                          )}
+                          {/* Cases Grid - shown when not spinning */}
+                          {!spinActive && (
+                            <div className="compact-cases-grid">
+                              {player.cases && player.cases.slice(0, 4).map((caseItem, caseIdx) => (
+                                <div key={caseIdx} className="compact-case-item">
+                                  <div className="compact-case-icon">📦</div>
+                                  <div className="compact-case-value">
+                                    ${(caseItem.value / 100).toFixed(2)}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {/* Total Amount Box */}
+                          <div className="compact-total-box">
+                            <span className="total-label">Total:</span>
+                            <span className="total-amount">
+                              ${((displayedTotals[player.userId] ?? 0) / 100).toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          ) : (
+            // SIDE-BY-SIDE LAYOUT (1v1/2v2)
+            <div className="compact-grid-sidebyside">
+              {players.map((player, idx) => {
+                const isCurrentUser = player.userId === user?.id;
+                const isWinner = battleEnded && battle.winnerId === player.userId;
+                return (
+                  <div key={idx} className="compact-player-card-wrapper">
+                    <div 
+                      className={`compact-player-card ${isWinner ? 'winner-card' : ''}`}
+                    >
+                      {/* Card Header - Avatar and Player Info */}
+                      <div className="compact-card-header">
+                        <div className="compact-player-avatar">
+                          {player.isBot ? '🤖' : '👤'}
+                        </div>
+                        <div className="compact-player-details">
+                          <div className="compact-player-name">
+                            {player.username}
+                            {isCurrentUser && <span className="you-badge">(YOU)</span>}
+                          </div>
+                          <div className="compact-player-value">
+                            ${((displayedTotals[player.userId] ?? 0) / 100).toFixed(2)}
+                          </div>
+                        </div>
+                      </div>
+                      {/* Spin Animation - shown during spinning */}
+                      {spinActive && displayItems.length > 0 && (
+                        <div className="spin-container-compact">
+                          <div className={`spin-window-compact ${spinActive ? 'spinning' : ''} ${goldWinActive ? 'gold-win-active' : (goldWinPending ? 'gold-win-pending' : '')}`}>
+                            <div
+                              className="spin-reel-compact"
+                              data-spinning="true"
+                              data-hold={holdWinningItem}
+                              style={{
+                                transform: `translate3d(0, -${currentTranslate}px, 0)`,
+                              }}
+                            >
+                              {displayItems.map((item, itemIdx) => (
+                                <div key={itemIdx} className={`spin-item-compact rarity-${item.rarity || 'common'}`}> 
+                                  <div className="item-icon-compact">🎁</div>
+                                  <div className="item-value-compact">${(item.value / 100).toFixed(2)}</div>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="spin-indicator-line-compact" />
+                          </div>
+                        </div>
+                      )}
+                      {/* Cases Grid - shown when not spinning */}
+                      {!spinActive && (
+                        <div className="compact-cases-grid">
+                          {player.cases && player.cases.slice(0, 4).map((caseItem, caseIdx) => (
+                            <div key={caseIdx} className="compact-case-item">
+                              <div className="compact-case-icon">📦</div>
+                              <div className="compact-case-value">
+                                ${(caseItem.value / 100).toFixed(2)}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {/* Total Amount Box */}
+                      <div className="compact-total-box">
+                        <span className="total-label">Total:</span>
+                        <span className="total-amount">
+                          ${((displayedTotals[player.userId] ?? 0) / 100).toFixed(2)}
+                        </span>
+                      </div>
                     </div>
-                  );
-                })}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
             </div>
 
             {/* Divider - Horizontal */}

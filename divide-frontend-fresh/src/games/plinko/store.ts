@@ -53,7 +53,7 @@ interface PlinkoGameState {
 export const usePlinkoStore = create<PlinkoGameState>()(
   persist(
     (set, get) => ({
-      balance: DEFAULT_BALANCE,
+      balance: 0,
       betAmount: 0,
       riskLevel: 'low' as RiskLevel,
       rowCount: 8 as RowCount,
@@ -136,8 +136,8 @@ export const usePlinkoStore = create<PlinkoGameState>()(
           set({ isLoadingBalance: true });
           const token = localStorage.getItem('token');
           if (!token) {
-            console.warn('[PlinkoStore] No token in localStorage, using default balance');
-            set({ isLoadingBalance: false });
+            console.warn('[PlinkoStore] No token in localStorage, cannot load balance');
+            set({ balance: 0, isLoadingBalance: false });
             return;
           }
 
@@ -161,7 +161,7 @@ export const usePlinkoStore = create<PlinkoGameState>()(
 
       resetGame: () => {
         set({
-          balance: DEFAULT_BALANCE,
+          balance: 0,
           betAmount: 0,
           riskLevel: 'low' as RiskLevel,
           rowCount: 8 as RowCount,

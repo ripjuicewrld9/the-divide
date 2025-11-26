@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
+import { isMobile } from '../utils/deviceDetect';
 import useSocket from '../hooks/useSocket';
 import { useAuth } from '../context/AuthContext.jsx';
 import api from '../services/api';
@@ -34,92 +35,34 @@ export default function RuggedGame() {
   const DISPLAY_DIVISOR = 100000; // divisor used for UX-friendly display price
   const DISPLAY_SCALE = SERVER_TOTAL_SUPPLY / DISPLAY_DIVISOR; // kept for reference (not applied if server already emits display units)
   const MIN_DISPLAY = 0.00001; // smallest non-zero display step (e.g. $1 -> 0.00001)
+
   const loadLocalHistory = () => {
     try {
       const raw = localStorage.getItem(LOCAL_KEY);
       if (!raw) return [];
       const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed.map(p => ({ ts: p?.ts ? new Date(p.ts) : new Date(), price: Number(p?.price || 0) })) : [];
-    } catch (e) { return []; }
+      return Array.isArray(parsed) ? parsed.map(p => ({ ...p, ts: new Date(p.ts) })) : [];
+    } catch (e) {
+      return [];
+    }
   };
-  const saveLocalHistory = (arr) => {
-    try { localStorage.setItem(LOCAL_KEY, JSON.stringify((arr || []).slice(-500))); } catch (e) {}
+
+  const saveLocalHistory = (history) => {
+    try {
+      localStorage.setItem(LOCAL_KEY, JSON.stringify(history));
+    } catch (e) { }
   };
 
   useEffect(() => {
     let mounted = true;
     (async () => {
+      // load persisted price history from localStorage
       try {
-        // Attempt to fetch server state (pool/jackpot) if backend provides it. This is optional.
-        const s = await api.get('/rugged/status').catch(() => null);
-        if (s && mounted) {
-            // normalize priceHistory entries to { ts: Date, price: Number }
-            // Normalize server history to {ts:Date, price:Number}
-            // Normalize server history. Server currently emits display-friendly price points
-            // (price = pool / DISPLAY_DIVISOR). Do not rescale here; clamp tiny values to zero.
-            const serverPH = Array.isArray(s.priceHistory) ? s.priceHistory.map(p => {
-              const sp = Number((p?.fakePrice ?? p?.price ?? p) || 0);
-              const disp = sp > 0 && sp < MIN_DISPLAY ? 0 : sp;
-              return ({ ts: p?.ts ? new Date(p.ts) : new Date(), price: disp });
-            }) : (s.priceHistory || []);
-            // localStorage fallback: keep last-known points in the browser so refresh doesn't lose the line
-            const localKey = 'rugged_priceHistory';
-            const loadLocal = () => {
-              try {
-                const raw = localStorage.getItem(localKey);
-                if (!raw) return [];
-                const parsed = JSON.parse(raw);
-                return Array.isArray(parsed) ? parsed.map(p => ({ ts: p?.ts ? new Date(p.ts) : new Date(), price: Number(p?.price || 0) })) : [];
-              } catch (e) { return []; }
-            };
-            const saveLocal = (arr) => {
-              try { localStorage.setItem(localKey, JSON.stringify((arr || []).slice(-500))); } catch (e) {}
-            };
-
-            // Prefer authoritative server history. Use local cache only if server
-            // returns no points (fallback for cold-start clients). Persist server
-            // history locally for faster reloads, but do not merge local points
-            // into the canonical sequence — that would create divergent charts.
-            let ph = serverPH && serverPH.length ? serverPH.slice(-500) : loadLocal();
-            // Trim trailing zero price points (they represent crashed/empty states)
-            // but keep at least one point so chart has content.
-            while (ph.length > 1 && Number(ph[ph.length - 1].price || 0) === 0) ph.pop();
-
-            // If server returned no usable history or the last point is zero,
-            // derive a display price from the authoritative pool so a page
-            // refresh still shows the correct price. Server `pool` is in dollars
-            // and display price = pool / DISPLAY_DIVISOR.
-            const lastPrice = ph.length ? Number(ph[ph.length - 1].price || 0) : 0;
-            if ((!ph || ph.length === 0) || (lastPrice === 0 && Number(s.pool || 0) > 0)) {
-              const derived = Number(s.pool || 0) / DISPLAY_DIVISOR;
-              const disp = (derived > 0 && derived < MIN_DISPLAY) ? 0 : Number(Number(derived || 0).toFixed(8));
-              ph = [{ ts: new Date(), price: disp }];
-            }
-            // server returns `pool` in dollars (total USD in pool). Keep that
-            // semantic: status.pool and local `pool` are both in dollars. The
-            // chart's display price is taken from priceHistory points (USD per DC).
-            let respPoolDollars = Number(s.pool || 0);
-            if ((!respPoolDollars || respPoolDollars <= 0) && ph && ph.length) {
-              const last = ph[ph.length - 1];
-              const lastPriceDisplay = Number(last?.price || 0);
-              if (lastPriceDisplay > 0) {
-                // ph now contains displayPrice = pool / DISPLAY_DIVISOR
-                // approximate pool = displayPrice * DISPLAY_DIVISOR
-                respPoolDollars = lastPriceDisplay * DISPLAY_DIVISOR;
-                console.debug('Using fallback pool derived from priceHistory (display units)', { lastPriceDisplay, respPoolDollars });
-              }
-            }
-
-            setStatus(prev => ({ ...prev, pool: respPoolDollars, jackpot: Number(s.jackpot || 0), priceHistory: ph.length ? ph : (prev.priceHistory || []) }));
-            if (ph && ph.length) saveLocal(ph.map(p => ({ ts: p.ts instanceof Date ? p.ts.toISOString() : p.ts, price: p.price })));
+        const ph = loadLocalHistory();
+        if (ph && ph.length && mounted) {
+          setStatus(prev => ({ ...prev, priceHistory: ph }));
         }
-      } catch (e) { console.error('failed to load rugged status', e); }
-      try {
-        const me = await api.get('/api/me');
-        if (me && mounted) {
-          setBalance(Number(me.balance || 0));
-        }
-      } catch (e) {}
+      } catch (e) { }
       // fetch user's open positions so they survive page reload
       try {
         const resp = await api.get('/rugged/positions').catch(() => null);
@@ -202,36 +145,36 @@ export default function RuggedGame() {
 
   useEffect(() => {
     if (!socket) return;
-        const onUpdate = (data) => {
-          // Expect server broadcasts like: { pool, jackpot, crashed }
-          // prefer explicit price if provided by server, fall back to pool for legacy emits
-          setStatus(prev => {
-      // price broadcast: server sends USD-per-DC (server units). Convert to display units.
-      // If price not provided, derive from pool. If neither provided, fall back to previous value.
-  const totalSupply = SERVER_TOTAL_SUPPLY;
-  // Server emits price in display units already (pool / DISPLAY_DIVISOR). Use prev.price as fallback.
-  const serverPriceFallback = (prev && typeof prev.price !== 'undefined') ? Number(prev.price || 0) : 0;
-  const serverPrice = Number(typeof data.price !== 'undefined' ? data.price : (typeof data.pool !== 'undefined' ? (Number(data.pool) / DISPLAY_DIVISOR) : serverPriceFallback));
-  let priceVal = Number(serverPrice); // priceVal is in display units
-  if (priceVal > 0 && priceVal < MIN_DISPLAY) priceVal = 0;
-  let ph = (prev.priceHistory || []).concat({ ts: new Date(), price: priceVal }).slice(-500);
-  // Trim trailing zeros so the visible line doesn't flatten when server emits zeros
-  while (ph.length > 1 && Number(ph[ph.length - 1].price || 0) === 0) ph.pop();
-            // persist to localStorage so refresh keeps the line
-            saveLocalHistory(ph.map(p => ({ ts: p.ts instanceof Date ? p.ts.toISOString() : p.ts, price: p.price })));
-            const newPool = typeof data.pool !== 'undefined' ? Number(data.pool) : prev.pool;
-            return ({ ...prev, pool: newPool, jackpot: typeof data.jackpot !== 'undefined' ? Number(data.jackpot) : prev.jackpot, crashed: !!data.crashed, priceHistory: ph, price: priceVal });
-          });
-          if (typeof data.pool !== 'undefined') setPool(Number(data.pool));
+    const onUpdate = (data) => {
+      // Expect server broadcasts like: { pool, jackpot, crashed }
+      // prefer explicit price if provided by server, fall back to pool for legacy emits
+      setStatus(prev => {
+        // price broadcast: server sends USD-per-DC (server units). Convert to display units.
+        // If price not provided, derive from pool. If neither provided, fall back to previous value.
+        const totalSupply = SERVER_TOTAL_SUPPLY;
+        // Server emits price in display units already (pool / DISPLAY_DIVISOR). Use prev.price as fallback.
+        const serverPriceFallback = (prev && typeof prev.price !== 'undefined') ? Number(prev.price || 0) : 0;
+        const serverPrice = Number(typeof data.price !== 'undefined' ? data.price : (typeof data.pool !== 'undefined' ? (Number(data.pool) / DISPLAY_DIVISOR) : serverPriceFallback));
+        let priceVal = Number(serverPrice); // priceVal is in display units
+        if (priceVal > 0 && priceVal < MIN_DISPLAY) priceVal = 0;
+        let ph = (prev.priceHistory || []).concat({ ts: new Date(), price: priceVal }).slice(-500);
+        // Trim trailing zeros so the visible line doesn't flatten when server emits zeros
+        while (ph.length > 1 && Number(ph[ph.length - 1].price || 0) === 0) ph.pop();
+        // persist to localStorage so refresh keeps the line
+        saveLocalHistory(ph.map(p => ({ ts: p.ts instanceof Date ? p.ts.toISOString() : p.ts, price: p.price })));
+        const newPool = typeof data.pool !== 'undefined' ? Number(data.pool) : prev.pool;
+        return ({ ...prev, pool: newPool, jackpot: typeof data.jackpot !== 'undefined' ? Number(data.jackpot) : prev.jackpot, crashed: !!data.crashed, priceHistory: ph, price: priceVal });
+      });
+      if (typeof data.pool !== 'undefined') setPool(Number(data.pool));
     };
     const onTrade = (data) => {
       // append a trade point instantly unless market is paused
       setStatus(prev => {
         if (prev.rugged) return prev; // ignore trades during paused state
-  // data.price is in display units already; clamp tiny values
-  const serverPrice = Number(data.price || 0);
-  let dispPrice = serverPrice;
-  if (dispPrice > 0 && dispPrice < MIN_DISPLAY) dispPrice = 0;
+        // data.price is in display units already; clamp tiny values
+        const serverPrice = Number(data.price || 0);
+        let dispPrice = serverPrice;
+        if (dispPrice > 0 && dispPrice < MIN_DISPLAY) dispPrice = 0;
         const ph = (prev.priceHistory || []).concat({ ts: new Date(data.ts || Date.now()), price: dispPrice, volume: data.volume }).slice(-500);
         saveLocalHistory(ph.map(p => ({ ts: p.ts instanceof Date ? p.ts.toISOString() : p.ts, price: p.price })));
         return { ...prev, price: dispPrice, priceHistory: ph };
@@ -258,40 +201,38 @@ export default function RuggedGame() {
       }
 
       // update status to reflect rug state and cooldown if present and clear chart data
-  setStatus(prev => ({ ...prev, rugged: true, ruggedCooldownUntil: data.ruggedCooldownUntil || data.ruggedCooldownUntil || prev.ruggedCooldownUntil || null, priceHistory: [] , price: 0 }));
-  try { localStorage.removeItem(LOCAL_KEY); } catch (e) {}
-  // Reset frontend fake-price and per-user UI state on crash
-  setPool(0);
-  setFirstPrice(null);
-  setMyEntry(0);
-  setMyMultiplier(1);
-  setMyCashout(0);
-  setPlayers({});
+      setStatus(prev => ({ ...prev, rugged: true, ruggedCooldownUntil: data.ruggedCooldownUntil || data.ruggedCooldownUntil || prev.ruggedCooldownUntil || null, priceHistory: [], price: 0 }));
+      try { localStorage.removeItem(LOCAL_KEY); } catch (e) { }
+      // Reset frontend fake-price and per-user UI state on crash
+      setPool(0);
+      setFirstPrice(null);
+      setMyEntry(0);
+      setMyMultiplier(1);
+      setMyCashout(0);
+      setPlayers({});
 
-  // Try to fetch revealed seed info from server so user can verify the crash
-  (async () => {
-    try {
-      const rev = await api.get('/rugged/reveal').catch(() => null);
-      if (rev) {
-        // Build a short human message with the committed hash and any revealed seeds
-        let msg2 = `Server seed hash (commitment): ${rev.serverSeedHashed || 'N/A'}`;
-        if (rev.revealed && rev.revealed.length) {
-          msg2 += '\n\nRevealed seeds (most recent first):\n';
-          rev.revealed.slice().reverse().forEach(r => { msg2 += `nonce=${r.nonce} seed=${r.seed} at ${new Date(r.revealedAt).toLocaleString()}\n`; });
-        }
-        // Offer user to copy or open a new tab with the proof details
-        window.alert(msg2);
-      }
-    } catch (e) { console.error('Failed to fetch revealed seed info', e); }
-  })();
+      // Try to fetch revealed seed info from server so user can verify the crash
+      (async () => {
+        try {
+          const rev = await api.get('/rugged/reveal').catch(() => null);
+          if (rev) {
+            // Build a short human message with the committed hash and any revealed seeds
+            let msg2 = `Server seed hash (commitment): ${rev.serverSeedHashed || 'N/A'}`;
+            if (rev.revealed && rev.revealed.length) {
+              msg2 += '\n\nRevealed seeds (most recent first):\n';
+              rev.revealed.slice().reverse().forEach(r => { msg2 += `nonce=${r.nonce} seed=${r.seed} at ${new Date(r.revealedAt).toLocaleString()}\n`; });
+            }
+            // Offer user to copy or open a new tab with the proof details
+            window.alert(msg2);
+          }
+        } catch (e) { console.error('Failed to fetch revealed seed info', e); }
+      })();
 
-  // refresh user holdings from server
+      // refresh user holdings from server
       (async () => {
         try {
           const me = await api.get('/api/me');
           if (me) {
-            setUserHoldings(Number(me.holdingsDC || 0));
-            setUserInvested(Number(me.holdingsInvested || 0));
             setBalance(Number(me.balance || 0));
           }
         } catch (e) { console.error('failed to refresh /api/me after rug', e); }
@@ -340,7 +281,7 @@ export default function RuggedGame() {
     if (typeof data.crashed !== 'undefined') setStatus(prev => ({ ...prev, crashed: !!data.crashed }));
     if (typeof data.balance !== 'undefined') setBalance(Number(data.balance));
     // Also update global AuthContext so the header shows the new balance immediately
-    try { updateUser && updateUser({ balance: Number(data.balance) }); } catch (e) {}
+    try { updateUser && updateUser({ balance: Number(data.balance) }); } catch (e) { }
   }
 
   // PURE RNG frontend actions: buy into pool and sell all positions
@@ -364,15 +305,15 @@ export default function RuggedGame() {
         if (typeof resp.balance !== 'undefined') setBalance(Number(resp.balance));
         return;
       }
-    // normal buy: reconcile with server state and position info
-  const srvPool = Number(resp.pool || 0); // server sends dollars
-  const srvJackpot = Number(resp.jackpot || 0);
-  // store pool as dollars
-  setStatus(prev => ({ ...prev, pool: srvPool, jackpot: srvJackpot }));
-  setPool(srvPool);
+      // normal buy: reconcile with server state and position info
+      const srvPool = Number(resp.pool || 0); // server sends dollars
+      const srvJackpot = Number(resp.jackpot || 0);
+      // store pool as dollars
+      setStatus(prev => ({ ...prev, pool: srvPool, jackpot: srvJackpot }));
+      setPool(srvPool);
       if (typeof resp.balance !== 'undefined') {
         setBalance(Number(resp.balance));
-        try { updateUser && updateUser({ balance: Number(resp.balance) }); } catch (e) {}
+        try { updateUser && updateUser({ balance: Number(resp.balance) }); } catch (e) { }
       }
       // add created position if returned (position.entryPool is pool after buy)
       if (resp.position) {
@@ -407,7 +348,7 @@ export default function RuggedGame() {
       }
       if (typeof resp.balance !== 'undefined') {
         setBalance(Number(resp.balance));
-        try { updateUser && updateUser({ balance: Number(resp.balance) }); } catch (e) {}
+        try { updateUser && updateUser({ balance: Number(resp.balance) }); } catch (e) { }
       }
       // If server returned canonical updated positions, use them. Otherwise
       // fall back to client-side approximation for partial sells.
@@ -461,17 +402,75 @@ export default function RuggedGame() {
   }
 
   return (
-    <div style={{ maxWidth: 1100, margin: '12px auto', padding: 12, paddingBottom: 120 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-  <img src="/token-dc.png" alt="DC token" style={{ width: 36, height: 36 }} />
-        <h2 style={{ margin: 0 }}>Rugged — Divide Coin (DC)</h2>
+    isMobile() ? (
+      <div className="rugged-mobile-layout w-full max-w-md mx-auto px-2 py-2">
+        <div className="bg-gray-900 rounded-xl shadow-lg p-4 mb-4">
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-bold text-lg text-cyan-400">Rugged Market</span>
+              <span className="text-base text-white">Pool: <span className="font-bold">${Number(status.pool || 0).toFixed(2)}</span></span>
+            </div>
+            <span className="text-sm text-pink-400">Jackpot: ${Number(status.jackpot || 0).toFixed(2)}</span>
+            <span className="text-xs text-green-300">{(() => {
+              const baselinePrice = status.priceHistory && status.priceHistory.length ? Number(status.priceHistory[0].price || 0) : null;
+              const last = status.priceHistory && status.priceHistory.length ? Number(status.priceHistory[status.priceHistory.length - 1].price || 0) : null;
+              const displayPrice = (last && last > 0) ? last : (Number(pool || 0) / DISPLAY_DIVISOR);
+              if (!baselinePrice || baselinePrice <= 0) return 'N/A';
+              const pct = ((displayPrice / baselinePrice) - 1) * 100;
+              const sign = pct > 0 ? '+' : (pct < 0 ? '' : '');
+              return `${sign}${pct.toFixed(2)}%`;
+            })()}</span>
+          </div>
+          <div className="relative mt-2">
+            <RuggedChart priceHistory={status.priceHistory || []} width={350} height={120} />
+            {(status && status.rugged && status.ruggedCooldownUntil) && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="bg-gray-800 bg-opacity-80 p-2 rounded-lg pointer-events-auto">
+                  <Countdown target={status.ruggedCooldownUntil} prefix="Time until next pump" />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="mb-4">
+          <RuggedControls
+            pool={status.pool}
+            onBuy={(usd) => buyViaServer(usd)}
+            onSellAll={(percent) => sellAllPositions(percent)}
+            positions={positions}
+            onRefresh={async () => {
+              try {
+                const data = await refreshUser();
+                if (data) setBalance(Number(data.balance || 0));
+              } catch (e) { console.error('refresh user failed', e); }
+            }}
+            balance={balance}
+            rugged={status.crashed}
+            myMultiplier={myMultiplier}
+            myCashout={myCashout}
+            debugEnabled={debugEnabled}
+            debugInfo={debugInfo}
+          />
+        </div>
+        <div className="mb-4">
+          <div className="bg-gray-900 rounded-xl p-4">
+            <LiveGamesFeed />
+          </div>
+        </div>
       </div>
-          {/* removed debug server/timer panel per UX request */}
-      {/* center chart shows the 'Time until next pump' countdown; banner removed to avoid duplication */}
-      <div style={{ display: 'grid', gap: 12 }}>
-        <div style={{ display: 'flex', gap: 12 }}>
-          <div style={{ flex: 1 }}>
-            <div className="stat-panel" style={{ background: 'linear-gradient(180deg,#041018,#08222a)', padding: 12, borderRadius: 8 }}>
+    ) : (
+      // Desktop layout
+      <div style={{ maxWidth: 1100, margin: '12px auto', padding: 12, paddingBottom: 120 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <img src="/token-dc.png" alt="DC token" style={{ width: 36, height: 36 }} />
+          <h2 style={{ margin: 0 }}>Rugged — Divide Coin (DC)</h2>
+        </div>
+        {/* removed debug server/timer panel per UX request */}
+        {/* center chart shows the 'Time until next pump' countdown; banner removed to avoid duplication */}
+        <div style={{ display: 'grid', gap: 12 }}>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <div style={{ flex: 1 }}>
+              <div className="stat-panel" style={{ background: 'linear-gradient(180deg,#041018,#08222a)', padding: 12, borderRadius: 8 }}>
                 <div style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center' }}>
                   <div>
                     <div style={{ fontSize: 12, color: '#9fb' }}>Price</div>
@@ -489,7 +488,7 @@ export default function RuggedGame() {
                         if (rounded > 0 && rounded < MIN_DISPLAY) return `<${MIN_DISPLAY}`;
                         const fixed = rounded.toFixed(6);
                         // remove trailing zeros after decimal (e.g. 0.000360 -> 0.00036)
-                        let out = fixed.replace(/0+$/,'').replace(/\.$/,'');
+                        let out = fixed.replace(/0+$/, '').replace(/\.$/, '');
                         if (out === '') out = '0';
                         return out;
                       })()}</div>
@@ -510,7 +509,7 @@ export default function RuggedGame() {
                     </div>
                   </div>
                 </div>
-              <div style={{ marginTop: 12, position: 'relative' }}>
+                <div style={{ marginTop: 12, position: 'relative' }}>
                   <div style={{ position: 'relative' }}>
                     <RuggedChart priceHistory={status.priceHistory || []} width={900} height={240} />
                     {
@@ -525,46 +524,45 @@ export default function RuggedGame() {
                     }
                   </div>
                 </div>
+              </div>
             </div>
           </div>
 
-          {/* right column removed — controls moved below chart */}
-        </div>
-        
-        {/* Controls directly below chart */}
-        <div style={{ width: '100%' }}>
-          <RuggedControls
-            pool={status.pool}
-            onBuy={(usd) => buyViaServer(usd)}
-            onSellAll={(percent) => sellAllPositions(percent)}
-            positions={positions}
-            onRefresh={async () => {
-              try {
-                const data = await refreshUser();
-                if (data) setBalance(Number(data.balance || 0));
-              } catch (e) { console.error('refresh user failed', e); }
-            }}
-            balance={balance}
-            rugged={status.crashed}
-            myMultiplier={myMultiplier}
-            myCashout={myCashout}
-            debugEnabled={debugEnabled}
-            debugInfo={debugInfo}
-          />
-        </div>
-        
-        {/* Live Games Feed */}
-        <div style={{ marginTop: 24 }}>
-          <div style={{
-            background: 'rgba(11, 11, 11, 0.8)',
-            border: '1px solid rgba(0, 255, 255, 0.1)',
-            borderRadius: '16px',
-            padding: '24px'
-          }}>
-            <LiveGamesFeed />
+          {/* Controls directly below chart */}
+          <div style={{ width: '100%' }}>
+            <RuggedControls
+              pool={status.pool}
+              onBuy={(usd) => buyViaServer(usd)}
+              onSellAll={(percent) => sellAllPositions(percent)}
+              positions={positions}
+              onRefresh={async () => {
+                try {
+                  const data = await refreshUser();
+                  if (data) setBalance(Number(data.balance || 0));
+                } catch (e) { console.error('refresh user failed', e); }
+              }}
+              balance={balance}
+              rugged={status.crashed}
+              myMultiplier={myMultiplier}
+              myCashout={myCashout}
+              debugEnabled={debugEnabled}
+              debugInfo={debugInfo}
+            />
+          </div>
+
+          {/* Live Games Feed */}
+          <div style={{ marginTop: 24 }}>
+            <div style={{
+              background: 'rgba(11, 11, 11, 0.8)',
+              border: '1px solid rgba(0, 255, 255, 0.1)',
+              borderRadius: '16px',
+              padding: '24px'
+            }}>
+              <LiveGamesFeed />
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    )
   );
 }

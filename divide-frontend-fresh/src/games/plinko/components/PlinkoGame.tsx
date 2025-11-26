@@ -373,125 +373,85 @@ export const PlinkoGame: React.FC = () => {
     }
   };
 
+  // Device detection for layout separation
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 600;
   return (
-    <div className="relative flex min-h-dvh w-full flex-col" style={{ background: 'linear-gradient(135deg, #0a0a14 0%, #1a1a2e 50%, #0f0f1e 100%)' }}>
-      <div className="flex-1 px-5">
-        {/* Auto-generation progress */}
-        {autoGenerating && (
-          <div className="mx-auto mb-4 max-w-7xl rounded-lg border-2 border-blue-500 bg-blue-500/10 p-4">
-            <p className="text-center text-blue-200">
-              🎬 Generating physics recordings for first time... {recordingProgress.current}/{recordingProgress.total} bins
-            </p>
-            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-700">
-              <div 
-                className="h-full bg-blue-500 transition-all duration-300"
-                style={{ width: `${(recordingProgress.current / recordingProgress.total) * 100}%` }}
-              />
-            </div>
-            <p className="mt-2 text-center text-sm text-gray-400">This only happens once and takes ~1 minute</p>
-          </div>
-        )}
-
-        {/* Manual recording banner (hidden during auto-gen) */}
-        {USE_PLAYBACK && !recordingsLoaded && !isRecording && !autoGenerating && (
-          <div className="mx-auto mb-4 max-w-7xl rounded-lg border-2 border-yellow-500 bg-yellow-500/10 p-4">
-            <p className="text-center text-yellow-200">
-              ⚠️ No physics recordings found. 
-              <button 
-                onClick={handleRecordPhysics}
-                className="ml-2 rounded bg-yellow-500 px-4 py-1 font-bold text-black hover:bg-yellow-400"
-              >
-                Record Physics Now
-              </button>
-            </p>
-          </div>
-        )}
-        
-        {isRecording && (
-          <div className="mx-auto mb-4 max-w-7xl rounded-lg border-2 border-blue-500 bg-blue-500/10 p-4">
-            <p className="text-center text-blue-200">
-              🎬 Recording physics simulations... {recordingProgress.current + 1}/{recordingProgress.total} bins
-            </p>
-            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-700">
-              <div 
-                className="h-full bg-blue-500 transition-all duration-300"
-                style={{ width: `${(recordingProgress.current / recordingProgress.total) * 100}%` }}
-              />
-            </div>
-          </div>
-        )}
-
-        <div className="mx-auto mt-5 max-w-xl min-w-[300px] drop-shadow-xl md:mt-10 lg:max-w-6xl" style={{ transform: 'scale(0.9)', transformOrigin: 'top center' }}>
-          <nav className="w-full drop-shadow-lg rounded-t-lg overflow-hidden" style={{ background: 'linear-gradient(135deg, #0a0a14 0%, #1a1a2e 50%, #0f0f1e 100%)' }}>
-            <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-5">
-              <h1 className="text-2xl font-bold text-white">Plinko</h1>
-            </div>
-          </nav>
-          <div className="relative overflow-hidden rounded-b-lg">
-            <div className="flex flex-col-reverse lg:w-full lg:flex-row">
-              {/* Plinko Game Component */}
-              <div className="flex-1 relative" style={{ background: 'linear-gradient(135deg, #0a0a14 0%, #1a1a2e 50%, #0f0f1e 100%)' }}>
-                <div className="mx-auto flex h-full flex-col px-4 pb-4" style={{ maxWidth: '760px' }}>
-                
-                {/* HUD Bar */}
-                <PlinkoHUD balance={balance} message="Drop a ball to play" />
-
-                <div className="relative w-full" style={{ aspectRatio: '760 / 570' }}>
-                  <canvas
-                    ref={canvasRef}
-                    width={760}
-                    height={570}
-                    className="absolute inset-0 h-full w-full"
+    <div
+        className={isMobile ? 'relative flex min-h-dvh w-full flex-col bg-gradient-to-b from-gray-900 to-gray-800' : 'relative flex min-h-dvh w-full flex-col'}
+        style={isMobile ? {} : { background: 'linear-gradient(135deg, #0a0a14 0%, #1a1a2e 50%, #0f0f1e 100%)' }}
+      >
+        <div className={isMobile ? 'flex-1 px-2 py-2' : 'flex-1 px-5'}>
+          {/* ...existing code... */}
+          <div className="mx-auto mt-5 max-w-xl min-w-[300px] drop-shadow-xl md:mt-10 lg:max-w-6xl" style={{ transform: 'scale(0.9)', transformOrigin: 'top center' }}>
+            <nav className="w-full drop-shadow-lg rounded-t-lg overflow-hidden" style={{ background: 'linear-gradient(135deg, #0a0a14 0%, #1a1a2e 50%, #0f0f1e 100%)' }}>
+              <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-5">
+                <h1 className="text-2xl font-bold text-white">Plinko</h1>
+              </div>
+            </nav>
+            <div className="relative overflow-hidden rounded-b-lg">
+              <div className={isMobile ? 'flex flex-col w-full gap-6' : 'flex flex-col-reverse lg:w-full lg:flex-row'}>
+                {/* Plinko Game Component */}
+                <div className={isMobile ? 'w-full relative bg-gradient-to-b from-gray-900 to-gray-800 rounded-xl shadow-lg p-2' : 'flex-1 relative'} style={isMobile ? {} : { background: 'linear-gradient(135deg, #0a0a14 0%, #1a1a2e 50%, #0f0f1e 100%)' }}>
+                  <div className={isMobile ? 'mx-auto flex h-full flex-col px-1 pb-2' : 'mx-auto flex h-full flex-col px-4 pb-4'} style={{ maxWidth: '760px' }}>
+                    {/* HUD Bar */}
+                    <PlinkoHUD balance={balance} message="Drop a ball to play" />
+                    <div className={isMobile ? 'relative w-full' : 'relative w-full'} style={isMobile ? { aspectRatio: '760 / 570', minHeight: 220 } : { aspectRatio: '760 / 570' }}>
+                      <canvas
+                        ref={canvasRef}
+                        width={760}
+                        height={570}
+                        className="absolute inset-0 h-full w-full"
+                      />
+                    </div>
+                    <BinsRow rowCount={rowCount} riskLevel={riskLevel} binsWidthPercentage={binsWidthPercentage} />
+                  </div>
+                </div>
+                {/* Sidebar below game on mobile, right on desktop */}
+                <div className={isMobile ? 'w-full' : ''}>
+                  <Sidebar
+                    betAmount={betAmount}
+                    onBetAmountChange={setBetAmount}
+                    betMode={betMode}
+                    onBetModeChange={setBetMode}
+                    riskLevel={riskLevel}
+                    onRiskLevelChange={setRiskLevel}
+                    rowCount={rowCount}
+                    onRowCountChange={setRowCount}
+                    autoBetCount={autoBetCount}
+                    onAutoBetCountChange={setAutoBetCount}
+                    isAutoRunning={isAutoRunning}
+                    onDropBall={handleDropBall}
+                    onAutobet={handleAutobet}
+                    balance={balance}
+                    disabled={isAutoRunning}
                   />
                 </div>
-                <BinsRow rowCount={rowCount} riskLevel={riskLevel} binsWidthPercentage={binsWidthPercentage} />
               </div>
             </div>
-
-            {/* Sidebar */}
-            <Sidebar
-              betAmount={betAmount}
-              onBetAmountChange={setBetAmount}
-              betMode={betMode}
-              onBetModeChange={setBetMode}
-              riskLevel={riskLevel}
-              onRiskLevelChange={setRiskLevel}
-              rowCount={rowCount}
-              onRowCountChange={setRowCount}
-              autoBetCount={autoBetCount}
-              onAutoBetCountChange={setAutoBetCount}
-              isAutoRunning={isAutoRunning}
-              onDropBall={handleDropBall}
-              onAutobet={handleAutobet}
-              balance={balance}
-              disabled={isAutoRunning}
-            />
+          </div>
+          {/* Plinko Leaderboard */}
+          <div className="mx-auto mt-10 max-w-xl min-w-[300px] lg:max-w-7xl">
+            <PlinkoLeaderboard />
+          </div>
+          {/* Live Games Feed */}
+          <div className="mx-auto mt-10 max-w-xl min-w-[300px] lg:max-w-7xl">
+            <div style={{
+              background: 'rgba(11, 11, 11, 0.8)',
+              border: '1px solid rgba(0, 255, 255, 0.1)',
+              borderRadius: '16px',
+              padding: '24px'
+            }}>
+              <LiveGamesFeed maxGames={10} />
             </div>
           </div>
         </div>
-
-        {/* Plinko Leaderboard */}
-        <div className="mx-auto mt-10 max-w-xl min-w-[300px] lg:max-w-7xl">
-          <PlinkoLeaderboard />
-        </div>
-
-        {/* Live Games Feed */}
-        <div className="mx-auto mt-10 max-w-xl min-w-[300px] lg:max-w-7xl">
-          <div style={{
-            background: 'rgba(11, 11, 11, 0.8)',
-            border: '1px solid rgba(0, 255, 255, 0.1)',
-            borderRadius: '16px',
-            padding: '24px'
-          }}>
-            <LiveGamesFeed maxGames={10} />
+        {/* Desktop-only: LastWins floating panel */}
+        {!isMobile && (
+          <div className="absolute top-[15%] left-[5%]">
+            <LastWins />
           </div>
-        </div>
+        )}
       </div>
-
-      <div className="absolute top-[15%] left-[5%]">
-        <LastWins />
-      </div>
-    </div>
   );
 };
 

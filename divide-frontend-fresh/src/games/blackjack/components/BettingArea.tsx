@@ -140,40 +140,90 @@ export const BettingArea: React.FC<BettingAreaProps> = ({
     return `${ratio}:1`;
   };
 
+  // Responsive: use mobile-friendly layout and larger touch targets
+  const isMobile = window.innerWidth <= 600;
   return (
-    <div className="space-y-2">
-      {/* Circular Betting Layout - Compact - Display Only */}
-      <div style={{ position: 'relative', width: '100%', height: '130px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {/* 777 - Top Center, directly above main bet */}
-        {(
+    <div
+      className={
+        isMobile
+          ? 'flex flex-col items-center justify-center w-full py-2 gap-4 bg-gradient-to-b from-gray-900 to-gray-800 rounded-lg shadow-lg'
+          : 'space-y-2'
+      }
+      style={isMobile ? { minHeight: 220 } : {}}
+    >
+      {/* Betting Layout - Responsive */}
+      <div
+        style={
+          isMobile
+            ? {
+                position: 'relative',
+                width: '100%',
+                height: 220,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }
+            : {
+                position: 'relative',
+                width: '100%',
+                height: '130px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }
+        }
+      >
+        {/* Always show 777 side bet UI */}
         <motion.div
-          style={{
-            position: 'absolute',
-            top: '-15px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: '50px',
-            height: '50px',
-            borderRadius: '50%',
-            border: '2px solid',
-            cursor: 'default',
-            backgroundColor:
-              currentMode === 'blazingSevens' ? '#7c2d12' : '#431407',
-            borderColor:
-              currentMode === 'blazingSevens'
-                ? '#facc15'
-                : '#92400e',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.1rem',
-            zIndex: 5,
-          }}
+          style={
+            isMobile
+              ? {
+                  position: 'absolute',
+                  top: 10,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: 70,
+                  height: 70,
+                  borderRadius: '50%',
+                  border: '3px solid',
+                  cursor: 'default',
+                  backgroundColor:
+                    currentMode === 'blazingSevens' ? '#7c2d12' : '#431407',
+                  borderColor:
+                    currentMode === 'blazingSevens' ? '#facc15' : '#92400e',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.2rem',
+                  zIndex: 5,
+                }
+              : {
+                  position: 'absolute',
+                  top: '-15px',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: '50px',
+                  height: '50px',
+                  borderRadius: '50%',
+                  border: '2px solid',
+                  cursor: 'default',
+                  backgroundColor:
+                    currentMode === 'blazingSevens' ? '#7c2d12' : '#431407',
+                  borderColor:
+                    currentMode === 'blazingSevens' ? '#facc15' : '#92400e',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.1rem',
+                  zIndex: 5,
+                }
+          }
         >
-          <div style={{ color: '#fed7aa', fontSize: '0.95rem', fontWeight: 'bold' }}>777</div>
+          <div style={{ color: '#fed7aa', fontSize: isMobile ? '1.2rem' : '0.95rem', fontWeight: 'bold' }}>777</div>
           <motion.div
-            style={{ fontSize: '0.6rem', fontWeight: 'bold', color: '#fed7aa' }}
+            style={{ fontSize: isMobile ? '0.9rem' : '0.6rem', fontWeight: 'bold', color: '#fed7aa' }}
             key={blazingSevensBet + (lastRoundResult?.blazingSevensPayout || 0)}
             initial={{ scale: 1.1 }}
             animate={{ scale: 1 }}
@@ -185,10 +235,130 @@ export const BettingArea: React.FC<BettingAreaProps> = ({
             payoutRatio={lastRoundResult?.blazingSevenResult === 'win' ? getPayoutRatio(blazingSevensBet, lastRoundResult?.blazingSevensPayout) : currentDealRatios?.blazingSevenRatio}
           />
         </motion.div>
-        )}
 
-        {/* 21+3 - Left of main bet */}
-        {twentyPlusThreeBet > 0 && (gamePhase === 'betting' || lastRoundResult?.twentyPlusThreeResult === 'win') && (
+        {/* Always show Perfect Pairs side bet UI */}
+        <motion.div
+          style={
+            isMobile
+              ? {
+                  position: 'absolute',
+                  left: 'calc(50% + 90px)',
+                  top: 60,
+                  width: 70,
+                  height: 70,
+                  borderRadius: '50%',
+                  border: '3px solid',
+                  cursor: 'default',
+                  backgroundColor:
+                    currentMode === 'perfectPairs' ? '#065f46' : '#134e4a',
+                  borderColor:
+                    currentMode === 'perfectPairs' ? '#facc15' : '#065f46',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.2rem',
+                  zIndex: 20,
+                }
+              : {
+                  position: 'absolute',
+                  left: 'calc(50% + 80px)',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  width: '50px',
+                  height: '50px',
+                  borderRadius: '50%',
+                  border: '2px solid',
+                  cursor: 'default',
+                  backgroundColor:
+                    currentMode === 'perfectPairs' ? '#065f46' : '#134e4a',
+                  borderColor:
+                    currentMode === 'perfectPairs' ? '#facc15' : '#065f46',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.1rem',
+                  zIndex: 20,
+                }
+          }
+        >
+          <div style={{ color: '#6ee7b7', fontSize: isMobile ? '1.1rem' : '0.8rem', fontWeight: 'bold' }}>Perfect Pairs</div>
+          <motion.div
+            style={{ fontSize: isMobile ? '0.8rem' : '0.6rem', fontWeight: 'bold', color: '#6ee7b7' }}
+            key={perfectPairsBet + (lastRoundResult?.perfectPairsPayout || 0)}
+            initial={{ scale: 1.1 }}
+            animate={{ scale: 1 }}
+          >
+            ${(perfectPairsBet + (lastRoundResult?.perfectPairsResult === 'win' ? (lastRoundResult?.perfectPairsPayout || 0) : 0)).toFixed(2)}
+          </motion.div>
+          <ChipDisplay 
+            amount={perfectPairsBet + (lastRoundResult?.perfectPairsResult === 'win' ? (lastRoundResult?.perfectPairsPayout || 0) : 0)}
+            payoutRatio={lastRoundResult?.perfectPairsResult === 'win' ? getPayoutRatio(perfectPairsBet, lastRoundResult?.perfectPairsPayout) : currentDealRatios?.perfectPairsRatio}
+          />
+        </motion.div>
+
+        {/* Always show 21+3 side bet UI */}
+        <motion.div
+          style={
+            isMobile
+              ? {
+                  position: 'absolute',
+                  left: 'calc(50% - 90px)',
+                  top: 60,
+                  width: 70,
+                  height: 70,
+                  borderRadius: '50%',
+                  border: '3px solid',
+                  cursor: 'default',
+                  backgroundColor:
+                    currentMode === 'twentyPlusThree' ? '#1e3a8a' : '#0c2a4a',
+                  borderColor:
+                    currentMode === 'twentyPlusThree' ? '#facc15' : '#1e40af',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.2rem',
+                  zIndex: 5,
+                }
+              : {
+                  position: 'absolute',
+                  left: 'calc(50% - 80px)',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  width: '50px',
+                  height: '50px',
+                  borderRadius: '50%',
+                  border: '2px solid',
+                  cursor: 'default',
+                  backgroundColor:
+                    currentMode === 'twentyPlusThree' ? '#1e3a8a' : '#0c2a4a',
+                  borderColor:
+                    currentMode === 'twentyPlusThree' ? '#facc15' : '#1e40af',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.1rem',
+                  zIndex: 5,
+                }
+          }
+        >
+          <div style={{ color: '#93c5fd', fontSize: isMobile ? '1.1rem' : '0.8rem', fontWeight: 'bold' }}>21+3</div>
+          <motion.div
+            style={{ fontSize: isMobile ? '0.8rem' : '0.6rem', fontWeight: 'bold', color: '#93c5fd' }}
+            key={twentyPlusThreeBet + (lastRoundResult?.twentyPlusThreePayout || 0)}
+            initial={{ scale: 1.1 }}
+            animate={{ scale: 1 }}
+          >
+            ${(twentyPlusThreeBet + (lastRoundResult?.twentyPlusThreeResult === 'win' ? (lastRoundResult?.twentyPlusThreePayout || 0) : 0)).toFixed(2)}
+          </motion.div>
+          <ChipDisplay 
+            amount={twentyPlusThreeBet + (lastRoundResult?.twentyPlusThreeResult === 'win' ? (lastRoundResult?.twentyPlusThreePayout || 0) : 0)}
+            payoutRatio={lastRoundResult?.twentyPlusThreeResult === 'win' ? getPayoutRatio(twentyPlusThreeBet, lastRoundResult?.twentyPlusThreePayout) : currentDealRatios?.twentyPlusThreeRatio}
+          />
+        </motion.div>
         <motion.div
           style={{
             position: 'absolute',
@@ -228,7 +398,6 @@ export const BettingArea: React.FC<BettingAreaProps> = ({
             payoutRatio={lastRoundResult?.twentyPlusThreeResult === 'win' ? getPayoutRatio(twentyPlusThreeBet, lastRoundResult?.twentyPlusThreePayout) : currentDealRatios?.twentyPlusThreeRatio}
           />
         </motion.div>
-        )}
 
         {/* Main Bet - Center */}
         <motion.div
@@ -241,36 +410,61 @@ export const BettingArea: React.FC<BettingAreaProps> = ({
               }
             }
           }}
-          style={{
-            position: 'absolute',
-            left: '50%',
-            top: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: '75px',
-            height: '75px',
-            borderRadius: '50%',
-            border: '3px solid',
-            cursor: isDisabled ? 'not-allowed' : 'pointer',
-            backgroundColor:
-              currentMode === 'main' ? '#166534' : isDisabled ? '#1f2937' : '#1a4d2e',
-            borderColor:
-              currentMode === 'main' ? '#facc15' : isDisabled ? '#4b5563' : '#15803d',
-            opacity: isDisabled ? 0.5 : 1,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.2rem',
-            zIndex: mainBet > 0 ? 5 : 10,
-          }}
+          style={
+            isMobile
+              ? {
+                  position: 'absolute',
+                  left: '50%',
+                  top: 120,
+                  transform: 'translateX(-50%)',
+                  width: 90,
+                  height: 90,
+                  borderRadius: '50%',
+                  border: '4px solid',
+                  cursor: isDisabled ? 'not-allowed' : 'pointer',
+                  backgroundColor:
+                    currentMode === 'main' ? '#166534' : isDisabled ? '#1f2937' : '#1a4d2e',
+                  borderColor:
+                    currentMode === 'main' ? '#facc15' : isDisabled ? '#4b5563' : '#15803d',
+                  opacity: isDisabled ? 0.5 : 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.3rem',
+                  zIndex: mainBet > 0 ? 5 : 10,
+                }
+              : {
+                  position: 'absolute',
+                  left: '50%',
+                  top: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  width: '75px',
+                  height: '75px',
+                  borderRadius: '50%',
+                  border: '3px solid',
+                  cursor: isDisabled ? 'not-allowed' : 'pointer',
+                  backgroundColor:
+                    currentMode === 'main' ? '#166534' : isDisabled ? '#1f2937' : '#1a4d2e',
+                  borderColor:
+                    currentMode === 'main' ? '#facc15' : isDisabled ? '#4b5563' : '#15803d',
+                  opacity: isDisabled ? 0.5 : 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.2rem',
+                  zIndex: mainBet > 0 ? 5 : 10,
+                }
+          }
           whileHover={!isDisabled ? {} : {}}
           whileTap={!isDisabled ? {} : {}}
         >
-          <div style={{ color: '#d1d5db', fontSize: '0.6rem', fontWeight: '600', textTransform: 'uppercase' }}>
+          <div style={{ color: '#d1d5db', fontSize: isMobile ? '1rem' : '0.6rem', fontWeight: '600', textTransform: 'uppercase' }}>
             Main
           </div>
           <motion.div
-            style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#fbbf24' }}
+            style={{ fontSize: isMobile ? '1.2rem' : '0.8rem', fontWeight: 'bold', color: '#fbbf24' }}
             key={mainBet}
             initial={{ scale: 1.1 }}
             animate={{ scale: 1 }}
@@ -280,7 +474,7 @@ export const BettingArea: React.FC<BettingAreaProps> = ({
           {mainBet > 0 && <ChipDisplay amount={mainBet} />}
         </motion.div>
 
-        {/* Perfect Pairs - Right of main bet */}
+        {/* Perfect Pairs - Right of main bet (mobile: below main) */}
         {(perfectPairsBet > 0 || (gamePhase === 'betting' && (currentMode === 'perfectPairs' || selectedChip !== null))) && (gamePhase === 'betting' || lastRoundResult?.perfectPairsResult === 'win') && (
         <motion.div
           onClick={() => {
@@ -292,38 +486,58 @@ export const BettingArea: React.FC<BettingAreaProps> = ({
               }
             }
           }}
-          style={{
-            position: 'absolute',
-            right: 'calc(50% - 80px)',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            width: '50px',
-            height: '50px',
-            borderRadius: '50%',
-            border: '2px solid',
-            cursor: isDisabled ? 'not-allowed' : 'pointer',
-            backgroundColor:
-              currentMode === 'perfectPairs' ? '#581c87' : isDisabled ? '#1f2937' : '#3f0f5c',
-            borderColor:
-              currentMode === 'perfectPairs'
-                ? '#facc15'
-                : isDisabled
-                ? '#4b5563'
-                : '#7c3aed',
-            opacity: isDisabled ? 0.5 : 1,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.1rem',
-            zIndex: perfectPairsBet > 0 ? 5 : 1,
-          }}
+          style={
+            isMobile
+              ? {
+                  position: 'absolute',
+                  left: 'calc(50% + 90px)',
+                  top: 170,
+                  width: 70,
+                  height: 70,
+                  borderRadius: '50%',
+                  border: '3px solid',
+                  cursor: isDisabled ? 'not-allowed' : 'pointer',
+                  backgroundColor:
+                    currentMode === 'perfectPairs' ? '#581c87' : isDisabled ? '#1f2937' : '#3f0f5c',
+                  borderColor:
+                    currentMode === 'perfectPairs' ? '#facc15' : isDisabled ? '#4b5563' : '#7c3aed',
+                  opacity: isDisabled ? 0.5 : 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.2rem',
+                  zIndex: perfectPairsBet > 0 ? 5 : 1,
+                }
+              : {
+                  position: 'absolute',
+                  right: 'calc(50% - 80px)',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  width: '50px',
+                  height: '50px',
+                  borderRadius: '50%',
+                  border: '2px solid',
+                  cursor: isDisabled ? 'not-allowed' : 'pointer',
+                  backgroundColor:
+                    currentMode === 'perfectPairs' ? '#581c87' : isDisabled ? '#1f2937' : '#3f0f5c',
+                  borderColor:
+                    currentMode === 'perfectPairs' ? '#facc15' : isDisabled ? '#4b5563' : '#7c3aed',
+                  opacity: isDisabled ? 0.5 : 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.1rem',
+                  zIndex: perfectPairsBet > 0 ? 5 : 1,
+                }
+          }
           whileHover={!isDisabled ? {} : {}}
           whileTap={!isDisabled ? {} : {}}
         >
-          <div style={{ color: '#d8b4fe', fontSize: '0.8rem', fontWeight: 'bold' }}>PP</div>
+          <div style={{ color: '#d8b4fe', fontSize: isMobile ? '1.1rem' : '0.8rem', fontWeight: 'bold' }}>PP</div>
           <motion.div
-            style={{ fontSize: '0.6rem', fontWeight: 'bold', color: '#d8b4fe' }}
+            style={{ fontSize: isMobile ? '0.8rem' : '0.6rem', fontWeight: 'bold', color: '#d8b4fe' }}
             key={perfectPairsBet + (lastRoundResult?.perfectPairsPayout || 0)}
             initial={{ scale: 1.1 }}
             animate={{ scale: 1 }}
