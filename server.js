@@ -393,7 +393,7 @@ app.post('/divides/vote', auth, async (req, res) => {
       if (existing) {
         // If creator, only allow updating vote if side matches locked side
         if (divide.isUserCreated && divide.creatorId === req.userId && divide.creatorSide && side !== divide.creatorSide) {
-          // Do not update vote record
+          return res.status(400).json({ error: 'Creator is locked to their chosen side and cannot vote on the other side.' });
         } else {
           existing.voteCount += voteCount;
           existing.side = side;
