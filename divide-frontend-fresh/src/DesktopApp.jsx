@@ -19,6 +19,7 @@ import Sidebar from "./components/Sidebar.jsx";
 import ChatSidebar from "./components/ChatSidebar.jsx";
 import BlackjackPage from "./games/blackjack/index.tsx";
 import PlinkoPage from "./games/plinko/index.tsx";
+import ProfilePage from "./pages/Profile.jsx";
 
 function ProtectedRoute({ children, requiredRole = null }) {
   const { user } = React.useContext(AuthContext);
@@ -59,6 +60,7 @@ export default function DesktopApp() {
             <Route path="/battles" element={<ActiveBattlesPage />} />
             <Route path="/battles/create" element={<CreateBattlePage />} />
             <Route path="/battles/:id" element={<CaseBattleDetail />} />
+            <Route path="/profile" element={<ProfilePage />} />
 
             {/* Admin routes */}
             <Route

@@ -6,9 +6,10 @@ import useSocket from '../hooks/useSocket';
 import CaseBattleCard from './CaseBattleCard';
 import CaseEditor from './CaseEditor';
 import CaseBrowser from './CaseBrowser';
+import MobileGameHeader from './MobileGameHeader';
 import '../styles/buttons.css';
 
-export default function CreateBattlePage() {
+export default function CreateBattlePage({ onOpenChat }) {
   const navigate = useNavigate();
   const { refreshUser } = useContext(AuthContext);
   const socket = useSocket(null); // Connect to global socket (no specific room)
@@ -67,7 +68,7 @@ export default function CreateBattlePage() {
         return;
       }
 
-      const payload = { 
+      const payload = {
         mode: selectedMode,
         teamSize: selectedTeamSize,
         caseIds: selectedCaseIds  // Send array of case IDs
@@ -124,6 +125,10 @@ export default function CreateBattlePage() {
 
   return (
     <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', padding: '20px' }}>
+      {/* Mobile Header - only shows on mobile */}
+      <div className="md:hidden mb-4">
+        <MobileGameHeader title="Create Battle" onOpenChat={onOpenChat} />
+      </div>
       <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
         {/* Hero Header Section */}
         <div style={{
@@ -255,24 +260,23 @@ export default function CreateBattlePage() {
                         ? modeOption.value === 'normal'
                           ? 'rgba(0, 255, 255, 0.2)'
                           : modeOption.value === 'crazy'
-                          ? 'rgba(255, 100, 100, 0.2)'
-                          : 'rgba(100, 200, 100, 0.2)'
+                            ? 'rgba(255, 100, 100, 0.2)'
+                            : 'rgba(100, 200, 100, 0.2)'
                         : 'rgba(255, 255, 255, 0.05)',
-                      border: `2px solid ${
-                        selectedMode === modeOption.value
+                      border: `2px solid ${selectedMode === modeOption.value
                           ? modeOption.value === 'normal'
                             ? '#00ffff'
                             : modeOption.value === 'crazy'
-                            ? '#ff6464'
-                            : '#64c864'
+                              ? '#ff6464'
+                              : '#64c864'
                           : 'rgba(255, 255, 255, 0.1)'
-                      }`,
+                        }`,
                       color: selectedMode === modeOption.value
                         ? modeOption.value === 'normal'
                           ? '#00ffff'
                           : modeOption.value === 'crazy'
-                          ? '#ff6464'
-                          : '#64c864'
+                            ? '#ff6464'
+                            : '#64c864'
                         : '#ccc',
                       borderRadius: '8px',
                       fontSize: '12px',
@@ -304,16 +308,16 @@ export default function CreateBattlePage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                 {(selectedMode === 'normal' || selectedMode === 'crazy'
                   ? [
-                      { value: 1, label: '1v1' },
-                      { value: 2, label: '2v2' },
-                      { value: 3, label: '3v3' },
-                    ]
+                    { value: 1, label: '1v1' },
+                    { value: 2, label: '2v2' },
+                    { value: 3, label: '3v3' },
+                  ]
                   : [
-                      { value: 2, label: '2P' },
-                      { value: 3, label: '3P' },
-                      { value: 4, label: '4P' },
-                      { value: 6, label: '6P' },
-                    ]
+                    { value: 2, label: '2P' },
+                    { value: 3, label: '3P' },
+                    { value: 4, label: '4P' },
+                    { value: 6, label: '6P' },
+                  ]
                 ).map((sizeOption) => (
                   <button
                     key={sizeOption.value}
@@ -323,11 +327,10 @@ export default function CreateBattlePage() {
                       backgroundColor: selectedTeamSize === sizeOption.value
                         ? 'rgba(100, 255, 100, 0.2)'
                         : 'rgba(255, 255, 255, 0.05)',
-                      border: `2px solid ${
-                        selectedTeamSize === sizeOption.value
+                      border: `2px solid ${selectedTeamSize === sizeOption.value
                           ? '#64ff64'
                           : 'rgba(255, 255, 255, 0.1)'
-                      }`,
+                        }`,
                       color: selectedTeamSize === sizeOption.value ? '#64ff64' : '#ccc',
                       borderRadius: '8px',
                       fontSize: '12px',
@@ -462,7 +465,7 @@ export default function CreateBattlePage() {
                 borderRadius: '12px',
                 padding: '24px',
               }}>
-                <CaseBrowser 
+                <CaseBrowser
                   onSelectCase={handleSelectCase}
                   selectedCaseIds={selectedCaseIds}
                   onRemoveCase={removeSelectedCase}
@@ -524,8 +527,8 @@ export default function CreateBattlePage() {
                       >
                         {/* Case Image */}
                         {caseObj.image && (
-                          <img 
-                            src={caseObj.image} 
+                          <img
+                            src={caseObj.image}
                             alt={caseObj.name}
                             style={{
                               width: '100%',
@@ -535,7 +538,7 @@ export default function CreateBattlePage() {
                             }}
                           />
                         )}
-                        
+
                         {/* Case Info */}
                         <div style={{ padding: '12px' }}>
                           <div style={{
@@ -557,7 +560,7 @@ export default function CreateBattlePage() {
                           }}>
                             ${(caseObj.calculatedPrice || 0).toFixed(2)}
                           </div>
-                          
+
                           {/* Remove Button */}
                           <button
                             onClick={() => removeSelectedCase(index)}

@@ -5,11 +5,12 @@ import { useAuth } from '../context/AuthContext';
 import useSocket from '../hooks/useSocket';
 import api from '../services/api';
 import CaseBattleArenaReelNativeV2 from './CaseBattleArenaReelNativeV2';
+import MobileGameHeader from './MobileGameHeader';
 import '../styles/buttons.css';
 import '../styles/rarities.css';
 import '../styles/BattleWrapper.css';
 
-export default function CaseBattleDetail() {
+export default function CaseBattleDetail({ onOpenChat }) {
   const { battleId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -87,8 +88,8 @@ export default function CaseBattleDetail() {
   const isCreator = user?.id === battle.player1Id;
   const playerInBattle = battle.players && battle.players.some(p => p.userId === user?.id);
   const playerCount = battle.players ? battle.players.length : 0;
-  const maxPlayers = battle.teamSize && (battle.mode === 'group') 
-    ? battle.teamSize 
+  const maxPlayers = battle.teamSize && (battle.mode === 'group')
+    ? battle.teamSize
     : (battle.teamSize ? battle.teamSize * 2 : 2);
   const canJoin = battle.status === 'waiting' && !isCreator && !playerInBattle && playerCount < maxPlayers;
 
@@ -121,6 +122,10 @@ export default function CaseBattleDetail() {
 
   return (
     <div className="battle-page-wrapper">
+      {/* Mobile Header - only shows on mobile */}
+      <div className="md:hidden mb-4">
+        <MobileGameHeader title="Battle Arena" onOpenChat={onOpenChat} />
+      </div>
       <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '12px', height: '90vh', maxHeight: '800px' }}>
         {/* Header Section - Back button and info badges */}
         <div className="battle-header-section">

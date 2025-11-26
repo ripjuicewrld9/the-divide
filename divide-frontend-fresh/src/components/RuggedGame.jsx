@@ -7,8 +7,9 @@ import RuggedChart from './RuggedChart';
 import RuggedControls from './RuggedControls';
 import Countdown from './Countdown';
 import LiveGamesFeed from './LiveGamesFeed';
+import MobileGameHeader from './MobileGameHeader';
 
-export default function RuggedGame() {
+export default function RuggedGame({ onOpenChat }) {
   const socket = useSocket('rugged');
   // PURE RNG crash game frontend state
   // pool: current USD pool; jackpot: accumulated jackpot from crashes; crashed: boolean
@@ -400,10 +401,14 @@ export default function RuggedGame() {
       }
     } catch (e) { console.error('sellAllPositions failed', e); alert('Sell failed'); }
   }
-
   return (
     isMobile() ? (
       <div className="rugged-mobile-layout w-full max-w-md mx-auto px-2 py-2">
+        {/* Mobile Header - only shows on mobile */}
+        <div className="md:hidden mb-4">
+          <MobileGameHeader title="Rugged" onOpenChat={onOpenChat} />
+        </div>
+
         <div className="bg-gray-900 rounded-xl shadow-lg p-4 mb-4">
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between mb-2">
@@ -431,7 +436,7 @@ export default function RuggedGame() {
               </div>
             )}
           </div>
-        </div>
+        </div >
         <div className="mb-4">
           <RuggedControls
             pool={status.pool}
@@ -457,7 +462,7 @@ export default function RuggedGame() {
             <LiveGamesFeed />
           </div>
         </div>
-      </div>
+      </div >
     ) : (
       // Desktop layout
       <div style={{ maxWidth: 1100, margin: '12px auto', padding: 12, paddingBottom: 120 }}>

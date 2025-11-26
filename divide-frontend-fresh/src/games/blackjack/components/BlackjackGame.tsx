@@ -16,6 +16,11 @@ import { WinOverlay } from './WinOverlay';
 import LiveGamesFeed from '../../../components/LiveGamesFeed';
 import BlackjackLeaderboard from '../../../components/BlackjackLeaderboard';
 import BlackjackVerification from './BlackjackVerification';
+import MobileGameHeader from '../../../components/MobileGameHeader';
+
+interface BlackjackGameProps {
+  onOpenChat?: () => void;
+}
 
 const syncBalanceToServer = async (balance: number, token: string, refreshUser: () => Promise<any>) => {
   try {
@@ -44,22 +49,22 @@ const syncBalanceToServer = async (balance: number, token: string, refreshUser: 
 const saveBlackjackGameResult = async (gameState: any, token: string) => {
   try {
     const apiUrl = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000';
-    
+
     // Get the most recent round result
     const lastResult = gameState.roundResults[0];
     if (!lastResult) return;
-    
+
     const gameId = (gameState as any).currentGameId;
-    
+
     // If we have a gameId (provably fair session), save with full data
     if (gameId) {
       // Prepare player and dealer cards
       const playerHands = gameState.playerHands || [];
       const dealerHand = gameState.dealerHand || { cards: [] };
-      
+
       const playerCards = playerHands[0]?.cards?.map((c: any) => `${c.rank}${c.suit}`) || [];
       const dealerCards = dealerHand.cards?.map((c: any) => `${c.rank}${c.suit}`) || [];
-      
+
       const response = await fetch(`${apiUrl}/api/blackjack/game/save`, {
         method: 'POST',
         headers: {
@@ -87,7 +92,7 @@ const saveBlackjackGameResult = async (gameState: any, token: string) => {
           balance: gameState.balance,
         }),
       });
-      
+
       if (!response.ok) {
         console.error('[Blackjack] Failed to save game with provably fair:', response.statusText);
       } else {
@@ -119,7 +124,7 @@ const saveBlackjackGameResult = async (gameState: any, token: string) => {
           balance: gameState.balance,
         }),
       });
-      
+
       if (!response.ok) {
         console.error('[Blackjack] Failed to save game for feed:', response.statusText);
       }
@@ -129,7 +134,7 @@ const saveBlackjackGameResult = async (gameState: any, token: string) => {
   }
 };
 
-export const BlackjackGame: React.FC = () => {
+export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
   const gameState = useGameStore();
   const { balance: userBalance, token, refreshUser } = useAuth();
   const [showRules, setShowRules] = useState(false);
@@ -168,7 +173,7 @@ export const BlackjackGame: React.FC = () => {
       gameSavedRef.current = true;
       syncBalanceToServer(gameState.balance, token, refreshUser);
       // Save game result to database for recent games feed
-      saveBlackjackGameResult(gameState, token).catch(err => 
+      saveBlackjackGameResult(gameState, token).catch(err =>
         console.error('[Blackjack] Failed to save game:', err)
       );
     } else if (gameState.gamePhase === 'betting') {
@@ -223,7 +228,7 @@ export const BlackjackGame: React.FC = () => {
   // Handle verification
   const handleVerify = useCallback(async () => {
     if (!token) return;
-    
+
     setIsVerifying(true);
     try {
       const apiUrl = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000';
@@ -233,12 +238,12 @@ export const BlackjackGame: React.FC = () => {
           'Authorization': `Bearer ${token}`,
         },
       });
-      
+
       if (!response.ok) throw new Error('Failed to fetch recent games');
-      
+
       const data = await response.json();
       const lastGame = data.games?.[0];
-      
+
       if (!lastGame || !lastGame._id) {
         setVerificationResult({
           valid: false,
@@ -246,16 +251,16 @@ export const BlackjackGame: React.FC = () => {
         });
         return;
       }
-      
+
       // Now verify the game
       const verifyResponse = await fetch(`${apiUrl}/api/blackjack/game/${lastGame._id}/verify`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
       });
-      
+
       if (!verifyResponse.ok) throw new Error('Verification failed');
-      
+
       const verifyData = await verifyResponse.json();
       setVerificationResult(verifyData);
     } catch (error) {
@@ -295,10 +300,10 @@ export const BlackjackGame: React.FC = () => {
 
       const sessionData = await response.json();
       console.log('[Blackjack] Session started:', sessionData.gameId);
-      
+
       // Store gameId for later save
       (gameState as any).currentGameId = sessionData.gameId;
-      
+
       // Increment nonce in localStorage to match backend
       try {
         const currentNonce = localStorage.getItem('blackjack_nonce');
@@ -308,7 +313,7 @@ export const BlackjackGame: React.FC = () => {
       } catch (err) {
         console.error('[Blackjack] Error incrementing nonce:', err);
       }
-      
+
       // Deal cards
       gameState.deal();
     } catch (error) {
@@ -364,398 +369,412 @@ export const BlackjackGame: React.FC = () => {
           background: 'linear-gradient(135deg, #0a0a14 0%, #1a1a2e 50%, #0f0f1e 100%)',
         }}
       >
-      <RulesModal isOpen={showRules} onClose={() => setShowRules(false)} />
-      <BlackjackVerification
-        isOpen={showVerification}
-        onClose={() => {
-          setShowVerification(false);
-          setVerificationResult(null);
-        }}
-        verificationResult={verificationResult}
-        onVerify={handleVerify}
-        isVerifying={isVerifying}
-      />
+        {/* Mobile Header - only shows on mobile */}
+        <div className="md:hidden">
+          <MobileGameHeader title="Blackjack" onOpenChat={onOpenChat} />
+        </div>
 
-      <div className="flex-1 px-5">
-        <div className="mx-auto mt-5 max-w-xl min-w-[300px] drop-shadow-xl md:mt-10 lg:max-w-6xl" style={{ transform: 'scale(0.9)', transformOrigin: 'top center' }}>
-          {/* Header */}
-          <nav className="w-full drop-shadow-lg rounded-t-lg overflow-hidden" style={{ background: 'linear-gradient(135deg, #0a0a14 0%, #1a1a2e 50%, #0f0f1e 100%)' }}>
-            <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-5">
-              <h1 className="blackjack-title text-2xl font-bold text-white">Blackjack</h1>
-            </div>
-          </nav>
+        <RulesModal isOpen={showRules} onClose={() => setShowRules(false)} />
+        <BlackjackVerification
+          isOpen={showVerification}
+          onClose={() => {
+            setShowVerification(false);
+            setVerificationResult(null);
+          }}
+          verificationResult={verificationResult}
+          onVerify={handleVerify}
+          isVerifying={isVerifying}
+        />
 
-          {/* Game Container with Sidebar Layout */}
-          <div className="relative overflow-hidden rounded-b-lg">
-            <div className="flex flex-col-reverse lg:w-full lg:flex-row">
-              {/* MAIN GAME AREA */}
-              <div className="flex-1 relative" style={{ background: 'linear-gradient(135deg, #0a0a14 0%, #1a1a2e 50%, #0f0f1e 100%)' }}>
-                <div style={{
-                  background: 'linear-gradient(135deg, rgba(26, 26, 46, 0.8) 0%, rgba(15, 15, 30, 0.8) 100%)',
-                  position: 'relative',
-                  border: '2px solid rgba(0, 255, 255, 0.2)',
-                  padding: '0.5rem',
-                  boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
-                  minHeight: '600px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.3rem',
-                }}>
-                  {/* Header with Balance */}
-                  <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      flexShrink: 0,
-                      paddingBottom: '0.25rem',
-                    }}
+        <div className="flex-1 px-0 md:px-5 pb-40 md:pb-0">
+          <div className="mx-auto mt-0 md:mt-5 max-w-xl min-w-[300px] drop-shadow-xl md:mt-10 lg:max-w-6xl md:scale-90 md:origin-top-center">
+            {/* Header */}
+            <nav className="w-full drop-shadow-lg rounded-t-lg overflow-hidden" style={{ background: 'linear-gradient(135deg, #0a0a14 0%, #1a1a2e 50%, #0f0f1e 100%)' }}>
+              <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-5">
+                <h1 className="blackjack-title text-2xl font-bold text-white">Blackjack</h1>
+              </div>
+            </nav>
+
+            {/* Game Container with Sidebar Layout */}
+            <div className="relative overflow-hidden rounded-b-lg">
+              <div className="flex flex-col-reverse lg:w-full lg:flex-row">
+                {/* MAIN GAME AREA */}
+                <div className="flex-1 relative" style={{ background: 'linear-gradient(135deg, #0a0a14 0%, #1a1a2e 50%, #0f0f1e 100%)' }}>
+                  <div style={{
+                    background: 'linear-gradient(135deg, rgba(26, 26, 46, 0.8) 0%, rgba(15, 15, 30, 0.8) 100%)',
+                    position: 'relative',
+                    border: '2px solid rgba(0, 255, 255, 0.2)',
+                    padding: '0.5rem',
+                    boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.3rem',
+                  }}
+                    className="min-h-[50vh] md:min-h-[600px]"
                   >
-                    <div>
-                      <h1 className="blackjack-title" style={{ fontSize: '1.3rem', fontWeight: 'bold', background: 'linear-gradient(135deg, #00ffff, #ffd700)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', margin: '0' }}>
-                        BLACKJACK
-                      </h1>
-                      <p style={{ color: '#cbd5e1', fontSize: '0.65rem', margin: '0' }}>Professional Casino</p>
-                    </div>
-                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ color: '#cbd5e1', fontSize: '0.65rem', fontWeight: '600', textTransform: 'uppercase' }}>Balance</div>
-                        <motion.div
-                          key={gameState.balance}
-                          style={{
-                            fontSize: '1rem',
-                            fontWeight: 'bold',
-                            background: 'linear-gradient(135deg, #00ffff, #ffd700)',
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                            backgroundClip: 'text',
-                          }}
-                          initial={{ scale: 1.1 }}
-                          animate={{ scale: 1 }}
-                          transition={{ duration: 0.3 }}
-                        >
-                          ${gameState.balance.toFixed(2)}
-                        </motion.div>
+                    {/* Header with Balance */}
+                    <motion.div
+                      initial={{ opacity: 0, y: -20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        flexShrink: 0,
+                        paddingBottom: '0.25rem',
+                      }}
+                    >
+                      <div>
+                        <h1 className="blackjack-title" style={{ fontSize: '1.3rem', fontWeight: 'bold', background: 'linear-gradient(135deg, #00ffff, #ffd700)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', margin: '0' }}>
+                          BLACKJACK
+                        </h1>
+                        <p style={{ color: '#cbd5e1', fontSize: '0.65rem', margin: '0' }}>Professional Casino</p>
                       </div>
-                      <motion.button
-                        onClick={() => setShowRules(true)}
-                        style={{
-                          padding: '0.35rem 0.7rem',
-                          background: 'rgba(0, 255, 255, 0.2)',
-                          color: 'white',
-                          fontWeight: '600',
-                          borderRadius: '0.35rem',
-                          border: '1px solid rgba(0, 255, 255, 0.3)',
-                          cursor: 'pointer',
-                          fontSize: '0.75rem',
-                          flexShrink: 0,
-                        }}
-                        whileHover={{ scale: 1.05, background: 'rgba(0, 255, 255, 0.3)' }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        📋 Rules
-                      </motion.button>
-                      <motion.button
-                        onClick={() => setShowVerification(true)}
-                        style={{
-                          padding: '0.35rem 0.7rem',
-                          background: 'rgba(255, 215, 0, 0.2)',
-                          color: 'white',
-                          fontWeight: '600',
-                          borderRadius: '0.35rem',
-                          border: '1px solid rgba(255, 215, 0, 0.3)',
-                          cursor: 'pointer',
-                          fontSize: '0.75rem',
-                          flexShrink: 0,
-                        }}
-                        whileHover={{ scale: 1.05, background: 'rgba(255, 215, 0, 0.3)' }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        ℹ️ Info
-                      </motion.button>
-                    </div>
-                  </motion.div>
-
-                  {/* Game Table */}
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.2 }}
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      borderRadius: '0.5rem',
-                      background: 'linear-gradient(to bottom, rgb(20, 83, 45), rgb(15, 78, 43))',
-                      border: '2px solid #B8860B',
-                      boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-                      padding: '0.4rem',
-                      gap: '0.25rem',
-                      flex: 1,
-                      overflowY: 'auto',
-                      minHeight: 0,
-                      position: 'relative',
-                    }}
-                  >
-                    {/* Win Overlay centered on the table */}
-                    <WinOverlay amount={winAmount} visible={showWinAnimation} />
-                    {/* Dealer */}
-                    <div className="flex flex-col items-center gap-1">
-                      <div className="text-gray-400 text-xs font-semibold uppercase">Dealer</div>
-                      <div className="flex gap-2 items-center justify-center h-24">
-                        <AnimatePresence mode="popLayout">
-                          {gameState.dealerHand.cards.map((card, index) => {
-                            // Hide second card only if it's NOT an ace and we're still in playing/insurance phase
-                            const shouldHideCard = index === 1 && 
-                              (gameState.gamePhase === 'playing' || gameState.gamePhase === 'insurance') &&
-                              card.rank !== 'A';
-                            
-                            return (
-                              <PlayingCard
-                                key={card.id}
-                                card={card}
-                                index={index}
-                                isDealer={true}
-                                isHidden={shouldHideCard}
-                                delay={index * 0.15}
-                              />
-                            );
-                          })}
-                        </AnimatePresence>
-                      </div>
-                      <div className="h-4 flex items-center justify-center">
-                        {gameState.dealerHand.cards.length > 1 && (
-                          <motion.div className="text-gray-400 text-xs font-semibold" initial={{ opacity: 0 }} animate={{ opacity: 1 }} key={gameState.dealerHand.cards.length}>
-                            {(() => {
-                              // If second card is an ace and visible, show full hand value
-                              const holeCard = gameState.dealerHand.cards[1];
-                              const isHoleCardAce = holeCard && holeCard.rank === 'A';
-                              const showFullValue = !(gameState.gamePhase === 'playing' || gameState.gamePhase === 'insurance') || isHoleCardAce;
-                              
-                              return getHandValue(
-                                gameState.dealerHand.cards.slice(0, showFullValue ? gameState.dealerHand.cards.length : 1)
-                              ).value;
-                            })()}
+                      <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ color: '#cbd5e1', fontSize: '0.65rem', fontWeight: '600', textTransform: 'uppercase' }}>Balance</div>
+                          <motion.div
+                            key={gameState.balance}
+                            style={{
+                              fontSize: '1rem',
+                              fontWeight: 'bold',
+                              background: 'linear-gradient(135deg, #00ffff, #ffd700)',
+                              WebkitBackgroundClip: 'text',
+                              WebkitTextFillColor: 'transparent',
+                              backgroundClip: 'text',
+                            }}
+                            initial={{ scale: 1.1 }}
+                            animate={{ scale: 1 }}
+                            transition={{ duration: 0.3 }}
+                          >
+                            ${gameState.balance.toFixed(2)}
                           </motion.div>
+                        </div>
+                        <motion.button
+                          onClick={() => setShowRules(true)}
+                          style={{
+                            padding: '0.35rem 0.7rem',
+                            background: 'rgba(0, 255, 255, 0.2)',
+                            color: 'white',
+                            fontWeight: '600',
+                            borderRadius: '0.35rem',
+                            border: '1px solid rgba(0, 255, 255, 0.3)',
+                            cursor: 'pointer',
+                            fontSize: '0.75rem',
+                            flexShrink: 0,
+                          }}
+                          whileHover={{ scale: 1.05, background: 'rgba(0, 255, 255, 0.3)' }}
+                          whileTap={{ scale: 0.95 }}
+                        >
+                          📋 Rules
+                        </motion.button>
+                        <motion.button
+                          onClick={() => setShowVerification(true)}
+                          style={{
+                            padding: '0.35rem 0.7rem',
+                            background: 'rgba(255, 215, 0, 0.2)',
+                            color: 'white',
+                            fontWeight: '600',
+                            borderRadius: '0.35rem',
+                            border: '1px solid rgba(255, 215, 0, 0.3)',
+                            cursor: 'pointer',
+                            fontSize: '0.75rem',
+                            flexShrink: 0,
+                          }}
+                          whileHover={{ scale: 1.05, background: 'rgba(255, 215, 0, 0.3)' }}
+                          whileTap={{ scale: 0.95 }}
+                        >
+                          ℹ️ Info
+                        </motion.button>
+                      </div>
+                    </motion.div>
+
+                    {/* Game Table */}
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.2 }}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        borderRadius: '0.5rem',
+                        background: 'linear-gradient(to bottom, rgb(20, 83, 45), rgb(15, 78, 43))',
+                        border: '2px solid #B8860B',
+                        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+                        padding: '0.4rem',
+                        gap: '0.25rem',
+                        flex: 1,
+                        overflowY: 'auto',
+                        minHeight: 0,
+                        position: 'relative',
+                      }}
+                    >
+                      {/* Win Overlay centered on the table */}
+                      <WinOverlay amount={winAmount} visible={showWinAnimation} />
+                      {/* Dealer */}
+                      <div className="flex flex-col items-center gap-1">
+                        <div className="text-gray-400 text-xs font-semibold uppercase">Dealer</div>
+                        <div className="flex gap-2 items-center justify-center h-24">
+                          <AnimatePresence mode="popLayout">
+                            {gameState.dealerHand.cards.map((card, index) => {
+                              // Hide second card only if it's NOT an ace and we're still in playing/insurance phase
+                              const shouldHideCard = index === 1 &&
+                                (gameState.gamePhase === 'playing' || gameState.gamePhase === 'insurance') &&
+                                card.rank !== 'A';
+
+                              return (
+                                <PlayingCard
+                                  key={card.id}
+                                  card={card}
+                                  index={index}
+                                  isDealer={true}
+                                  isHidden={shouldHideCard}
+                                  delay={index * 0.15}
+                                />
+                              );
+                            })}
+                          </AnimatePresence>
+                        </div>
+                        <div className="h-4 flex items-center justify-center">
+                          {gameState.dealerHand.cards.length > 1 && (
+                            <motion.div className="text-gray-400 text-xs font-semibold" initial={{ opacity: 0 }} animate={{ opacity: 1 }} key={gameState.dealerHand.cards.length}>
+                              {(() => {
+                                // If second card is an ace and visible, show full hand value
+                                const holeCard = gameState.dealerHand.cards[1];
+                                const isHoleCardAce = holeCard && holeCard.rank === 'A';
+                                const showFullValue = !(gameState.gamePhase === 'playing' || gameState.gamePhase === 'insurance') || isHoleCardAce;
+
+                                return getHandValue(
+                                  gameState.dealerHand.cards.slice(0, showFullValue ? gameState.dealerHand.cards.length : 1)
+                                ).value;
+                              })()}
+                            </motion.div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Table Center - Insurance Prompt */}
+                      <div className="flex-1 flex items-center justify-center min-h-0" style={{ position: 'relative' }}>
+                        {gameState.gamePhase === 'insurance' ? (
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="bg-blue-900 border-2 border-blue-400 rounded-lg p-3"
+                          >
+                            <div className="text-white font-bold mb-3 text-sm text-center">Dealer shows Ace - Insurance offered (2:1)</div>
+                            <div className="flex gap-3">
+                              <motion.button
+                                onClick={() => gameState.takeInsurance()}
+                                className="py-2 px-4 bg-green-600 hover:bg-green-500 text-white font-bold text-sm rounded-lg transition-colors"
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                              >
+                                Yes
+                              </motion.button>
+                              <motion.button
+                                onClick={() => gameState.declineInsurance()}
+                                className="py-2 px-4 bg-gray-600 hover:bg-gray-500 text-white font-bold text-sm rounded-lg transition-colors"
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                              >
+                                Decline
+                              </motion.button>
+                            </div>
+                          </motion.div>
+                        ) : (
+                          <div className="text-gray-600 text-center">
+                            <div className="text-2xl opacity-20">♠ ♥ ♣ ♦</div>
+                          </div>
                         )}
                       </div>
-                    </div>
 
-                    {/* Table Center - Insurance Prompt */}
-                    <div className="flex-1 flex items-center justify-center min-h-0" style={{ position: 'relative' }}>
-                      {gameState.gamePhase === 'insurance' ? (
-                        <motion.div
-                          initial={{ opacity: 0, scale: 0.9 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          className="bg-blue-900 border-2 border-blue-400 rounded-lg p-3"
-                        >
-                          <div className="text-white font-bold mb-3 text-sm text-center">Dealer shows Ace - Insurance offered (2:1)</div>
-                          <div className="flex gap-3">
-                            <motion.button
-                              onClick={() => gameState.takeInsurance()}
-                              className="py-2 px-4 bg-green-600 hover:bg-green-500 text-white font-bold text-sm rounded-lg transition-colors"
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                            >
-                              Yes
-                            </motion.button>
-                            <motion.button
-                              onClick={() => gameState.declineInsurance()}
-                              className="py-2 px-4 bg-gray-600 hover:bg-gray-500 text-white font-bold text-sm rounded-lg transition-colors"
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                            >
-                              Decline
-                            </motion.button>
+                      {/* Player Hands */}
+                      <div className="flex flex-col items-center gap-1 min-h-[140px] justify-center mb-16">
+                        <div className="text-gray-400 text-xs font-semibold uppercase">Your Hands</div>
+                        {gameState.playerHands.length === 0 ? (
+                          <div className="text-center text-gray-500 text-xs flex items-center justify-center h-24"><p>Place a bet and click Deal</p></div>
+                        ) : (
+                          <div className="flex gap-3 justify-center flex-wrap h-24 items-end">
+                            {gameState.playerHands.map((hand, index) => {
+                              const handValue = getHandValue(hand.cards).value;
+                              return (
+                                <motion.div key={index} layout initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center gap-1">
+                                  <div className="text-gray-400 text-xs font-semibold">{handValue}</div>
+                                  <HandDisplay
+                                    cards={hand.cards}
+                                    label={`Hand ${gameState.playerHands.length > 1 ? index + 1 : ''}`}
+                                    isCurrent={index === gameState.currentHandIndex}
+                                    canAct={index === gameState.currentHandIndex && gameState.gamePhase === 'playing'}
+                                  />
+                                </motion.div>
+                              );
+                            })}
                           </div>
-                        </motion.div>
-                      ) : (
-                        <div className="text-gray-600 text-center">
-                          <div className="text-2xl opacity-20">♠ ♥ ♣ ♦</div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Player Hands */}
-                    <div className="flex flex-col items-center gap-1 min-h-[140px] justify-center mb-16">
-                      <div className="text-gray-400 text-xs font-semibold uppercase">Your Hands</div>
-                      {gameState.playerHands.length === 0 ? (
-                        <div className="text-center text-gray-500 text-xs flex items-center justify-center h-24"><p>Place a bet and click Deal</p></div>
-                      ) : (
-                        <div className="flex gap-3 justify-center flex-wrap h-24 items-end">
-                          {gameState.playerHands.map((hand, index) => {
-                            const handValue = getHandValue(hand.cards).value;
-                            return (
-                              <motion.div key={index} layout initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center gap-1">
-                                <div className="text-gray-400 text-xs font-semibold">{handValue}</div>
-                                <HandDisplay
-                                  cards={hand.cards}
-                                  label={`Hand ${gameState.playerHands.length > 1 ? index + 1 : ''}`}
-                                  isCurrent={index === gameState.currentHandIndex}
-                                  canAct={index === gameState.currentHandIndex && gameState.gamePhase === 'playing'}
-                                />
-                              </motion.div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Betting Area Display */}
-                    <div className="px-2 pb-2">
-                      <BettingArea
-                        mainBet={gameState.playerHands[0]?.bet || 0}
-                        perfectPairsBet={gameState.playerHands[0]?.sideBets.perfectPairs || 0}
-                        twentyPlusThreeBet={gameState.playerHands[0]?.sideBets.twentyPlusThree || 0}
-                        blazingSevensBet={gameState.playerHands[0]?.sideBets.blazingSevens || 0}
-                selectedChip={null}
-                currentMode={gameState.betPlacementMode}
-                onSelectMode={(mode) => gameState.setBetMode(mode)}
-                onPlaceBet={() => {}}
-                        onDeal={() => {}}
-                        gamePhase={gameState.gamePhase}
-                        hasPlayerHand={gameState.playerHands.length > 0}
-                        lastRoundResult={gameState.roundResults[0] || null}
-                        currentDealRatios={gameState.currentDealRatios}
-                      />
-                    </div>
-
-                    {/* Game Action Buttons Below Betting Area */}
-                    <div className="px-2 py-2 h-14 flex items-center justify-center">
-                      {gameState.gamePhase === 'playing' && (
-                        <PlayingActionButtons
-                          canHit={canHit}
-                          canStand={true}
-                          canDouble={canDouble}
-                          canSplit={canSplitHand}
-                          onHit={() => gameState.hit()}
-                          onStand={() => gameState.stand()}
-                          onDouble={() => gameState.doubleDown()}
-                          onSplit={() => gameState.split()}
-                        />
-                      )}
-                    </div>
-                  </motion.div>
-                </div>
-              </div>
-
-              {/* SIDEBAR */}
-              <aside style={{ width: '320px', background: 'linear-gradient(135deg, #0a0a14 0%, #1a1a2e 50%, #0f0f1e 100%)' }} className="p-4">
-                <BlackjackBetBar
-                  betAmount={gameState.betAmount}
-                  onBetAmountChange={(amount) => gameState.setBetAmount(amount)}
-                  balance={gameState.balance}
-                  disabled={gameState.gamePhase !== 'betting'}
-                  currentMode={gameState.betPlacementMode}
-                  onModeChange={(mode) => gameState.setBetMode(mode)}
-                />
-                
-                {/* Action Buttons */}
-                <div className="flex flex-col gap-2 mt-4">
-                  {gameState.gamePhase === 'betting' ? (
-                    <>
-                      <motion.button
-                        onClick={() => gameState.placeBet()}
-                        disabled={gameState.betAmount <= 0 || gameState.betAmount > gameState.balance || !gameState.betPlacementMode}
-                        className="w-full py-3 px-4 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded transition-colors"
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        Place Bet
-                      </motion.button>
-                      <div className="flex gap-2">
-                        <motion.button
-                          onClick={() => gameState.undoBet()}
-                          disabled={gameState.playerHands[0]?.betPlacementOrder.length === 0}
-                          className="flex-1 py-2 px-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded transition-colors"
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                          title="Remove last placed bet"
-                        >
-                          ↶ Undo
-                        </motion.button>
-                        <motion.button
-                          onClick={() => gameState.clearBets()}
-                          disabled={gameState.playerHands[0]?.bet === 0 && gameState.playerHands[0]?.sideBets.perfectPairs === 0}
-                          className="flex-1 py-2 px-4 bg-gray-600 hover:bg-gray-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded transition-colors"
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          Clear
-                        </motion.button>
+                        )}
                       </div>
-                      <motion.button
-                        onClick={handleDeal}
-                        disabled={!gameState.playerHands[0]?.bet || gameState.playerHands[0]?.bet === 0}
-                        className="w-full py-3 px-4 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded transition-colors"
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        Deal
-                      </motion.button>
-                    </>
-                  ) : gameState.gamePhase === 'gameOver' ? (
-                    <>
-                      <motion.button
-                        onClick={handleNextRound}
-                        className="w-full py-3 px-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold rounded transition-colors"
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        Next Round
-                      </motion.button>
-                      <motion.button
-                        onClick={() => {
-                          gameState.resetGame();
-                          setTimeout(() => {
-                            gameState.redoBet();
-                            setTimeout(() => handleDeal(), 100);
-                          }, 50);
-                        }}
-                        disabled={!(gameState.lastBets && (gameState.lastBets.mainBet > 0 || gameState.lastBets.perfectPairs > 0 || gameState.lastBets.twentyPlusThree > 0 || gameState.lastBets.blazingSevens > 0))}
-                        className="w-full py-3 px-4 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded transition-colors"
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        title="Place previous round's bets and deal"
-                      >
-                        ↻ Redo Bet + Deal
-                      </motion.button>
-                    </>
-                  ) : null}
+
+                      {/* Betting Area Display */}
+                      <div className="px-2 pb-2">
+                        <BettingArea
+                          mainBet={gameState.playerHands[0]?.bet || 0}
+                          perfectPairsBet={gameState.playerHands[0]?.sideBets.perfectPairs || 0}
+                          twentyPlusThreeBet={gameState.playerHands[0]?.sideBets.twentyPlusThree || 0}
+                          blazingSevensBet={gameState.playerHands[0]?.sideBets.blazingSevens || 0}
+                          selectedChip={null}
+                          currentMode={gameState.betPlacementMode}
+                          onSelectMode={(mode) => gameState.setBetMode(mode)}
+                          onPlaceBet={() => { }}
+                          onDeal={() => { }}
+                          gamePhase={gameState.gamePhase}
+                          hasPlayerHand={gameState.playerHands.length > 0}
+                          lastRoundResult={gameState.roundResults[0] || null}
+                          currentDealRatios={gameState.currentDealRatios}
+                        />
+                      </div>
+
+                      {/* Game Action Buttons Below Betting Area */}
+                      <div className="px-2 py-2 h-14 flex items-center justify-center">
+                        {gameState.gamePhase === 'playing' && (
+                          <PlayingActionButtons
+                            canHit={canHit}
+                            canStand={true}
+                            canDouble={canDouble}
+                            canSplit={canSplitHand}
+                            onHit={() => gameState.hit()}
+                            onStand={() => gameState.stand()}
+                            onDouble={() => gameState.doubleDown()}
+                            onSplit={() => gameState.split()}
+                          />
+                        )}
+                      </div>
+                    </motion.div>
+                  </div>
                 </div>
 
-                {/* Streak Indicator */}
-                <div className="mt-4 flex justify-center">
-                  <AnimatePresence>
-                    <StreakIndicator
-                      streakCount={gameState.streakCount}
-                      streakType={gameState.streakType}
+                {/* SIDEBAR */}
+                <aside
+                  className="fixed bottom-0 left-0 right-0 z-40 p-4 md:static md:w-[320px] md:p-4 border-t border-white/10 md:border-none flex flex-col"
+                  style={{
+                    background: 'linear-gradient(135deg, #0a0a14 0%, #1a1a2e 50%, #0f0f1e 100%)',
+                    boxShadow: '0 -4px 20px rgba(0,0,0,0.5)'
+                  }}
+                >
+                  <div className="order-2 md:order-first">
+                    <BlackjackBetBar
+                      betAmount={gameState.betAmount}
+                      onBetAmountChange={(amount) => gameState.setBetAmount(amount)}
+                      balance={gameState.balance}
+                      disabled={gameState.gamePhase !== 'betting'}
+                      currentMode={gameState.betPlacementMode}
+                      onModeChange={(mode) => gameState.setBetMode(mode)}
                     />
-                  </AnimatePresence>
-                </div>
-              </aside>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex flex-col gap-2 mt-4 order-1 md:order-last md:mt-4 mb-4 md:mb-0">
+                    {gameState.gamePhase === 'betting' ? (
+                      <>
+                        <motion.button
+                          onClick={() => gameState.placeBet()}
+                          disabled={gameState.betAmount <= 0 || gameState.betAmount > gameState.balance || !gameState.betPlacementMode}
+                          className="w-full py-3 px-4 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded transition-colors"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          Place Bet
+                        </motion.button>
+                        <div className="flex gap-2">
+                          <motion.button
+                            onClick={() => gameState.undoBet()}
+                            disabled={gameState.playerHands[0]?.betPlacementOrder.length === 0}
+                            className="flex-1 py-2 px-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded transition-colors"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            title="Remove last placed bet"
+                          >
+                            ↶ Undo
+                          </motion.button>
+                          <motion.button
+                            onClick={() => gameState.clearBets()}
+                            disabled={gameState.playerHands[0]?.bet === 0 && gameState.playerHands[0]?.sideBets.perfectPairs === 0}
+                            className="flex-1 py-2 px-4 bg-gray-600 hover:bg-gray-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded transition-colors"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            Clear
+                          </motion.button>
+                        </div>
+                        <motion.button
+                          onClick={handleDeal}
+                          disabled={!gameState.playerHands[0]?.bet || gameState.playerHands[0]?.bet === 0}
+                          className="w-full py-3 px-4 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded transition-colors"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          Deal
+                        </motion.button>
+                      </>
+                    ) : gameState.gamePhase === 'gameOver' ? (
+                      <>
+                        <motion.button
+                          onClick={handleNextRound}
+                          className="w-full py-3 px-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold rounded transition-colors"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          Next Round
+                        </motion.button>
+                        <motion.button
+                          onClick={() => {
+                            gameState.resetGame();
+                            setTimeout(() => {
+                              gameState.redoBet();
+                              setTimeout(() => handleDeal(), 100);
+                            }, 50);
+                          }}
+                          disabled={!(gameState.lastBets && (gameState.lastBets.mainBet > 0 || gameState.lastBets.perfectPairs > 0 || gameState.lastBets.twentyPlusThree > 0 || gameState.lastBets.blazingSevens > 0))}
+                          className="w-full py-3 px-4 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded transition-colors"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          title="Place previous round's bets and deal"
+                        >
+                          ↻ Redo Bet + Deal
+                        </motion.button>
+                      </>
+                    ) : null}
+                  </div>
+
+                  {/* Streak Indicator */}
+                  <div className="mt-4 flex justify-center order-3">
+                    <AnimatePresence>
+                      <StreakIndicator
+                        streakCount={gameState.streakCount}
+                        streakType={gameState.streakType}
+                      />
+                    </AnimatePresence>
+                  </div>
+                </aside>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Blackjack Leaderboard */}
-      <div className="mx-auto mt-10 max-w-7xl px-5">
-        <BlackjackLeaderboard />
-      </div>
-
-      {/* Live Games Feed */}
-      <div className="mx-auto mt-10 max-w-7xl px-5 mb-10">
-        <div style={{
-          background: 'rgba(11, 11, 11, 0.8)',
-          border: '1px solid rgba(0, 255, 255, 0.1)',
-          borderRadius: '16px',
-          padding: '24px'
-        }}>
-          <LiveGamesFeed maxGames={10} />
+        {/* Blackjack Leaderboard */}
+        <div className="mx-auto mt-10 max-w-7xl px-5">
+          <BlackjackLeaderboard />
         </div>
-      </div>
+
+        {/* Live Games Feed */}
+        <div className="mx-auto mt-10 max-w-7xl px-5 mb-10">
+          <div style={{
+            background: 'rgba(11, 11, 11, 0.8)',
+            border: '1px solid rgba(0, 255, 255, 0.1)',
+            borderRadius: '16px',
+            padding: '24px'
+          }}>
+            <LiveGamesFeed maxGames={10} />
+          </div>
+        </div>
       </div>
     </>
   );

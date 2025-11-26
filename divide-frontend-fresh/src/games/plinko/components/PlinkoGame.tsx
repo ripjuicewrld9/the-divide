@@ -11,13 +11,18 @@ import LastWins from './LastWins';
 import PlinkoHUD from './PlinkoHUD';
 import LiveGamesFeed from '../../../components/LiveGamesFeed';
 import PlinkoLeaderboard from '../../../components/PlinkoLeaderboard';
+import MobileGameHeader from '../../../components/MobileGameHeader';
 import { loadRecordingsFromStorage, loadRecordingsFromDatabase, saveRecordingsToStorage, saveRecordingsToDatabase, serializeRecordings } from '../utils/recordingManager';
 
 // Animation mode selection
 const USE_PATH_ANIMATION = true;   // Path-based (refined physics)
 const USE_PLAYBACK = false;        // Recorded physics playback
 
-export const PlinkoGame: React.FC = () => {
+interface PlinkoGameProps {
+  onOpenChat?: () => void;
+}
+
+export const PlinkoGame: React.FC<PlinkoGameProps> = ({ onOpenChat }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<PlinkoEngine | PlinkoPathEngine | PlinkoPlaybackEngine | null>(null);
   const autoBetIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -28,7 +33,7 @@ export const PlinkoGame: React.FC = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingProgress, setRecordingProgress] = useState({ current: 0, total: 0 });
   const [autoGenerating, setAutoGenerating] = useState(false);
-  
+
   const MAX_CONCURRENT_BALLS = 10; // Limit concurrent balls to prevent overload
   const MIN_DROP_INTERVAL = 100; // Minimum 100ms between drops
 
@@ -64,14 +69,14 @@ export const PlinkoGame: React.FC = () => {
 
     if (USE_PLAYBACK) {
       engine = new PlinkoPlaybackEngine(canvasRef.current, rowCount as RowCount);
-      
+
       // Try to load recordings
       const loadRecordings = async () => {
         console.log(`🔍 Checking database for ${rowCount}-row recordings...`);
-        
+
         // Try database first
         let recordings = await loadRecordingsFromDatabase(rowCount);
-        
+
         if (recordings && engine instanceof PlinkoPlaybackEngine) {
           engine.loadRecordings(recordings);
           setRecordingsLoaded(true);
@@ -79,29 +84,29 @@ export const PlinkoGame: React.FC = () => {
         } else {
           console.log(`⚠️ No recordings in database for ${rowCount} rows. Generating...`);
           setRecordingsLoaded(false);
-          
+
           // Auto-generate if not found
           setAutoGenerating(true);
           try {
             const recorder = new PlinkoRecorder(rowCount as RowCount);
             const numBins = rowCount + 1;
-            
+
             for (let binIndex = 0; binIndex < numBins; binIndex++) {
               setRecordingProgress({ current: binIndex, total: numBins });
               await recorder.recordBin(binIndex, undefined, true);
             }
-            
+
             setRecordingProgress({ current: numBins, total: numBins });
             const newRecordings = recorder.getAllRecordings();
-            
+
             // Save to database
             await saveRecordingsToDatabase(rowCount, newRecordings);
-            
+
             if (engine instanceof PlinkoPlaybackEngine) {
               engine.loadRecordings(newRecordings);
               setRecordingsLoaded(true);
             }
-            
+
             console.log(`✅ Generated and saved ${rowCount}-row recordings to database`);
           } catch (error) {
             console.error('Auto-generation failed:', error);
@@ -119,22 +124,22 @@ export const PlinkoGame: React.FC = () => {
       engine = new PlinkoEngine(canvasRef.current, rowCount as RowCount, riskLevel);
       setRecordingsLoaded(true);  // Physics mode doesn't need recordings
     }
-      
+
     engine.setOnBallInBin((binIndex, betAmount, gameResult) => {
-      
+
       // Ball landed - use the game result passed with the ball, not from a ref
       if (gameResult) {
         // balanceAfter from API is already in dollars
         let newBalanceInDollars = gameResult.balanceAfter ?? 0;
-        
+
         // Ensure it's a valid number
         if (typeof newBalanceInDollars !== 'number' || isNaN(newBalanceInDollars)) {
           newBalanceInDollars = 0;
         }
-        
+
         // Update balance with the authoritative balance from backend (already in dollars)
         setBalance(newBalanceInDollars);
-        
+
         // Add win record for visual feedback
         addWinRecord({
           id: Math.random().toString(),
@@ -180,7 +185,7 @@ export const PlinkoGame: React.FC = () => {
       if (engineRef.current && 'balls' in engineRef.current) {
         const engine = engineRef.current as any;
         const activeBalls = engine.balls?.size || 0;
-        
+
         // Just log if there are many balls for debugging
         if (activeBalls > MAX_CONCURRENT_BALLS) {
           console.warn(`[Plinko] High ball count detected: ${activeBalls}`);
@@ -200,39 +205,39 @@ export const PlinkoGame: React.FC = () => {
       }
       return 0;
     };
-    
+
     // Throttle: prevent spam by limiting concurrent balls and enforcing minimum interval
     const now = Date.now();
     const currentActiveBalls = getActiveBallCount();
-    
+
     if (currentActiveBalls >= MAX_CONCURRENT_BALLS) {
       return; // Too many balls in flight
     }
     if (now - lastDropTimeRef.current < MIN_DROP_INTERVAL) {
       return; // Dropping too fast
     }
-    
+
     // Only check bet validity
     if (betAmount <= 0 || isRecording) {
       return;
     }
-    
+
     // Check balance at time of click - ensure it's a number
     const currentBalance = typeof balance === 'number' ? balance : 0;
     if (betAmount > currentBalance) {
       return;
     }
-    
+
     // Update throttle tracking
     lastDropTimeRef.current = now;
-    
+
     try {
       lastBetAmountRef.current = betAmount;
-      
+
       // Deduct bet immediately from display balance
       const currentBalance = typeof balance === 'number' && !isNaN(balance) ? balance : 0;
       setBalance(Math.max(0, currentBalance - betAmount));
-      
+
       // Get token from localStorage
       const token = localStorage.getItem('token');
       if (!token) {
@@ -267,7 +272,7 @@ export const PlinkoGame: React.FC = () => {
       }
 
       const result = await response.json();
-      
+
       // Increment nonce in localStorage to match backend
       try {
         const currentNonce = localStorage.getItem('plinko_nonce');
@@ -276,22 +281,22 @@ export const PlinkoGame: React.FC = () => {
       } catch (err) {
         console.error('[Plinko] Error incrementing nonce:', err);
       }
-      
+
       // Ensure profit is always a valid number
       if (typeof result.profit !== 'number' || isNaN(result.profit)) {
         const payout = typeof result.payout === 'number' ? result.payout : 0;
         const betAmt = typeof result.betAmount === 'number' ? result.betAmount : betAmount;
         result.profit = payout - betAmt;
       }
-      
+
       // Ensure profit is still a valid number
       if (typeof result.profit !== 'number' || isNaN(result.profit)) {
         result.profit = 0;
       }
-      
+
       // Store result to be applied when ball lands in bin
       // (no need to store in ref anymore - it's passed with the ball)
-      
+
       // Drop ball with the result from backend
       if (engineRef.current) {
         const ballCreated = engineRef.current.dropBall(betAmount, result.binIndex, result);
@@ -333,35 +338,35 @@ export const PlinkoGame: React.FC = () => {
   // Record physics simulations
   const handleRecordPhysics = async () => {
     if (isRecording) return;
-    
+
     setIsRecording(true);
     console.log('🎬 Starting physics recording...');
-    
+
     try {
       const recorder = new PlinkoRecorder(rowCount as RowCount);
       const numBins = rowCount + 1;
-      
+
       let completedBins = 0;
       for (let binIndex = 0; binIndex < numBins; binIndex++) {
         console.log(`Recording bin ${binIndex + 1}/${numBins}...`);
         setRecordingProgress({ current: completedBins, total: numBins });
-        
+
         await recorder.recordBin(binIndex);
         completedBins++;
       }
-      
+
       setRecordingProgress({ current: numBins, total: numBins });
-      
+
       // Save recordings
       const recordings = recorder.getAllRecordings();
       saveRecordingsToStorage(recordings);
-      
+
       // Load into current engine
       if (engineRef.current && engineRef.current instanceof PlinkoPlaybackEngine) {
         engineRef.current.loadRecordings(recordings);
         setRecordingsLoaded(true);
       }
-      
+
       console.log('✅ Recording complete!');
       alert(`✅ Successfully recorded physics simulations!\n\nYou can now play with real physics animations.`);
     } catch (error) {
@@ -377,81 +382,86 @@ export const PlinkoGame: React.FC = () => {
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 600;
   return (
     <div
-        className={isMobile ? 'relative flex min-h-dvh w-full flex-col bg-gradient-to-b from-gray-900 to-gray-800' : 'relative flex min-h-dvh w-full flex-col'}
-        style={isMobile ? {} : { background: 'linear-gradient(135deg, #0a0a14 0%, #1a1a2e 50%, #0f0f1e 100%)' }}
-      >
-        <div className={isMobile ? 'flex-1 px-2 py-2' : 'flex-1 px-5'}>
-          {/* ...existing code... */}
-          <div className="mx-auto mt-5 max-w-xl min-w-[300px] drop-shadow-xl md:mt-10 lg:max-w-6xl" style={{ transform: 'scale(0.9)', transformOrigin: 'top center' }}>
-            <nav className="w-full drop-shadow-lg rounded-t-lg overflow-hidden" style={{ background: 'linear-gradient(135deg, #0a0a14 0%, #1a1a2e 50%, #0f0f1e 100%)' }}>
-              <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-5">
-                <h1 className="text-2xl font-bold text-white">Plinko</h1>
-              </div>
-            </nav>
-            <div className="relative overflow-hidden rounded-b-lg">
-              <div className={isMobile ? 'flex flex-col w-full gap-6' : 'flex flex-col-reverse lg:w-full lg:flex-row'}>
-                {/* Plinko Game Component */}
-                <div className={isMobile ? 'w-full relative bg-gradient-to-b from-gray-900 to-gray-800 rounded-xl shadow-lg p-2' : 'flex-1 relative'} style={isMobile ? {} : { background: 'linear-gradient(135deg, #0a0a14 0%, #1a1a2e 50%, #0f0f1e 100%)' }}>
-                  <div className={isMobile ? 'mx-auto flex h-full flex-col px-1 pb-2' : 'mx-auto flex h-full flex-col px-4 pb-4'} style={{ maxWidth: '760px' }}>
-                    {/* HUD Bar */}
-                    <PlinkoHUD balance={balance} message="Drop a ball to play" />
-                    <div className={isMobile ? 'relative w-full' : 'relative w-full'} style={isMobile ? { aspectRatio: '760 / 570', minHeight: 220 } : { aspectRatio: '760 / 570' }}>
-                      <canvas
-                        ref={canvasRef}
-                        width={760}
-                        height={570}
-                        className="absolute inset-0 h-full w-full"
-                      />
-                    </div>
-                    <BinsRow rowCount={rowCount} riskLevel={riskLevel} binsWidthPercentage={binsWidthPercentage} />
-                  </div>
-                </div>
-                {/* Sidebar below game on mobile, right on desktop */}
-                <div className={isMobile ? 'w-full' : ''}>
-                  <Sidebar
-                    betAmount={betAmount}
-                    onBetAmountChange={setBetAmount}
-                    betMode={betMode}
-                    onBetModeChange={setBetMode}
-                    riskLevel={riskLevel}
-                    onRiskLevelChange={setRiskLevel}
-                    rowCount={rowCount}
-                    onRowCountChange={setRowCount}
-                    autoBetCount={autoBetCount}
-                    onAutoBetCountChange={setAutoBetCount}
-                    isAutoRunning={isAutoRunning}
-                    onDropBall={handleDropBall}
-                    onAutobet={handleAutobet}
-                    balance={balance}
-                    disabled={isAutoRunning}
-                  />
-                </div>
-              </div>
+      className={isMobile ? 'relative flex min-h-dvh w-full flex-col bg-gradient-to-b from-gray-900 to-gray-800' : 'relative flex min-h-dvh w-full flex-col'}
+      style={isMobile ? {} : { background: 'linear-gradient(135deg, #0a0a14 0%, #1a1a2e 50%, #0f0f1e 100%)' }}
+    >
+      {/* Mobile Header - only shows on mobile */}
+      <div className="md:hidden">
+        <MobileGameHeader title="Plinko" onOpenChat={onOpenChat} />
+      </div>
+
+      <div className={isMobile ? 'flex-1 px-2 py-2 pb-20' : 'flex-1 px-5'}>
+        {/* ...existing code... */}
+        <div className="mx-auto mt-5 max-w-xl min-w-[300px] drop-shadow-xl md:mt-10 lg:max-w-6xl" style={{ transform: 'scale(0.9)', transformOrigin: 'top center' }}>
+          <nav className="w-full drop-shadow-lg rounded-t-lg overflow-hidden" style={{ background: 'linear-gradient(135deg, #0a0a14 0%, #1a1a2e 50%, #0f0f1e 100%)' }}>
+            <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-5">
+              <h1 className="text-2xl font-bold text-white">Plinko</h1>
             </div>
-          </div>
-          {/* Plinko Leaderboard */}
-          <div className="mx-auto mt-10 max-w-xl min-w-[300px] lg:max-w-7xl">
-            <PlinkoLeaderboard />
-          </div>
-          {/* Live Games Feed */}
-          <div className="mx-auto mt-10 max-w-xl min-w-[300px] lg:max-w-7xl">
-            <div style={{
-              background: 'rgba(11, 11, 11, 0.8)',
-              border: '1px solid rgba(0, 255, 255, 0.1)',
-              borderRadius: '16px',
-              padding: '24px'
-            }}>
-              <LiveGamesFeed maxGames={10} />
+          </nav>
+          <div className="relative overflow-hidden rounded-b-lg">
+            <div className={isMobile ? 'flex flex-col w-full gap-6' : 'flex flex-col-reverse lg:w-full lg:flex-row'}>
+              {/* Plinko Game Component */}
+              <div className={isMobile ? 'w-full relative bg-gradient-to-b from-gray-900 to-gray-800 rounded-xl shadow-lg p-2' : 'flex-1 relative'} style={isMobile ? {} : { background: 'linear-gradient(135deg, #0a0a14 0%, #1a1a2e 50%, #0f0f1e 100%)' }}>
+                <div className={isMobile ? 'mx-auto flex h-full flex-col px-1 pb-2' : 'mx-auto flex h-full flex-col px-4 pb-4'} style={{ maxWidth: '760px' }}>
+                  {/* HUD Bar */}
+                  <PlinkoHUD balance={balance} message="Drop a ball to play" />
+                  <div className={isMobile ? 'relative w-full' : 'relative w-full'} style={isMobile ? { aspectRatio: '760 / 570', minHeight: 220 } : { aspectRatio: '760 / 570' }}>
+                    <canvas
+                      ref={canvasRef}
+                      width={760}
+                      height={570}
+                      className="absolute inset-0 h-full w-full"
+                    />
+                  </div>
+                  <BinsRow rowCount={rowCount} riskLevel={riskLevel} binsWidthPercentage={binsWidthPercentage} />
+                </div>
+              </div>
+              {/* Sidebar below game on mobile, right on desktop */}
+              <div className={isMobile ? 'w-full' : ''}>
+                <Sidebar
+                  betAmount={betAmount}
+                  onBetAmountChange={setBetAmount}
+                  betMode={betMode}
+                  onBetModeChange={setBetMode}
+                  riskLevel={riskLevel}
+                  onRiskLevelChange={setRiskLevel}
+                  rowCount={rowCount}
+                  onRowCountChange={setRowCount}
+                  autoBetCount={autoBetCount}
+                  onAutoBetCountChange={setAutoBetCount}
+                  isAutoRunning={isAutoRunning}
+                  onDropBall={handleDropBall}
+                  onAutobet={handleAutobet}
+                  balance={balance}
+                  disabled={isAutoRunning}
+                />
+              </div>
             </div>
           </div>
         </div>
-        {/* Desktop-only: LastWins floating panel */}
-        {!isMobile && (
-          <div className="absolute top-[15%] left-[5%]">
-            <LastWins />
+        {/* Plinko Leaderboard */}
+        <div className="mx-auto mt-10 max-w-xl min-w-[300px] lg:max-w-7xl">
+          <PlinkoLeaderboard />
+        </div>
+        {/* Live Games Feed */}
+        <div className="mx-auto mt-10 max-w-xl min-w-[300px] lg:max-w-7xl">
+          <div style={{
+            background: 'rgba(11, 11, 11, 0.8)',
+            border: '1px solid rgba(0, 255, 255, 0.1)',
+            borderRadius: '16px',
+            padding: '24px'
+          }}>
+            <LiveGamesFeed maxGames={10} />
           </div>
-        )}
+        </div>
       </div>
+      {/* Desktop-only: LastWins floating panel */}
+      {!isMobile && (
+        <div className="absolute top-[15%] left-[5%]">
+          <LastWins />
+        </div>
+      )}
+    </div>
   );
 };
 

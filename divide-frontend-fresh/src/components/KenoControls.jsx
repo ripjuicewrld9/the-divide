@@ -51,7 +51,7 @@ export default function KenoControls({ betAmount, setBetAmount, risk, setRisk, o
       <div
         className={
           isMobile
-            ? 'flex gap-2 rounded-full p-2 bg-black/40'
+            ? 'order-3 flex gap-2 rounded-full p-2 bg-black/40'
             : 'flex gap-1 rounded-full p-1'
         }
         style={isMobile ? {} : { background: 'rgba(0, 0, 0, 0.5)' }}
@@ -63,12 +63,10 @@ export default function KenoControls({ betAmount, setBetAmount, risk, setRisk, o
             disabled={autoRunning || isDrawing}
             className={
               isMobile
-                ? `flex-1 rounded-full py-4 text-base font-bold transition ${
-                    betMode === mode ? 'bg-cyan-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-cyan-700'
-                  } ${autoRunning || isDrawing ? 'opacity-50 cursor-not-allowed' : ''}`
-                : `flex-1 rounded-full py-2 text-sm font-medium transition ${
-                    betMode === mode ? 'text-white' : 'text-slate-400 hover:text-white'
-                  } ${autoRunning || isDrawing ? 'opacity-50 cursor-not-allowed' : ''}`
+                ? `flex-1 rounded-full py-4 text-base font-bold transition ${betMode === mode ? 'bg-cyan-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-cyan-700'
+                } ${autoRunning || isDrawing ? 'opacity-50 cursor-not-allowed' : ''}`
+                : `flex-1 rounded-full py-2 text-sm font-medium transition ${betMode === mode ? 'text-white' : 'text-slate-400 hover:text-white'
+                } ${autoRunning || isDrawing ? 'opacity-50 cursor-not-allowed' : ''}`
             }
             style={
               betMode === mode
@@ -84,7 +82,7 @@ export default function KenoControls({ betAmount, setBetAmount, risk, setRisk, o
       </div>
 
       {/* Bet Amount */}
-      <div>
+      <div className={isMobile ? 'order-2' : ''}>
         <label className={isMobile ? 'text-lg font-bold text-cyan-300 mb-2 block' : 'text-sm font-medium text-slate-300'}>
           Bet Amount (${betAmount.toFixed(2)})
         </label>
@@ -122,7 +120,7 @@ export default function KenoControls({ betAmount, setBetAmount, risk, setRisk, o
       </div>
 
       {/* Risk Level */}
-      <div>
+      <div className={isMobile ? 'order-4' : ''}>
         <label className={isMobile ? 'text-lg font-bold text-cyan-300 mb-2 block' : 'text-sm font-medium text-slate-300'}>Risk</label>
         <select
           value={risk}
@@ -139,7 +137,7 @@ export default function KenoControls({ betAmount, setBetAmount, risk, setRisk, o
       </div>
 
       {/* Quick Actions */}
-      <div className={isMobile ? 'flex gap-4' : 'flex gap-2'}>
+      <div className={isMobile ? 'order-5 flex gap-4' : 'flex gap-2'}>
         <button
           onClick={() => { onRandom && onRandom(); }}
           disabled={autoRunning || isDrawing}
@@ -160,7 +158,7 @@ export default function KenoControls({ betAmount, setBetAmount, risk, setRisk, o
 
       {/* Auto Bet Count */}
       {betMode === 'auto' && (
-        <div>
+        <div className={isMobile ? 'order-6' : ''}>
           <label className={isMobile ? 'text-lg font-bold text-cyan-300 mb-2 block' : 'text-sm font-medium text-slate-300'}>
             Rounds (0 = infinite)
           </label>
@@ -187,7 +185,7 @@ export default function KenoControls({ betAmount, setBetAmount, risk, setRisk, o
         disabled={betAmount <= 0 || betAmount > balance || isDrawing}
         className={
           isMobile
-            ? 'rounded-xl py-5 font-extrabold text-lg text-slate-900 transition w-full mt-2 shadow-lg'
+            ? 'order-1 rounded-xl py-5 font-extrabold text-lg text-slate-900 transition w-full mt-2 shadow-lg'
             : 'rounded-md py-3 font-semibold text-slate-900 transition'
         }
         style={{

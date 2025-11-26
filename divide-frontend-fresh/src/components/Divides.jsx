@@ -10,9 +10,10 @@ import VoteWithBetModal from './VoteWithBetModal';
 import { AuthContext } from "../context/AuthContext";
 import AuthModal from "./AuthModal.jsx";
 import LiveGamesFeed from "./LiveGamesFeed";
+import MobileGameHeader from "./MobileGameHeader";
 import "../styles/Divides.css";
 
-  const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000"; // use VITE_API_URL when available, fallback to dev server port 3000
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000"; // use VITE_API_URL when available, fallback to dev server port 3000
 
 // 🎨 Randomize 2 colors for each Divide
 // Fixed red/blue neon color scheme: A = red, B = blue
@@ -23,7 +24,7 @@ const randomColors = () => {
 // small client-side short id generator for temporary keys
 const shortId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
-export default function Divides() {
+export default function Divides({ onOpenChat }) {
   const { user, refreshUser } = useContext(AuthContext);
   const [showModal, setShowModal] = useState(false);
   const [isRegister, setIsRegister] = useState(false);
@@ -56,13 +57,13 @@ export default function Divides() {
           const a = new Audio(url);
           a.preload = 'auto';
           // try load (best-effort)
-    try { a.load(); } catch { /* ignore */ }
+          try { a.load(); } catch { /* ignore */ }
           pool.push(a);
-  } catch { /* ignore single audio creation failures */ }
+        } catch { /* ignore single audio creation failures */ }
       }
       poolMap.set(url, { pool, idx: 0 });
       return pool[0] || null;
-  } catch (err) {
+    } catch (err) {
       console.warn('preloadAudio failed', err);
       return null;
     }
@@ -88,7 +89,7 @@ export default function Divides() {
       try {
         a.currentTime = 0;
         const playPromise = a.play();
-        if (playPromise && typeof playPromise.catch === 'function') playPromise.catch(() => {});
+        if (playPromise && typeof playPromise.catch === 'function') playPromise.catch(() => { });
       } catch { /* ignore */ }
     } catch { /* ignore audio errors */ }
   };
@@ -132,7 +133,7 @@ export default function Divides() {
       const amount = (typeof data.amount !== 'undefined') ? data.amount : 0;
       const kenoReserve = (typeof data.kenoReserve !== 'undefined') ? data.kenoReserve : (data.houseTotal || 0);
       setJackpot({ amount: amount, houseTotal: data.houseTotal || 0, kenoReserve });
-  } catch (err) {
+    } catch (err) {
       console.error('Failed to load jackpot', err);
     }
   };
@@ -166,8 +167,8 @@ export default function Divides() {
           return prev.map((d) => (d._id === id || d.id === id ? { ...d, ...updatedDivide } : d));
         });
         // preload sounds if included in update
-  try { if (updatedDivide.soundA) preloadAudio(updatedDivide.soundA); if (updatedDivide.soundB) preloadAudio(updatedDivide.soundB); } catch { /* ignore */ }
-  } catch (err) {
+        try { if (updatedDivide.soundA) preloadAudio(updatedDivide.soundA); if (updatedDivide.soundB) preloadAudio(updatedDivide.soundB); } catch { /* ignore */ }
+      } catch (err) {
         console.error('voteUpdate handler error', err);
       }
     });
@@ -181,7 +182,7 @@ export default function Divides() {
         if (exists) return prev.map((d) => (d._id === id || d.id === id ? { ...d, ...newDivide, colors: d.colors || randomColors() } : d));
         return [...prev, { ...newDivide, colors: randomColors() }];
       });
-  try { if (newDivide.soundA) preloadAudio(newDivide.soundA); if (newDivide.soundB) preloadAudio(newDivide.soundB); } catch { /* ignore */ }
+      try { if (newDivide.soundA) preloadAudio(newDivide.soundA); if (newDivide.soundB) preloadAudio(newDivide.soundB); } catch { /* ignore */ }
     });
 
     socket.on("divideEnded", (ended) => {
@@ -189,7 +190,7 @@ export default function Divides() {
       const endedId = typeof ended === 'object' ? (ended._id || ended.id) : ended;
       setDivides((prev) => prev.filter((d) => d._id !== endedId && d.id !== endedId));
       // refresh jackpot totals when a round ends
-  try { fetchJackpot(); } catch { /* ignore */ }
+      try { fetchJackpot(); } catch { /* ignore */ }
     });
 
     return () => {
@@ -227,22 +228,22 @@ export default function Divides() {
 
     try {
       const token = localStorage.getItem("token");
-  const res = await fetch(`${API_BASE}/Divides/vote`, {
+      const res = await fetch(`${API_BASE}/Divides/vote`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-            divideId,
-            side,
-            boostAmount: Number(boostAmount) || 1,
-          }),
+          divideId,
+          side,
+          boostAmount: Number(boostAmount) || 1,
+        }),
       });
 
       const text = await res.text();
       let updated;
-  try { updated = JSON.parse(text); } catch { updated = { raw: text }; }
+      try { updated = JSON.parse(text); } catch { updated = { raw: text }; }
       if (!res.ok) {
         console.error('Vote failed response', { status: res.status, body: updated });
         // If the server indicates insufficient balance, play guncock feedback
@@ -252,7 +253,7 @@ export default function Divides() {
             // prefer explicit .wav, play via pooled audio so it respects preload/pooling
             playPooledAudio('/sounds/guncock.wav');
           }
-  } catch { /* ignore */ }
+        } catch { /* ignore */ }
         throw new Error(updated.error || updated.raw || 'Vote failed');
       }
 
@@ -264,18 +265,18 @@ export default function Divides() {
         const soundField = side === 'A' ? 'soundA' : 'soundB';
         const soundPath = (updated && updated[soundField]) || (target && target[soundField]);
         if (soundPath) playPooledAudio(soundPath);
-  } catch { /* ignore audio errors */ }
+      } catch { /* ignore audio errors */ }
 
       // If server returned an updated balance, refresh local user state
       if (updated && typeof updated.balance !== 'undefined' && refreshUser) {
-  try { await refreshUser(); } catch { /* ignore */ }
+        try { await refreshUser(); } catch { /* ignore */ }
       }
     } catch (err) {
       console.error(err);
       const msg = err && err.message ? String(err.message) : String(err || 'Vote failed');
       // suppress native alert popup for insufficient-balance errors; play a sound and log instead
       if (/insufficient/i.test(msg)) {
-  try { playPooledAudio('/sounds/guncock.wav'); } catch { /* ignore */ }
+        try { playPooledAudio('/sounds/guncock.wav'); } catch { /* ignore */ }
         // optionally show a non-blocking UI cue here (toast/snackbar) — omitted to keep behavior minimal
       } else {
         alert(msg || "Vote failed");
@@ -286,7 +287,7 @@ export default function Divides() {
   if (loading) return <div className="loading">Loading Divides...</div>;
 
   const activeDivides = divides.filter((d) => d.status === 'active');
-  const previousDivides = divides.filter((d) => d.status !== 'active').sort((a,b) => {
+  const previousDivides = divides.filter((d) => d.status !== 'active').sort((a, b) => {
     const ta = a.endTime ? new Date(a.endTime).getTime() : 0;
     const tb = b.endTime ? new Date(b.endTime).getTime() : 0;
     return tb - ta; // newest first
@@ -295,6 +296,11 @@ export default function Divides() {
   return (
     isMobile() ? (
       <div className="divides-mobile-container px-2 py-2">
+        {/* Mobile Header - only shows on mobile */}
+        <div className="md:hidden mb-4">
+          <MobileGameHeader title="Divides" onOpenChat={onOpenChat} />
+        </div>
+
         <div className="page-title text-center text-2xl font-bold text-cyan-400 mb-2">THE DIVIDE</div>
         <div className="top-stats flex justify-center mb-2">
           <div className="stat-wrapper bg-gray-900 rounded-lg px-4 py-2">
@@ -364,7 +370,7 @@ export default function Divides() {
                   endTime={d.endTime}
                   status={d.status}
                   winner={d.winnerSide}
-                  onVote={() => {}}
+                  onVote={() => { }}
                   imageA={d.imageA}
                   imageB={d.imageB}
                   soundA={d.soundA}

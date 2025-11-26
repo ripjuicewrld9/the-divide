@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import useSocket from '../hooks/useSocket';
 import CaseBattleCard from './CaseBattleCard';
 import LiveGamesFeed from './LiveGamesFeed';
+import MobileGameHeader from './MobileGameHeader';
 import '../styles/buttons.css';
 
-export default function ActiveBattlesPage() {
+export default function ActiveBattlesPage({ onOpenChat }) {
   const navigate = useNavigate();
   const socket = useSocket(null); // Connect to global socket (no specific room)
   const [battles, setBattles] = useState([]);
@@ -46,7 +47,7 @@ export default function ActiveBattlesPage() {
 
     const handleBattleUpdated = (data) => {
       if (data?.battle) {
-        setBattles(prev => prev.map(b => 
+        setBattles(prev => prev.map(b =>
           b.id === data.battle.id ? data.battle : b
         ));
       }
@@ -61,7 +62,7 @@ export default function ActiveBattlesPage() {
     socket.on('battle:created', handleBattleCreated);
     socket.on('battle:updated', handleBattleUpdated);
     socket.on('battle:ended', handleBattleEnded);
-    
+
     // Legacy event names for backward compatibility
     socket.on('newBattle', handleBattleCreated);
     socket.on('caseBattleEnded', handleBattleEnded);
@@ -81,6 +82,10 @@ export default function ActiveBattlesPage() {
 
   return (
     <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', padding: '20px' }}>
+      {/* Mobile Header - only shows on mobile */}
+      <div className="md:hidden mb-4">
+        <MobileGameHeader title="Battles" onOpenChat={onOpenChat} />
+      </div>
       <div style={{ maxWidth: '100%', margin: '0 auto' }}>
         {/* Hero Header Section */}
         <div style={{
