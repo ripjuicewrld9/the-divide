@@ -390,13 +390,18 @@ app.post('/divides/vote', auth, async (req, res) => {
     if (isFree) user.lastFreeVoteDate = today;
 
     const existing = divide.votes.find(v => v.userId === req.userId);
-    if (existing) {
-      existing.voteCount += voteCount;
-      existing.side = side;
-      existing.isFree = isFree;
-    } else {
-      divide.votes.push({ userId: req.userId, side, voteCount, isFree });
-    }
+      if (existing) {
+        // If creator, only allow updating vote if side matches locked side
+        if (divide.isUserCreated && divide.creatorId === req.userId && divide.creatorSide && side !== divide.creatorSide) {
+          // Do not update vote record
+        } else {
+          existing.voteCount += voteCount;
+          existing.side = side;
+          existing.isFree = isFree;
+        }
+      } else {
+        divide.votes.push({ userId: req.userId, side, voteCount, isFree });
+      }
 
     divide.totalVotes += voteCount;
     if (side === 'A') divide.votesA += voteCount;
