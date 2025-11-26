@@ -135,6 +135,8 @@ const saveBlackjackGameResult = async (gameState: any, token: string) => {
 };
 
 export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
+  // Device detection
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 600;
   const gameState = useGameStore();
   const { balance: userBalance, token, refreshUser } = useAuth();
   const [showRules, setShowRules] = useState(false);
@@ -360,19 +362,17 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
   const canHit = currentHand && handValue < 21;
   const canDouble = currentHand && canDoubleDown(currentHand.cards);
   const canSplitHand = currentHand && canSplit(currentHand.cards);
-
   return (
     <>
       <div
-        className="relative flex min-h-dvh w-full flex-col"
+        className="relative flex min-h-dvh w-full flex-col overflow-x-hidden"
         style={{
           background: 'linear-gradient(135deg, #0a0a14 0%, #1a1a2e 50%, #0f0f1e 100%)',
         }}
       >
         {/* Mobile Header - only shows on mobile */}
-        <div className="md:hidden">
-          <MobileGameHeader title="Blackjack" onOpenChat={onOpenChat} />
-        </div>
+        {/* Mobile Header - only shows on mobile */}
+        <MobileGameHeader title="Blackjack" onOpenChat={onOpenChat} className="md:hidden" />
 
         <RulesModal isOpen={showRules} onClose={() => setShowRules(false)} />
         <BlackjackVerification
@@ -385,109 +385,83 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
           onVerify={handleVerify}
           isVerifying={isVerifying}
         />
-
-        <div className="flex-1 px-0 md:px-5 pb-40 md:pb-0">
-          <div className="mx-auto mt-0 md:mt-5 max-w-xl min-w-[300px] drop-shadow-xl md:mt-10 lg:max-w-6xl md:scale-90 md:origin-top-center">
-            {/* Header */}
-            <nav className="w-full drop-shadow-lg rounded-t-lg overflow-hidden" style={{ background: 'linear-gradient(135deg, #0a0a14 0%, #1a1a2e 50%, #0f0f1e 100%)' }}>
-              <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-5">
-                <h1 className="blackjack-title text-2xl font-bold text-white">Blackjack</h1>
-              </div>
-            </nav>
-
-            {/* Game Container with Sidebar Layout */}
-            <div className="relative overflow-hidden rounded-b-lg">
-              <div className="flex flex-col-reverse lg:w-full lg:flex-row">
+        <div className={isMobile ? 'flex-1 px-1 py-1 pb-4' : 'flex-1 px-5'}>
+          <div className="mx-auto mt-2 max-w-xl min-w-[300px] drop-shadow-xl md:mt-10 lg:max-w-6xl">
+            <div className="relative overflow-hidden rounded-lg">
+              <div className={isMobile ? 'flex flex-col w-full gap-2' : 'flex flex-col lg:flex-row gap-4'}>
                 {/* MAIN GAME AREA */}
                 <div className="flex-1 relative" style={{ background: 'linear-gradient(135deg, #0a0a14 0%, #1a1a2e 50%, #0f0f1e 100%)' }}>
                   <div style={{
                     background: 'linear-gradient(135deg, rgba(26, 26, 46, 0.8) 0%, rgba(15, 15, 30, 0.8) 100%)',
                     position: 'relative',
                     border: '2px solid rgba(0, 255, 255, 0.2)',
-                    padding: '0.5rem',
+                    padding: isMobile ? '0.25rem' : '0.5rem',
                     boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '0.3rem',
                   }}
-                    className="min-h-[50vh] md:min-h-[600px]"
+                    className={isMobile ? "min-h-[50vh]" : "min-h-[60vh] md:min-h-[600px]"}
                   >
-                    {/* Header with Balance */}
-                    <motion.div
-                      initial={{ opacity: 0, y: -20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        flexShrink: 0,
-                        paddingBottom: '0.25rem',
-                      }}
-                    >
-                      <div>
-                        <h1 className="blackjack-title" style={{ fontSize: '1.3rem', fontWeight: 'bold', background: 'linear-gradient(135deg, #00ffff, #ffd700)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', margin: '0' }}>
-                          BLACKJACK
-                        </h1>
-                        <p style={{ color: '#cbd5e1', fontSize: '0.65rem', margin: '0' }}>Professional Casino</p>
-                      </div>
-                      <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                        <div style={{ textAlign: 'center' }}>
-                          <div style={{ color: '#cbd5e1', fontSize: '0.65rem', fontWeight: '600', textTransform: 'uppercase' }}>Balance</div>
-                          <motion.div
-                            key={gameState.balance}
-                            style={{
-                              fontSize: '1rem',
-                              fontWeight: 'bold',
-                              background: 'linear-gradient(135deg, #00ffff, #ffd700)',
-                              WebkitBackgroundClip: 'text',
-                              WebkitTextFillColor: 'transparent',
-                              backgroundClip: 'text',
-                            }}
-                            initial={{ scale: 1.1 }}
-                            animate={{ scale: 1 }}
-                            transition={{ duration: 0.3 }}
-                          >
-                            ${gameState.balance.toFixed(2)}
-                          </motion.div>
+                    {/* Header with Balance - Hidden on Mobile */}
+                    {!isMobile && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          flexShrink: 0,
+                          paddingBottom: '0.25rem',
+                        }}
+                      >
+                        <div>
+                          <h1 className="blackjack-title" style={{ fontSize: '1.3rem', fontWeight: 'bold', background: 'linear-gradient(135deg, #00ffff, #ffd700)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', margin: '0' }}>
+                            BLACKJACK
+                          </h1>
+                          <p style={{ color: '#cbd5e1', fontSize: '0.65rem', margin: '0' }}>Professional Casino</p>
                         </div>
-                        <motion.button
-                          onClick={() => setShowRules(true)}
-                          style={{
-                            padding: '0.35rem 0.7rem',
-                            background: 'rgba(0, 255, 255, 0.2)',
-                            color: 'white',
-                            fontWeight: '600',
-                            borderRadius: '0.35rem',
-                            border: '1px solid rgba(0, 255, 255, 0.3)',
-                            cursor: 'pointer',
-                            fontSize: '0.75rem',
-                            flexShrink: 0,
-                          }}
-                          whileHover={{ scale: 1.05, background: 'rgba(0, 255, 255, 0.3)' }}
-                          whileTap={{ scale: 0.95 }}
-                        >
-                          📋 Rules
-                        </motion.button>
-                        <motion.button
-                          onClick={() => setShowVerification(true)}
-                          style={{
-                            padding: '0.35rem 0.7rem',
-                            background: 'rgba(255, 215, 0, 0.2)',
-                            color: 'white',
-                            fontWeight: '600',
-                            borderRadius: '0.35rem',
-                            border: '1px solid rgba(255, 215, 0, 0.3)',
-                            cursor: 'pointer',
-                            fontSize: '0.75rem',
-                            flexShrink: 0,
-                          }}
-                          whileHover={{ scale: 1.05, background: 'rgba(255, 215, 0, 0.3)' }}
-                          whileTap={{ scale: 0.95 }}
-                        >
-                          ℹ️ Info
-                        </motion.button>
-                      </div>
-                    </motion.div>
+                        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                          <motion.button
+                            onClick={() => setShowRules(true)}
+                            style={{
+                              padding: '0.35rem 0.7rem',
+                              background: 'rgba(0, 255, 255, 0.2)',
+                              color: 'white',
+                              fontWeight: '600',
+                              borderRadius: '0.35rem',
+                              border: '1px solid rgba(0, 255, 255, 0.3)',
+                              cursor: 'pointer',
+                              fontSize: '0.75rem',
+                              flexShrink: 0,
+                            }}
+                            whileHover={{ scale: 1.05, background: 'rgba(0, 255, 255, 0.3)' }}
+                            whileTap={{ scale: 0.95 }}
+                          >
+                            📋 Rules
+                          </motion.button>
+                          <motion.button
+                            onClick={() => setShowVerification(true)}
+                            style={{
+                              padding: '0.35rem 0.7rem',
+                              background: 'rgba(255, 215, 0, 0.2)',
+                              color: 'white',
+                              fontWeight: '600',
+                              borderRadius: '0.35rem',
+                              border: '1px solid rgba(255, 215, 0, 0.3)',
+                              cursor: 'pointer',
+                              fontSize: '0.75rem',
+                              flexShrink: 0,
+                            }}
+                            whileHover={{ scale: 1.05, background: 'rgba(255, 215, 0, 0.3)' }}
+                            whileTap={{ scale: 0.95 }}
+                          >
+                            ℹ️ Info
+                          </motion.button>
+                        </div>
+                      </motion.div>
+                    )}
 
                     {/* Game Table */}
                     <motion.div
@@ -589,7 +563,7 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
                       </div>
 
                       {/* Player Hands */}
-                      <div className="flex flex-col items-center gap-1 min-h-[140px] justify-center mb-16">
+                      <div className={isMobile ? "flex flex-col items-center gap-1 min-h-[140px] justify-center mb-4" : "flex flex-col items-center gap-1 min-h-[140px] justify-center mb-16"}>
                         <div className="text-gray-400 text-xs font-semibold uppercase">Your Hands</div>
                         {gameState.playerHands.length === 0 ? (
                           <div className="text-center text-gray-500 text-xs flex items-center justify-center h-24"><p>Place a bet and click Deal</p></div>
@@ -613,25 +587,6 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
                         )}
                       </div>
 
-                      {/* Betting Area Display */}
-                      <div className="px-2 pb-2">
-                        <BettingArea
-                          mainBet={gameState.playerHands[0]?.bet || 0}
-                          perfectPairsBet={gameState.playerHands[0]?.sideBets.perfectPairs || 0}
-                          twentyPlusThreeBet={gameState.playerHands[0]?.sideBets.twentyPlusThree || 0}
-                          blazingSevensBet={gameState.playerHands[0]?.sideBets.blazingSevens || 0}
-                          selectedChip={null}
-                          currentMode={gameState.betPlacementMode}
-                          onSelectMode={(mode) => gameState.setBetMode(mode)}
-                          onPlaceBet={() => { }}
-                          onDeal={() => { }}
-                          gamePhase={gameState.gamePhase}
-                          hasPlayerHand={gameState.playerHands.length > 0}
-                          lastRoundResult={gameState.roundResults[0] || null}
-                          currentDealRatios={gameState.currentDealRatios}
-                        />
-                      </div>
-
                       {/* Game Action Buttons Below Betting Area */}
                       <div className="px-2 py-2 h-14 flex items-center justify-center">
                         {gameState.gamePhase === 'playing' && (
@@ -648,12 +603,12 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
                         )}
                       </div>
                     </motion.div>
-                  </div>
-                </div>
+                  </div >
+                </div >
 
                 {/* SIDEBAR */}
-                <aside
-                  className="fixed bottom-0 left-0 right-0 z-40 p-4 md:static md:w-[320px] md:p-4 border-t border-white/10 md:border-none flex flex-col"
+                < aside
+                  className="w-full p-4 md:static md:w-[320px] md:p-4 border-t border-white/10 md:border-none flex flex-col"
                   style={{
                     background: 'linear-gradient(135deg, #0a0a14 0%, #1a1a2e 50%, #0f0f1e 100%)',
                     boxShadow: '0 -4px 20px rgba(0,0,0,0.5)'
@@ -677,7 +632,9 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
                         <motion.button
                           onClick={() => gameState.placeBet()}
                           disabled={gameState.betAmount <= 0 || gameState.betAmount > gameState.balance || !gameState.betPlacementMode}
-                          className="w-full py-3 px-4 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded transition-colors"
+                          className={isMobile
+                            ? "w-full py-2 px-4 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-sm rounded transition-colors"
+                            : "w-full py-3 px-4 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded transition-colors"}
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                         >
@@ -687,7 +644,9 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
                           <motion.button
                             onClick={() => gameState.undoBet()}
                             disabled={gameState.playerHands[0]?.betPlacementOrder.length === 0}
-                            className="flex-1 py-2 px-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded transition-colors"
+                            className={isMobile
+                              ? "flex-1 py-1.5 px-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs rounded transition-colors"
+                              : "flex-1 py-2 px-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded transition-colors"}
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                             title="Remove last placed bet"
@@ -697,7 +656,9 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
                           <motion.button
                             onClick={() => gameState.clearBets()}
                             disabled={gameState.playerHands[0]?.bet === 0 && gameState.playerHands[0]?.sideBets.perfectPairs === 0}
-                            className="flex-1 py-2 px-4 bg-gray-600 hover:bg-gray-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded transition-colors"
+                            className={isMobile
+                              ? "flex-1 py-1.5 px-3 bg-gray-600 hover:bg-gray-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs rounded transition-colors"
+                              : "flex-1 py-2 px-4 bg-gray-600 hover:bg-gray-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded transition-colors"}
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                           >
@@ -707,7 +668,9 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
                         <motion.button
                           onClick={handleDeal}
                           disabled={!gameState.playerHands[0]?.bet || gameState.playerHands[0]?.bet === 0}
-                          className="w-full py-3 px-4 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded transition-colors"
+                          className={isMobile
+                            ? "w-full py-2 px-4 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-sm rounded transition-colors"
+                            : "w-full py-3 px-4 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded transition-colors"}
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                         >
@@ -753,29 +716,31 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
                       />
                     </AnimatePresence>
                   </div>
-                </aside>
-              </div>
+                </aside >
+              </div >
+            </div >
+          </div >
+
+
+
+          {/* Blackjack Leaderboard */}
+          < div className="mx-auto mt-10 max-w-xl min-w-[300px] lg:max-w-7xl w-full" >
+            <BlackjackLeaderboard />
+          </div >
+
+          {/* Live Games Feed */}
+          < div className="mx-auto mt-10 max-w-xl min-w-[300px] lg:max-w-7xl w-full" >
+            <div style={{
+              background: 'rgba(11, 11, 11, 0.8)',
+              border: '1px solid rgba(0, 255, 255, 0.1)',
+              borderRadius: '16px',
+              padding: '24px'
+            }}>
+              <LiveGamesFeed maxGames={10} />
             </div>
-          </div>
-        </div>
-
-        {/* Blackjack Leaderboard */}
-        <div className="mx-auto mt-10 max-w-7xl px-5">
-          <BlackjackLeaderboard />
-        </div>
-
-        {/* Live Games Feed */}
-        <div className="mx-auto mt-10 max-w-7xl px-5 mb-10">
-          <div style={{
-            background: 'rgba(11, 11, 11, 0.8)',
-            border: '1px solid rgba(0, 255, 255, 0.1)',
-            borderRadius: '16px',
-            padding: '24px'
-          }}>
-            <LiveGamesFeed maxGames={10} />
-          </div>
-        </div>
-      </div>
+          </div >
+        </div >
+      </div >
     </>
   );
 };

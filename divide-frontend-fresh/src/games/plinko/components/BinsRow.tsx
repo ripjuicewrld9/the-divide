@@ -18,7 +18,7 @@ export const BinsRow: React.FC<BinsRowProps> = ({ rowCount, riskLevel, binsWidth
   const payouts = binPayouts[rowCount][riskLevel];
   const colors = binColorsByRowCount[rowCount];
   const odds = binOdds[rowCount];
-  
+
   // Get the actual odds for a specific bin index
   const getOddsForBin = (binIndex: number): string => {
     return odds[binIndex]?.toFixed(4) || '0';
@@ -78,8 +78,8 @@ export const BinsRow: React.FC<BinsRowProps> = ({ rowCount, riskLevel, binsWidth
       }
     >
       <div
-        className={isMobile ? 'flex gap-2 w-full' : 'flex gap-[1%]'}
-        style={isMobile ? { width: '100%' } : { width: `${binsWidthPercentage * 100}%` }}
+        className={isMobile ? 'flex gap-[0.2%]' : 'flex gap-[1%]'}
+        style={{ width: `${binsWidthPercentage * 100 * 1.02}%` }}
       >
         {payouts.map((payout, idx) => {
           const binColor = generateGradientColor(payout, payouts);
@@ -91,20 +91,23 @@ export const BinsRow: React.FC<BinsRowProps> = ({ rowCount, riskLevel, binsWidth
               }}
               className={
                 isMobile
-                  ? 'flex min-w-0 flex-1 items-center justify-center rounded-lg text-base font-bold text-gray-950 shadow-md transition-all relative cursor-pointer py-4 px-1'
+                  ? 'flex min-w-0 flex-1 items-center justify-center rounded-md text-xs font-bold text-gray-950 shadow-sm transition-all relative cursor-pointer py-1 px-0.5'
                   : 'flex min-w-0 flex-1 items-center justify-center rounded-xs text-[clamp(6px,2.784px+0.87vw,8px)] font-bold text-gray-950 shadow-[0_2px_0_rgba(0,0,0,0.3)] lg:rounded-md lg:text-[clamp(10px,-16.944px+2.632vw,12px)] lg:shadow-[0_3px_0_rgba(0,0,0,0.3)] transition-all relative cursor-help'
               }
               style={{
                 backgroundColor: binColor,
-                minHeight: isMobile ? 48 : undefined,
-                fontSize: isMobile ? '1.1rem' : undefined,
-                border: isMobile ? '2px solid #00ffff' : undefined,
+                minHeight: isMobile ? undefined : undefined,
+                aspectRatio: isMobile ? '1' : undefined,
+                fontSize: isMobile ? '0.6rem' : undefined,
+                border: isMobile ? '1px solid rgba(0,0,0,0.2)' : undefined,
+                padding: 0,
               }}
               onMouseEnter={() => setHoveredBin(idx)}
               onMouseLeave={() => setHoveredBin(null)}
             >
-              {payout}
-              {payout < 100 ? '×' : ''}
+              {payout === 1000 ? '1k' : payout}
+              {/* Show '×' only if payout < 100 AND it's not one of the outermost bins (first 2 or last 2) */}
+              {payout < 100 && idx >= 2 && idx < payouts.length - 2 ? '×' : ''}
               {/* Tooltip showing odds */}
               {hoveredBin === idx && (
                 <div className={isMobile ? 'absolute -top-12 left-1/2 -translate-x-1/2 bg-gray-900 text-cyan-300 text-base px-3 py-2 rounded-xl whitespace-nowrap border border-cyan-500 z-10 pointer-events-none' : 'absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-cyan-300 text-xs px-2 py-1 rounded whitespace-nowrap border border-cyan-500 z-10 pointer-events-none'}>

@@ -405,9 +405,8 @@ export default function RuggedGame({ onOpenChat }) {
     isMobile() ? (
       <div className="rugged-mobile-layout w-full max-w-md mx-auto px-2 py-2">
         {/* Mobile Header - only shows on mobile */}
-        <div className="md:hidden mb-4">
-          <MobileGameHeader title="Rugged" onOpenChat={onOpenChat} />
-        </div>
+        {/* Mobile Header - only shows on mobile */}
+        <MobileGameHeader title="Rugged" onOpenChat={onOpenChat} className="md:hidden mb-4" />
 
         <div className="bg-gray-900 rounded-xl shadow-lg p-4 mb-4">
           <div className="flex flex-col gap-2">

@@ -297,9 +297,8 @@ export default function Divides({ onOpenChat }) {
     isMobile() ? (
       <div className="divides-mobile-container px-2 py-2">
         {/* Mobile Header - only shows on mobile */}
-        <div className="md:hidden mb-4">
-          <MobileGameHeader title="Divides" onOpenChat={onOpenChat} />
-        </div>
+        {/* Mobile Header - only shows on mobile */}
+        <MobileGameHeader title="Divides" onOpenChat={onOpenChat} className="md:hidden mb-4" />
 
         <div className="page-title text-center text-2xl font-bold text-cyan-400 mb-2">THE DIVIDE</div>
         <div className="top-stats flex justify-center mb-2">

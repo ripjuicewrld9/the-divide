@@ -123,9 +123,8 @@ export default function CaseBattleDetail({ onOpenChat }) {
   return (
     <div className="battle-page-wrapper">
       {/* Mobile Header - only shows on mobile */}
-      <div className="md:hidden mb-4">
-        <MobileGameHeader title="Battle Arena" onOpenChat={onOpenChat} />
-      </div>
+      {/* Mobile Header - only shows on mobile */}
+      <MobileGameHeader title="Battle Arena" onOpenChat={onOpenChat} className="md:hidden mb-4" />
       <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '12px', height: '90vh', maxHeight: '800px' }}>
         {/* Header Section - Back button and info badges */}
         <div className="battle-header-section">

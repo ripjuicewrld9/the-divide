@@ -108,41 +108,6 @@ body {
   background: #2a2a2a;
   color: var(--accent-blue);
   padding: 5px 10px;
-  border-radius: 5px;
-  margin: 5px;
-  text-align: center;
-  font-size: 0.8em;
-}
-
-.notification {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  background: #333;
-  color: var(--accent-blue);
-  padding: 15px;
-  border-radius: 6px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  z-index: 1000;
-}
-
-.grid-wrapper {
-  margin: 20px 0;
-  padding: 15px;
-  background: linear-gradient(135deg, rgba(26, 26, 46, 0.8) 0%, rgba(15, 15, 30, 0.8) 100%);
-  border: 1px solid rgba(0, 255, 255, 0.15);
-  border-radius: 10px;
-  box-shadow: 0 4px 10px rgba(0, 255, 255, 0.05);
-}
-
-.side-controls {
-  position: sticky;
-  top: 80px;
-  align-self: flex-start;
-  display: flex;
-  flex-direction: column;
   gap: 12px;
 }
 
@@ -353,38 +318,6 @@ body {
 .leaderboard-table .ld-win {
   background: linear-gradient(90deg, #00ffff, #00cccc);
   -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  font-weight: 700;
-}
-
-.keno-grid {
-  width: 100%;
-  max-width: 920px;
-  /* keep grid centered and not overly wide */
-  margin: 0 auto;
-  box-sizing: border-box;
-  max-height: 600px;
-  background: #333;
-  border: 1px solid var(--accent-blue);
-  /* stronger neon purple rim */
-  box-shadow: 0 0 28px var(--neon-purple), 0 10px 30px rgba(0, 0, 0, 0.6) inset;
-  border-radius: 10px;
-  display: grid;
-  --gap: 10px;
-  padding: 12px;
-  gap: var(--gap);
-  /* Use fixed 8-column layout so 40 numbers form a consistent grid that fills the wrapper.
-     Each cell will scale to fit using fractional columns and aspect-ratio. */
-  grid-template-columns: repeat(8, 1fr);
-  /* ensure grid children are centered within each grid cell */
-  justify-items: center;
-  align-items: center;
-}
-
-.rect {
-  /* cell styling — use aspect-ratio so cells scale to the grid column width and always remain square */
-  display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
@@ -741,27 +674,6 @@ input[type=number] {
   border: none !important;
 }
 
-.home-page .btn:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 0 25px rgba(0, 255, 255, 0.6), 0 14px 30px rgba(0, 0, 0, 0.3) !important;
-}
-
-.btn-small {
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal.screenOn {
-  display: flex;
-}
 
 /* When a modal should not darken the background (used for the win card), add
    the `no-overlay` class to the modal wrapper. This keeps centering behavior
@@ -1148,66 +1060,198 @@ payout-table th {
   color: #000;
 }
 
-.hidden {
-  display: none;
+.mult-num {
+  color: #ffd6a6;
 }
 
-svg {
-  overflow: visible;
+.hits-num {
+  color: #ffd966;
 }
 
-@media (max-width: 768px) {
-  .game-container {
-    padding: 10px;
-  }
+.win-card .hits,
+.win-card .multiplier,
+.win-card .amount {
+  border: 1px solid rgba(255, 255, 255, 0.03);
+}
 
-  /* smaller cells on mobile */
-  .rect {
-    --cell-size: 44px;
-    margin: 5px;
-  }
+.win-card .win-actions .btn-close {
+  background: linear-gradient(180deg, var(--accent-blue), var(--accent-blue));
+  color: #001f25;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-weight: 900;
+}
 
-  .top-info {
-    flex-direction: column;
-    text-align: center;
-  }
+/* grid-wrapper profit / loss glow like the live chart */
+.grid-wrapper.profit {
+  box-shadow: 0 0 30px rgba(46, 213, 115, 0.08), 0 8px 40px rgba(46, 213, 115, 0.06) inset;
+  border-radius: 10px;
+  outline: 2px solid rgba(46, 213, 115, 0.06);
+}
 
-  .bottom-controls {
+.grid-wrapper.loss {
+  box-shadow: 0 0 30px rgba(255, 215, 0, 0.08), 0 8px 40px rgba(255, 215, 0, 0.06) inset;
+  border-radius: 10px;
+  outline: 2px solid rgba(255, 215, 0, 0.06);
+}
+
+/* subtle animated pulse on wrapper when profit/loss changes */
+.grid-wrapper.profit,
+.grid-wrapper.loss {
+  transition: box-shadow 300ms ease, transform 200ms ease;
+}
+
+/* subtle decorative top accent */
+.win-card::before {
+  content: '';
+  display: block;
+  height: 6px;
+  width: 72px;
+  margin: 0 auto 12px auto;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--accent-blue), var(--accent-blue));
+  box-shadow: 0 6px 18px rgba(148, 0, 0, 0.08);
+}
+
+@media (max-width: 600px) {
+  .win-card .win-body {
     flex-direction: column;
     gap: 10px;
   }
 
-  .control-group {
+  .win-card .hits,
+  .win-card .multiplier,
+  .win-card .amount {
     width: 100%;
-    justify-content: center;
   }
 
-  .keno-grid {
-    max-height: 400px;
-  }
-
-  .btn,
-  .btn-small,
-  .btn-play,
-  .btn-stop,
-  .btn-info {
-    width: 100%;
-    max-width: 150px;
-  }
-
-  .payout-table {
-    font-size: 0.8em;
-  }
-
-  .game-log {
-    font-size: 0.8em;
+  .modal {
+    align-items: flex-end;
+    padding-bottom: 20px;
   }
 }
 
-/* Enforce final semantic colors requested by the user. These rules are placed
-   at the end of the file to take precedence over earlier/legacy definitions. */
-:root {
-  --match-color: #009494;
+.win-actions {
+  margin-top: 14px;
+  text-align: center;
+}
+
+
+.modal-content h2 {
+  color: var(--accent-blue);
+  font-size: 1.5em;
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.payout-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #333;
+  font-size: 0.9em;
+}
+
+.payout-table th,
+.payout-table td {
+  border: 1px solid #444;
+  padding: 10px;
+  text-align: center;
+  color: #e0e0e0;
+}
+
+payout-table th {
+  background: var(--accent-blue);
+  color: #000;
+  font-weight: 700;
+}
+
+.payout-table td {
+  background: #444;
+  transition: background 0.3s ease;
+}
+
+.payout-table tr:hover td {
+  background: #555;
+}
+
+#provably-fair-data {
+  margin-top: 20px;
+  padding: 10px;
+  background: #333;
+  border: 1px solid #444;
+  border-radius: 6px;
+  font-size: 0.9em;
+}
+
+#provably-fair-data p {
+  margin: 5px 0;
+  color: #e0e0e0;
+}
+
+#provably-fair-data span {
+  color: var(--accent-blue);
+  font-weight: 700;
+}
+
+.btn-close {
+  background: var(--accent-blue);
+  color: #fff;
+  padding: 10px 20px;
+  margin-top: 15px;
+  width: 100%;
+  max-width: 150px;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.btn-close:hover {
+  background: rgba(148, 0, 0, 0.9);
+}
+
+.win-animation {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--accent-blue);
+  color: #000;
+  padding: 15px 30px;
+  border-radius: 10px;
+  z-index: 1000;
+  font-weight: 700;
+}
+
+.game-log {
+  margin-top: 20px;
+  padding: 15px;
+  background: #2a2a2a;
+  border-radius: 10px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.game-log h3 {
+  color: var(--accent-blue);
+  font-size: 1.2em;
+  margin-bottom: 10px;
+}
+
+.game-log ul {
+  list-style: none;
+  padding: 0;
+}
+
+.game-log li {
+  background: #333;
+  padding: 10px;
+  margin: 5px 0;
+  border-radius: 6px;
+  font-size: 0.9em;
+  color: #e0e0e0;
+}
+
+.game-log li.won {
   --miss-color: #940000;
 }
 

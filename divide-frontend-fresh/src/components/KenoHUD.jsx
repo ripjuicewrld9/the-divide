@@ -11,7 +11,7 @@ export default function KenoHUD({ balance, message, risk = 'classic' }) {
   const prevBal = useRef(balance);
   const [pulse, setPulse] = useState(false);
   const [showPaytables, setShowPaytables] = useState(false);
-  
+
   // PnL tracking state — currently not displayed but kept for future integration
   // const [showPnl, setShowPnl] = useState(false);
   // const [pnlRounds, setPnlRounds] = useState(null);
@@ -51,21 +51,21 @@ export default function KenoHUD({ balance, message, risk = 'classic' }) {
     try {
       const res = await api.get('/keno/rounds?limit=200');
       // DEBUG: log server response shape to help diagnose live chart issues
-  try { console.debug('[KENO HUD] /keno/rounds raw response', res); } catch { /* ignore */ }
+      try { console.debug('[KENO HUD] /keno/rounds raw response', res); } catch { /* ignore */ }
       // Ensure we only display rounds that belong to the current user
       const rounds = res?.rounds || [];
       const uid = user?.id || user?._id || user?.userId;
-  try { console.debug('[KENO HUD] fetched rounds count', rounds.length, 'user uid', uid); } catch { /* ignore */ }
+      try { console.debug('[KENO HUD] fetched rounds count', rounds.length, 'user uid', uid); } catch { /* ignore */ }
       let filtered = [];
       if (uid) {
         filtered = rounds.filter(r => {
           const rid = r?.userId || r?.user || r?.user_id || (r.user && (r.user.id || r.user._id));
           return String(rid) === String(uid);
         });
-  try { console.debug('[KENO HUD] filtered rounds count', filtered.length, 'firstRound', filtered[0] || null); } catch { /* ignore */ }
+        try { console.debug('[KENO HUD] filtered rounds count', filtered.length, 'firstRound', filtered[0] || null); } catch { /* ignore */ }
       } else {
         // No authenticated user yet — do not show global rounds; show empty until we have the user
-  try { console.debug('[KENO HUD] no authenticated user yet; skipping rounds display'); } catch { /* ignore */ }
+        try { console.debug('[KENO HUD] no authenticated user yet; skipping rounds display'); } catch { /* ignore */ }
         filtered = [];
       }
       setLiveRounds(filtered);
@@ -137,34 +137,33 @@ export default function KenoHUD({ balance, message, risk = 'classic' }) {
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 600;
   return (
     <div className={isMobile ? 'top-info flex flex-col gap-4 mb-4 p-2 rounded-lg bg-gradient-to-b from-gray-900 to-gray-800 shadow-lg' : 'top-info'} style={isMobile ? { minWidth: 0 } : { marginBottom: 12 }}>
-        <div className={isMobile ? 'flex items-center justify-between gap-4' : ''} style={isMobile ? {} : { display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div className={`balance ${pulse ? 'pulse' : ''} ${isMobile ? 'text-lg font-bold text-cyan-300' : ''}`}>Balance: ${displayBalance}</div>
-        </div>
-        <div className={isMobile ? 'message text-base text-gray-400' : 'message'} style={isMobile ? {} : { color: '#999' }}>{message}</div>
-        <div className={isMobile ? 'flex gap-4 justify-center mt-2' : ''} style={isMobile ? {} : { display: 'flex', justifyContent: 'center', marginTop: 6 }}>
-          <button
-            className={isMobile ? 'hud-btn px-6 py-4 font-extrabold rounded-xl text-lg bg-cyan-500/30 text-gray-900' : 'hud-btn'}
-            style={isMobile ? {} : { marginRight: 8, background: 'linear-gradient(135deg, #00ffff, #ffd700)', color: '#1a1a1a', fontWeight: 600 }}
-            onClick={() => { setShowLiveChart(s => !s); }}
-          >
-            {showLiveChart ? 'Hide Live Chart' : 'Live Chart'}
-          </button>
-          <button
-            className={isMobile ? 'hud-btn px-6 py-4 font-extrabold rounded-xl text-lg bg-yellow-500/30 text-gray-900' : 'hud-btn'}
-            title="Info"
-            aria-label="Info"
-            onClick={() => { setShowPaytables(true); }}
-            style={isMobile ? {} : { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #00ffff, #ffd700)', color: '#1a1a1a', fontWeight: 600 }}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ verticalAlign: 'middle' }}>
-              <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5" />
-              <path d="M12 8h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M11.5 12h1v4h-1z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
-        </div>
-        {/* small spacer */}
-        <div style={isMobile ? { height: 12 } : { height: 6 }} />
+      <div className={isMobile ? 'flex items-center justify-between gap-4' : ''} style={isMobile ? {} : { display: 'flex', alignItems: 'center', gap: 12 }}>
+      </div>
+      <div className={isMobile ? 'message text-base text-gray-400' : 'message'} style={isMobile ? {} : { color: '#999' }}>{message}</div>
+      <div className={isMobile ? 'flex gap-4 justify-center mt-2' : ''} style={isMobile ? {} : { display: 'flex', justifyContent: 'center', marginTop: 6 }}>
+        <button
+          className={isMobile ? 'hud-btn px-6 py-4 font-extrabold rounded-xl text-lg bg-cyan-500/30 text-gray-900' : 'hud-btn'}
+          style={isMobile ? {} : { marginRight: 8, background: 'linear-gradient(135deg, #00ffff, #ffd700)', color: '#1a1a1a', fontWeight: 600 }}
+          onClick={() => { setShowLiveChart(s => !s); }}
+        >
+          {showLiveChart ? 'Hide Live Chart' : 'Live Chart'}
+        </button>
+        <button
+          className={isMobile ? 'hud-btn px-6 py-4 font-extrabold rounded-xl text-lg bg-yellow-500/30 text-gray-900' : 'hud-btn'}
+          title="Info"
+          aria-label="Info"
+          onClick={() => { setShowPaytables(true); }}
+          style={isMobile ? {} : { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #00ffff, #ffd700)', color: '#1a1a1a', fontWeight: 600 }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ verticalAlign: 'middle' }}>
+            <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M12 8h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M11.5 12h1v4h-1z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      </div>
+      {/* small spacer */}
+      <div style={isMobile ? { height: 12 } : { height: 6 }} />
 
       {/* Paytables modal (simple) */}
       {showPaytables ? (
@@ -184,7 +183,7 @@ export default function KenoHUD({ balance, message, risk = 'classic' }) {
               dragOffsetRef.current = { x: e.clientX - chartPos.left, y: e.clientY - chartPos.top };
               e.preventDefault();
             }}
-              style={{
+            style={{
               width: 420,
               background: 'linear-gradient(135deg,#071021, #0b1420)',
               border: '1px solid rgba(148,0,0,0.08)',

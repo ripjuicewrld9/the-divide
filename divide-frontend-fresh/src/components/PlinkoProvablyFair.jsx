@@ -9,7 +9,7 @@ async function sha256Hex(message) {
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-export default function PlinkoProvablyFair({ round = null, onClose = () => {}, initialTab = 'seed' }) {
+export default function PlinkoProvablyFair({ round = null, onClose = () => { }, initialTab = 'seed' }) {
   const [computedHash, setComputedHash] = useState(null);
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState(null);
@@ -50,7 +50,7 @@ export default function PlinkoProvablyFair({ round = null, onClose = () => {}, i
   function rotateSeed() {
     // Rotate BOTH client seed (local) and server seed (via API)
     setError(null);
-    
+
     // 1. Rotate client seed locally
     try {
       const arr = new Uint8Array(16);
@@ -64,7 +64,7 @@ export default function PlinkoProvablyFair({ round = null, onClose = () => {}, i
       persistClientSeed(fallback);
       persistNonce(0);
     }
-    
+
     // 2. Rotate server seed via API (use plinko endpoint)
     api.post('/plinko/rotate-seed')
       .then(res => {
@@ -94,14 +94,14 @@ export default function PlinkoProvablyFair({ round = null, onClose = () => {}, i
       // Plinko uses serverSeed + blockHash to create gameSeed
       const ss = toVerify.serverSeed || '';
       const bh = toVerify.blockHash || '';
-      
+
       // Verify the server seed hash matches using Web Crypto API
       const computedServerHash = await sha256Hex(ss);
-      
+
       // Compute game seed (SHA-256 of serverSeed + blockHash)
       const combinedInput = ss + bh;
       const computedGameSeed = await sha256Hex(combinedInput);
-      
+
       setComputedHash(computedGameSeed);
       setVerifying(false);
     } catch (err) {
@@ -130,7 +130,19 @@ export default function PlinkoProvablyFair({ round = null, onClose = () => {}, i
   }, [tab]);
 
   return (
-    <div className="modal screenOn" onClick={onClose}>
+    <div className="modal screenOn" onClick={onClose} style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      background: 'rgba(0, 0, 0, 0.75)',
+      backdropFilter: 'blur(6px)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 10000
+    }}>
       <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 900, width: '90%', maxHeight: '90vh', overflow: 'auto' }}>
         <div style={{ padding: 20 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -152,7 +164,7 @@ export default function PlinkoProvablyFair({ round = null, onClose = () => {}, i
           {tab === 'seed' && (
             <div>
               <p style={{ color: '#999', marginBottom: 16 }}>Control your client seed and nonce for Plinko rounds. The server seed is rotated automatically.</p>
-              
+
               <div style={{ marginBottom: 16 }}>
                 <label style={{ display: 'block', marginBottom: 4, fontWeight: 600 }}>Client Seed</label>
                 <input type="text" value={clientSeedUI} onChange={e => persistClientSeed(e.target.value)} style={{ width: '100%', padding: '8px 12px', background: '#1a1a1a', border: '1px solid rgba(0,255,255,0.2)', borderRadius: 6, color: '#fff', fontFamily: 'monospace' }} />
@@ -177,7 +189,7 @@ export default function PlinkoProvablyFair({ round = null, onClose = () => {}, i
           {tab === 'verify' && (
             <div>
               <p style={{ color: '#999', marginBottom: 16 }}>Verify a Plinko round by checking the server seed hash.</p>
-              
+
               {(selected || round) && (
                 <div style={{ marginBottom: 16, padding: 12, background: 'rgba(0,255,255,0.05)', border: '1px solid rgba(0,255,255,0.2)', borderRadius: 6 }}>
                   <div style={{ marginBottom: 8 }}><strong>Round ID:</strong> {(selected || round)?._id || 'N/A'}</div>
@@ -209,11 +221,11 @@ export default function PlinkoProvablyFair({ round = null, onClose = () => {}, i
           {tab === 'recent' && (
             <div>
               <p style={{ color: '#999', marginBottom: 16 }}>View your recent Plinko rounds.</p>
-              
+
               {loadingRecent && <div style={{ textAlign: 'center', padding: 20, color: '#999' }}>Loading...</div>}
-              
+
               {!loadingRecent && recent && recent.length === 0 && <div style={{ textAlign: 'center', padding: 20, color: '#999' }}>No recent rounds found.</div>}
-              
+
               {!loadingRecent && recent && recent.length > 0 && (
                 <div style={{ maxHeight: 400, overflow: 'auto' }}>
                   {recent.map((r, i) => (

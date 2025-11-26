@@ -1,9 +1,10 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import '../styles/keno.css';
 import useKeno from '../hooks/useKeno';
 import KenoGrid from '../components/KenoGrid';
 import KenoControls from '../components/KenoControls';
-import KenoHUD from '../components/KenoHUD';
+import KenoLiveChart from '../components/KenoLiveChart';
 import ProvablyFair from '../components/ProvablyFair';
 import KenoDebugOverlay from '../components/KenoDebugOverlay';
 import KenoLeaderboard from '../components/KenoLeaderboard';
@@ -14,17 +15,18 @@ import { formatCurrency } from '../utils/format';
 export default function KenoPage({ onOpenChat }) {
   const k = useKeno();
   const [showPF, setShowPF] = React.useState(false);
+  const [showLiveChart, setShowLiveChart] = React.useState(false);
+
   return (
     <>
-      <div className="relative flex min-h-dvh w-full flex-col" style={{ background: 'linear-gradient(135deg, #0a0a14 0%, #1a1a2e 50%, #0f0f1e 100%)' }}>
+      <div className="relative flex min-h-dvh w-full flex-col overflow-x-hidden" style={{ background: 'linear-gradient(135deg, #0a0a14 0%, #1a1a2e 50%, #0f0f1e 100%)' }}>
         {/* Mobile Header - only shows on mobile */}
-        <div className="md:hidden">
-          <MobileGameHeader title="Keno" onOpenChat={onOpenChat} />
-        </div>
+        {/* Mobile Header - only shows on mobile */}
+        <MobileGameHeader title="Keno" onOpenChat={onOpenChat} className="md:hidden" />
 
-        <div className="flex-1 px-2 md:px-5 pb-20 md:pb-5">
-          <div className="mx-auto mt-2 md:mt-5 max-w-xl min-w-[300px] drop-shadow-xl md:mt-10 lg:max-w-6xl">
-            <nav className="w-full drop-shadow-lg rounded-t-lg overflow-hidden" style={{ background: 'linear-gradient(135deg, #0a0a14 0%, #1a1a2e 50%, #0f0f1e 100%)' }}>
+        <div className="flex-1 px-0 md:px-5 pb-4 md:pb-5">
+          <div className="mx-auto mt-2 md:mt-5 max-w-xl min-w-[300px] md:drop-shadow-xl md:mt-10 lg:max-w-6xl">
+            <nav className="hidden md:block w-full md:drop-shadow-lg rounded-t-lg overflow-hidden" style={{ background: 'linear-gradient(135deg, #0a0a14 0%, #1a1a2e 50%, #0f0f1e 100%)' }}>
               <div className="mx-auto flex h-12 md:h-14 max-w-7xl items-center justify-between px-3 md:px-5">
                 <h1 className="text-xl md:text-2xl font-bold text-white">Keno</h1>
               </div>
@@ -34,8 +36,8 @@ export default function KenoPage({ onOpenChat }) {
               <div className="flex flex-col lg:flex-row">
                 {/* Keno Game Component */}
                 <div className="flex-1 relative order-1" style={{ background: 'linear-gradient(135deg, #0a0a14 0%, #1a1a2e 50%, #0f0f1e 100%)' }}>
-                  <div className="mx-auto flex h-full flex-col px-2 md:px-4 pb-2 md:pb-4">
-                    <KenoHUD balance={k.balance} message={k.message} computeOdds={k.computeOdds} risk={k.risk} />
+                  <div className="mx-auto flex h-full flex-col px-0 md:px-4 pb-0 md:pb-4">
+                    {/* HUD Removed */}
                     <KenoGrid playerNumbers={k.playerNumbers} onToggle={k.toggleNumber} drawnNumbers={k.drawnNumbers} matches={k.matches} autoDraw={k.isDrawing} onRevealComplete={k.onRevealComplete} risk={k.risk} selectionOrder={k.selectionOrder} />
                   </div>
                 </div>
@@ -61,6 +63,9 @@ export default function KenoPage({ onOpenChat }) {
                     autoRemaining={k.autoRemaining}
                     autoRounds={k.autoRounds}
                     setAutoRounds={k.setAutoRounds}
+
+                    onShowLiveChart={() => setShowLiveChart(true)}
+                    onShowInfo={() => setShowPF(true)}
                   />
                 </aside>
               </div>
@@ -96,9 +101,16 @@ export default function KenoPage({ onOpenChat }) {
               </div>
             </div>
           ) : null}
-          {showPF ? (
-            <ProvablyFair round={k.pendingResult} onClose={() => setShowPF(false)} risk={k.risk} />
-          ) : null}
+          {showPF && createPortal(
+            <ProvablyFair round={k.pendingResult} onClose={() => setShowPF(false)} risk={k.risk} />,
+            document.body
+          )}
+
+          {/* Live Chart Portal */}
+          {showLiveChart && createPortal(
+            <KenoLiveChart onClose={() => setShowLiveChart(false)} />,
+            document.body
+          )}
 
           {/* Leaderboard - Now visible on mobile */}
           <div className="mx-auto mt-10 max-w-xl min-w-[300px] lg:max-w-7xl">
@@ -119,7 +131,7 @@ export default function KenoPage({ onOpenChat }) {
         </div>
 
         {/* Keno debug overlay */}
-        <KenoDebugOverlay result={k.pendingResult} picks={k.selectionOrder || Object.keys(k.playerNumbers || {}).map(Number)} />
+
       </div>
     </>
   );

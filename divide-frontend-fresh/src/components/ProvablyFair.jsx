@@ -40,7 +40,7 @@ function hashToNumbersClient(hash, max, count) {
   const seedHex = (hash && hash.length >= 8) ? hash.slice(0, 8) : '00000000';
   let seed = parseInt(seedHex, 16) >>> 0;
   function mulberry32(a) {
-    return function() {
+    return function () {
       let t = (a += 0x6D2B79F5);
       t = Math.imul(t ^ (t >>> 15), t | 1);
       t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
@@ -63,7 +63,7 @@ function hashToNumbersClient(hash, max, count) {
   return numbers;
 }
 
-export default function ProvablyFair({ round = null, onClose = () => {}, initialTab = 'seed', risk: propRisk = 'classic' }) {
+export default function ProvablyFair({ round = null, onClose = () => { }, initialTab = 'seed', risk: propRisk = 'classic' }) {
   const [computedHash, setComputedHash] = useState(null);
   const [computedDraw, setComputedDraw] = useState(null);
   const [verifying, setVerifying] = useState(false);
@@ -188,7 +188,7 @@ export default function ProvablyFair({ round = null, onClose = () => {}, initial
   function rotateSeed() {
     // Rotate BOTH client seed (local) and server seed (via API)
     setError(null);
-    
+
     // 1. Rotate client seed locally
     try {
       const arr = new Uint8Array(16);
@@ -202,7 +202,7 @@ export default function ProvablyFair({ round = null, onClose = () => {}, initial
       persistClientSeed(fallback);
       persistNonce(0);
     }
-    
+
     // 2. Rotate server seed via API
     api.post('/keno/rotate-seed')
       .then(res => {
@@ -232,17 +232,17 @@ export default function ProvablyFair({ round = null, onClose = () => {}, initial
     try {
       setVerifying(true);
       const { serverSeed, blockHash, gameSeed: existingGameSeed } = toVerify;
-      
+
       // Keno uses gameSeed = SHA-256(serverSeed + blockHash)
       const combinedInput = serverSeed + blockHash;
       const computedGameSeed = await sha256Hex(combinedInput);
       setComputedHash(computedGameSeed);
-      
+
       // Verify the gameSeed matches
       if (existingGameSeed && computedGameSeed !== existingGameSeed) {
         setError(`Game seed mismatch! Expected: ${existingGameSeed}, Got: ${computedGameSeed}`);
       }
-      
+
       // Generate drawn numbers from the game seed
       const draw = generateKenoDrawFromGameSeed(computedGameSeed);
       setComputedDraw(draw);
@@ -268,8 +268,8 @@ export default function ProvablyFair({ round = null, onClose = () => {}, initial
   };
 
   return (
-    <div className="modal screenOn" onClick={() => onClose()}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+    <div className="modal screenOn" onClick={() => onClose()} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.8)' }}>
+      <div className="modal-content w-full max-w-4xl bg-slate-900 rounded-xl p-4 md:p-6 overflow-y-auto max-h-[90vh] border border-slate-700 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <h2>Provably Fair</h2>
 
         {/* Tabs: Paytables | Client Seed UI | Verify | Recent rounds | How It Works */}
@@ -282,11 +282,14 @@ export default function ProvablyFair({ round = null, onClose = () => {}, initial
         </div>
 
         {tab === 'paytables' && (
-          <div>
-            <h3 style={{ marginTop: 0 }}>Keno Paytables</h3>
-            <p style={{ fontSize: 13, color: '#ccc' }}>Server-authoritative paytables. Choose risk to view specific table.</p>
+          <div className="flex flex-col h-full overflow-hidden">
+            <div className="flex-none">
+              <h3 className="mt-0 text-xl font-bold text-white">Keno Paytables</h3>
+              <p className="text-sm text-gray-400 mb-4">Server-authoritative paytables. Choose risk to view specific table.</p>
+            </div>
+
             {paytablesError ? (
-              <div style={{ color: '#f77' }}>Failed to load paytables: {String(paytablesError)}</div>
+              <div className="text-red-400">Failed to load paytables: {String(paytablesError)}</div>
             ) : !paytables || Object.keys(paytables).length === 0 ? (
               <div>Loading...</div>
             ) : (
@@ -308,46 +311,53 @@ export default function ProvablyFair({ round = null, onClose = () => {}, initial
                 }
 
                 return (
-                  <div>
-                    <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div className="flex flex-col h-full overflow-hidden">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4 flex-none">
                       <div>
-                        <strong style={{ color: '#940000', textTransform: 'capitalize' }}>{risk}</strong>
-                        <div style={{ color: '#e0e0e0', marginTop: 6, fontSize: 12 }}>
-                          Per-spot RTP: {perSpot.map(p => `${p.spots}:${p.rtp.toFixed(2)}%`).join('  |  ')}
+                        <strong className="text-red-500 capitalize text-lg">{risk}</strong>
+                        <div className="text-gray-400 text-xs mt-1 hidden md:block">
+                          Per-spot RTP: {perSpot.map(p => `${p.spots}:${p.rtp.toFixed(2)}%`).join(' | ')}
                         </div>
                       </div>
-                      <div style={{ fontSize: 12, color: '#9fb', display: 'flex', gap: 8, alignItems: 'center' }}>
-                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <div className="flex flex-col items-end gap-2 w-full md:w-auto">
+                        <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-1">
                           {risks.map(rk => (
-                              <button key={rk} className={`btn small ${rk === risk ? 'active' : ''}`} onClick={() => persistSelectedRisk(rk)} style={{ textTransform: 'capitalize' }}>{rk}</button>
-                            ))}
+                            <button key={rk} className={`btn small capitalize whitespace-nowrap ${rk === risk ? 'active' : ''}`} onClick={() => persistSelectedRisk(rk)}>{rk}</button>
+                          ))}
                         </div>
-                        <div style={{ fontSize: 12, color: '#9fb' }}>Tap a row to expand hits</div>
+                        <div className="text-xs text-cyan-300">Tap a row to expand hits</div>
                       </div>
                     </div>
 
-                    <div className="payout-compact">
+                    <div className="flex-1 overflow-y-auto min-h-0 space-y-2 pr-1 custom-scrollbar">
                       {perSpot.map(p => (
-                        <div key={p.spots} className={`payout-row ${expandedSpot === p.spots ? 'expanded' : ''}`} onClick={() => setExpandedSpot(expandedSpot === p.spots ? null : p.spots)}>
-                          <div className="payout-row-head">
-                            <div style={{ fontWeight: 800 }}>{p.spots} spots</div>
-                            <div style={{ color: '#9fb', fontFamily: 'monospace' }}>{p.expectedMultiplier.toFixed(6)}x</div>
-                            <div style={{ color: '#9fb' }}>{p.rtp.toFixed(2)}%</div>
-                          </div>
-                          <div className="payout-row-body" style={{ display: expandedSpot === p.spots ? 'flex' : 'none' }}>
-                            <div className="hits-list">
-                              {(table[p.spots] ? Object.entries(table[p.spots]) : []).map(([hits, mult]) => {
-                                const prob = hyperProb(p.spots, Number(hits));
-                                return (
-                                  <div key={hits} className="hit-badge">
-                                    <div className="hit-key">{hits}</div>
-                                    <div className="hit-mult">{Number(mult).toFixed(6)}x</div>
-                                    <div className="hit-prob">{(prob*100).toFixed(4)}%</div>
-                                  </div>
-                                );
-                              })}
+                        <div key={p.spots} className={`bg-slate-800/50 rounded-lg border border-slate-700/50 overflow-hidden transition-all ${expandedSpot === p.spots ? 'ring-1 ring-cyan-500/50' : ''}`}>
+                          <div
+                            className="flex justify-between items-center p-3 cursor-pointer hover:bg-slate-700/50"
+                            onClick={() => setExpandedSpot(expandedSpot === p.spots ? null : p.spots)}
+                          >
+                            <div className="font-bold text-white">{p.spots} spots</div>
+                            <div className="text-sm font-mono text-cyan-300 text-right">
+                              {p.rtp.toFixed(2)}%
                             </div>
                           </div>
+
+                          {expandedSpot === p.spots && (
+                            <div className="bg-slate-900/50 p-2 border-t border-slate-700/50">
+                              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                                {(table[p.spots] ? Object.entries(table[p.spots]) : []).map(([hits, mult]) => {
+                                  const prob = hyperProb(p.spots, Number(hits));
+                                  return (
+                                    <div key={hits} className="flex flex-col items-center p-2 bg-slate-800 rounded border border-slate-700/50">
+                                      <div className="text-xs text-gray-400">{hits} hits</div>
+                                      <div className="text-sm font-bold text-white">{Number(mult).toFixed(2)}x</div>
+                                      <div className="text-[10px] text-gray-500">{(prob * 100).toFixed(2)}%</div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>

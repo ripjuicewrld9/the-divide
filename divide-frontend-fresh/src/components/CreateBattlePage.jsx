@@ -126,9 +126,8 @@ export default function CreateBattlePage({ onOpenChat }) {
   return (
     <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', padding: '20px' }}>
       {/* Mobile Header - only shows on mobile */}
-      <div className="md:hidden mb-4">
-        <MobileGameHeader title="Create Battle" onOpenChat={onOpenChat} />
-      </div>
+      {/* Mobile Header - only shows on mobile */}
+      <MobileGameHeader title="Create Battle" onOpenChat={onOpenChat} className="md:hidden mb-4" />
       <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
         {/* Hero Header Section */}
         <div style={{
@@ -264,12 +263,12 @@ export default function CreateBattlePage({ onOpenChat }) {
                             : 'rgba(100, 200, 100, 0.2)'
                         : 'rgba(255, 255, 255, 0.05)',
                       border: `2px solid ${selectedMode === modeOption.value
-                          ? modeOption.value === 'normal'
-                            ? '#00ffff'
-                            : modeOption.value === 'crazy'
-                              ? '#ff6464'
-                              : '#64c864'
-                          : 'rgba(255, 255, 255, 0.1)'
+                        ? modeOption.value === 'normal'
+                          ? '#00ffff'
+                          : modeOption.value === 'crazy'
+                            ? '#ff6464'
+                            : '#64c864'
+                        : 'rgba(255, 255, 255, 0.1)'
                         }`,
                       color: selectedMode === modeOption.value
                         ? modeOption.value === 'normal'
@@ -328,8 +327,8 @@ export default function CreateBattlePage({ onOpenChat }) {
                         ? 'rgba(100, 255, 100, 0.2)'
                         : 'rgba(255, 255, 255, 0.05)',
                       border: `2px solid ${selectedTeamSize === sizeOption.value
-                          ? '#64ff64'
-                          : 'rgba(255, 255, 255, 0.1)'
+                        ? '#64ff64'
+                        : 'rgba(255, 255, 255, 0.1)'
                         }`,
                       color: selectedTeamSize === sizeOption.value ? '#64ff64' : '#ccc',
                       borderRadius: '8px',

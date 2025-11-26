@@ -18,6 +18,8 @@ interface SidebarProps {
   onAutobet: () => void;
   balance: number;
   disabled: boolean;
+  onShowLiveChart?: () => void;
+  onShowProvablyFair?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -36,14 +38,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onAutobet,
   balance,
   disabled,
+  onShowLiveChart,
+  onShowProvablyFair,
 }) => {
   // Responsive: use mobile-friendly layout and larger touch targets
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 600;
+
   return (
     <div
       className={
         isMobile
-          ? 'flex flex-col gap-6 p-4 w-full max-w-full rounded-lg shadow-lg bg-gradient-to-b from-gray-900 to-gray-800'
+          ? 'flex flex-col gap-3 p-4 w-full max-w-full rounded-lg shadow-lg bg-gradient-to-b from-gray-900 to-gray-800'
           : 'flex flex-col gap-5 p-3 lg:max-w-80'
       }
       style={
@@ -52,11 +57,102 @@ export const Sidebar: React.FC<SidebarProps> = ({
           : { background: 'linear-gradient(135deg, rgba(26, 26, 46, 0.8) 0%, rgba(15, 15, 30, 0.8) 100%)', border: '1px solid rgba(0, 255, 255, 0.1)' }
       }
     >
+      {/* Bet Button - Top on Mobile */}
+      <button
+        onClick={betMode === 'manual' ? onDropBall : onAutobet}
+        disabled={disabled && betMode === 'manual'}
+        className={
+          isMobile
+            ? `order-first mb-3 w-full rounded-lg py-4 text-xl font-bold text-black shadow-[0_0_20px_rgba(0,255,255,0.3)] transition hover:shadow-[0_0_30px_rgba(0,255,255,0.5)] disabled:opacity-50 disabled:cursor-not-allowed ${isAutoRunning ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-gradient-to-r from-cyan-400 to-cyan-300 hover:from-cyan-300 hover:to-cyan-200'}`
+            : `mt-6 w-full rounded-lg py-3 text-base font-bold text-black shadow-[0_0_20px_rgba(0,255,255,0.3)] transition hover:shadow-[0_0_30px_rgba(0,255,255,0.5)] disabled:opacity-50 disabled:cursor-not-allowed ${isAutoRunning ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-gradient-to-r from-cyan-400 to-cyan-300 hover:from-cyan-300 hover:to-cyan-200'}`
+        }
+      >
+        {betMode === 'manual' ? 'Drop Ball' : isAutoRunning ? 'Stop Autobet' : 'Start Autobet'}
+      </button>
+
+      {/* Bet Amount Input */}
+      <div className={isMobile ? 'order-1' : ''}>
+        <div className="flex justify-between mb-1">
+          <span className={isMobile ? "text-sm font-medium text-slate-400" : "text-xs font-medium text-slate-400"}>Bet Amount</span>
+          {isMobile && <span className="text-sm font-medium text-slate-400">Balance: ${balance.toFixed(2)}</span>}
+        </div>
+        <div className="relative">
+          <input
+            type="number"
+            value={betAmount}
+            onChange={(e) => onBetAmountChange(Number(e.target.value))}
+            disabled={disabled}
+            className={
+              isMobile
+                ? 'w-full rounded-md border border-slate-700 bg-slate-900 py-3 pl-3 pr-20 text-base font-bold text-white focus:border-cyan-500 focus:outline-none'
+                : 'w-full rounded-md border border-slate-700 bg-slate-900 py-2 pl-3 pr-16 text-sm font-bold text-white focus:border-cyan-500 focus:outline-none'
+            }
+          />
+          <div className="absolute right-1 top-1 flex gap-1">
+            <button
+              onClick={() => onBetAmountChange(betAmount / 2)}
+              disabled={disabled}
+              className="rounded bg-slate-800 px-2 py-1 text-xs font-medium text-slate-400 hover:bg-slate-700 hover:text-white"
+            >
+              ½
+            </button>
+            <button
+              onClick={() => onBetAmountChange(betAmount * 2)}
+              disabled={disabled}
+              className="rounded bg-slate-800 px-2 py-1 text-xs font-medium text-slate-400 hover:bg-slate-700 hover:text-white"
+            >
+              2×
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Risk Level & Rows */}
+      <div className={isMobile ? 'order-2 flex flex-col gap-3' : ''}>
+        <div className={isMobile ? 'flex-1' : ''}>
+          <div className={isMobile ? "mb-1 text-sm font-medium text-slate-400" : "mb-1 text-xs font-medium text-slate-400"}>Risk</div>
+          <select
+            value={riskLevel}
+            onChange={(e) => onRiskLevelChange(e.target.value as any)}
+            disabled={disabled}
+            className={
+              isMobile
+                ? 'w-full rounded-md border border-slate-700 bg-slate-900 py-3 px-3 text-base font-bold text-white focus:border-cyan-500 focus:outline-none'
+                : 'w-full rounded-md border border-slate-700 bg-slate-900 py-2 px-3 text-sm font-bold text-white focus:border-cyan-500 focus:outline-none'
+            }
+          >
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+          </select>
+        </div>
+
+        <div className={isMobile ? 'flex-1' : 'mt-4'}>
+          <div className={isMobile ? "mb-1 text-sm font-medium text-slate-400" : "mb-1 text-xs font-medium text-slate-400"}>Rows</div>
+          <select
+            value={rowCount}
+            onChange={(e) => onRowCountChange(Number(e.target.value) as any)}
+            disabled={disabled}
+            className={
+              isMobile
+                ? 'w-full rounded-md border border-slate-700 bg-slate-900 py-3 px-3 text-base font-bold text-white focus:border-cyan-500 focus:outline-none'
+                : 'w-full rounded-md border border-slate-700 bg-slate-900 py-2 px-3 text-sm font-bold text-white focus:border-cyan-500 focus:outline-none'
+            }
+          >
+            {[8, 9, 10, 11, 12, 13, 14, 15, 16].map((rows) => (
+              <option key={rows} value={rows}>
+                {rows}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       {/* Bet Mode Toggle */}
       <div
         className={
           isMobile
-            ? 'order-3 flex gap-2 rounded-full p-2 bg-black/40'
+            ? 'order-3 flex gap-1 rounded-full p-1 bg-black/40'
             : 'flex gap-1 rounded-full p-1'
         }
         style={isMobile ? {} : { background: 'rgba(0, 0, 0, 0.5)' }}
@@ -68,7 +164,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             disabled={isAutoRunning}
             className={
               isMobile
-                ? `flex-1 rounded-full py-4 text-base font-bold transition ${betMode === mode ? 'bg-cyan-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-cyan-700'
+                ? `flex-1 rounded-full py-3 text-base font-bold transition ${betMode === mode ? 'bg-cyan-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-cyan-700'
                 } ${isAutoRunning ? 'opacity-50 cursor-not-allowed' : ''}`
                 : `flex-1 rounded-full py-2 text-sm font-medium text-white transition ${betMode === mode ? 'text-white' : 'text-slate-400 hover:text-white'
                 } ${isAutoRunning ? 'opacity-50 cursor-not-allowed' : ''}`
@@ -86,117 +182,54 @@ export const Sidebar: React.FC<SidebarProps> = ({
         ))}
       </div>
 
-      {/* Bet Amount */}
-      <div className={isMobile ? 'order-2' : ''}>
-        <label className={isMobile ? 'text-lg font-bold text-cyan-300 mb-2 block' : 'text-sm font-medium text-slate-300'}>
-          Bet Amount (${betAmount.toFixed(2)})
-        </label>
-        <div className={isMobile ? 'flex gap-2' : 'flex'}>
-          <div className="relative flex-1">
-            <input
-              type="number"
-              value={betAmount}
-              onChange={(e) => onBetAmountChange(parseFloat(e.target.value) || 0)}
-              disabled={isAutoRunning}
-              min="0"
-              step="0.01"
-              className={isMobile ? 'w-full rounded-l-xl border-2 py-4 pr-2 pl-10 text-lg text-white disabled:opacity-50' : 'w-full rounded-l-md border-2 py-2 pr-2 pl-7 text-sm text-white disabled:opacity-50'}
-              style={{ borderColor: 'rgba(0, 255, 255, 0.2)', background: 'rgba(0, 0, 0, 0.4)' }}
-            />
-            <div className={isMobile ? 'absolute top-3 left-4 text-cyan-400 select-none text-lg' : 'absolute top-2 left-3 text-slate-500 select-none'} aria-hidden="true">$</div>
-          </div>
-          <button
-            onClick={() => onBetAmountChange(betAmount / 2)}
-            disabled={isAutoRunning}
-            className={isMobile ? 'px-6 py-4 font-bold text-white text-lg rounded-xl hover:opacity-80 disabled:opacity-50 bg-yellow-500/30' : 'px-4 font-bold text-white hover:opacity-80 disabled:opacity-50'}
-            style={isMobile ? {} : { background: 'rgba(255, 215, 0, 0.2)' }}
-          >
-            1/2
-          </button>
-          <button
-            onClick={() => onBetAmountChange(betAmount * 2)}
-            disabled={isAutoRunning}
-            className={isMobile ? 'px-6 py-4 font-bold text-white text-lg rounded-xl hover:opacity-80 disabled:opacity-50 bg-cyan-500/30' : 'rounded-r-md px-4 font-bold text-white hover:opacity-80 disabled:opacity-50'}
-            style={isMobile ? {} : { background: 'rgba(0, 255, 255, 0.2)' }}
-          >
-            2×
-          </button>
-        </div>
-      </div>
-
-      {/* Risk Level */}
-      <div className={isMobile ? 'order-4' : ''}>
-        <label className={isMobile ? 'text-lg font-bold text-cyan-300 mb-2 block' : 'text-sm font-medium text-slate-300'}>Risk</label>
-        <select
-          value={riskLevel}
-          onChange={(e) => onRiskLevelChange(e.target.value as RiskLevel)}
-          disabled={disabled}
-          className={isMobile ? 'w-full rounded-xl border-2 py-4 px-4 text-lg text-white disabled:opacity-50' : 'w-full rounded-md border-2 py-2 px-2 text-white disabled:opacity-50'}
-          style={{ borderColor: 'rgba(0, 255, 255, 0.2)', background: 'rgba(0, 0, 0, 0.4)' }}
-        >
-          <option value="low">Low</option>
-          <option value="medium">Medium</option>
-          <option value="high">High</option>
-        </select>
-      </div>
-
-      {/* Row Count */}
-      <div className={isMobile ? 'order-5' : ''}>
-        <label className={isMobile ? 'text-lg font-bold text-cyan-300 mb-2 block' : 'text-sm font-medium text-slate-300'}>Rows</label>
-        <select
-          value={rowCount}
-          onChange={(e) => onRowCountChange(parseInt(e.target.value) as RowCount)}
-          disabled={disabled}
-          className={isMobile ? 'w-full rounded-xl border-2 py-4 px-4 text-lg text-white disabled:opacity-50' : 'w-full rounded-md border-2 py-2 px-2 text-white disabled:opacity-50'}
-          style={{ borderColor: 'rgba(0, 255, 255, 0.2)', background: 'rgba(0, 0, 0, 0.4)' }}
-        >
-          {rowCountOptions.map((rows) => (
-            <option key={rows} value={rows}>
-              {rows}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Auto Bet Count */}
+      {/* Auto Bet Count (only in auto mode) */}
       {betMode === 'auto' && (
-        <div className={isMobile ? 'order-6' : ''}>
-          <label className={isMobile ? 'text-lg font-bold text-cyan-300 mb-2 block' : 'text-sm font-medium text-slate-300'}>
-            Number of Bets (0 = infinite)
-          </label>
+        <div className={isMobile ? 'order-4' : 'mt-4'}>
+          <div className={isMobile ? "mb-1 text-sm font-medium text-slate-400" : "mb-1 text-xs font-medium text-slate-400"}>Number of Bets</div>
           <input
             type="number"
             value={autoBetCount}
-            onChange={(e) => onAutoBetCountChange(Math.max(0, parseInt(e.target.value) || 0))}
+            onChange={(e) => onAutoBetCountChange(Number(e.target.value))}
             disabled={isAutoRunning}
-            min="0"
-            className={isMobile ? 'w-full rounded-xl border-2 py-4 px-4 text-lg text-white disabled:opacity-50' : 'w-full rounded-md border-2 py-2 px-2 text-white disabled:opacity-50'}
-            style={{ borderColor: 'rgba(0, 255, 255, 0.2)', background: 'rgba(0, 0, 0, 0.4)' }}
+            className={
+              isMobile
+                ? 'w-full rounded-md border border-slate-700 bg-slate-900 py-3 px-3 text-base font-bold text-white focus:border-cyan-500 focus:outline-none'
+                : 'w-full rounded-md border border-slate-700 bg-slate-900 py-2 px-3 text-sm font-bold text-white focus:border-cyan-500 focus:outline-none'
+            }
           />
         </div>
       )}
 
-      {/* Action Button */}
-      <button
-        onClick={betMode === 'manual' ? onDropBall : onAutobet}
-        disabled={disabled || betAmount <= 0 || betAmount > balance}
-        className={
-          isMobile
-            ? 'order-1 rounded-xl py-5 font-extrabold text-lg text-slate-900 transition w-full mt-2 shadow-lg'
-            : 'rounded-md py-3 font-semibold text-slate-900 transition'
-        }
-        style={{
-          background: betMode === 'manual'
-            ? 'linear-gradient(135deg, #00ffff, #ffd700)'
-            : isAutoRunning
-              ? 'linear-gradient(135deg, #ffd700, #ff8c00)'
-              : 'linear-gradient(135deg, #00ffff, #ffd700)',
-          opacity: (disabled || betAmount <= 0 || betAmount > balance) ? 0.5 : 1,
-          cursor: (disabled || betAmount <= 0 || betAmount > balance) ? 'not-allowed' : 'pointer'
-        }}
-      >
-        {betMode === 'manual' ? 'Drop Ball' : isAutoRunning ? 'Stop Autobet' : 'Start Autobet'}
-      </button>
+      {/* Icon buttons - Chart and Fairness */}
+      {(onShowLiveChart || onShowProvablyFair) && (
+        <div className={isMobile ? "order-last flex gap-4 justify-center mt-2 pt-2 border-t border-white/5" : "flex gap-4 justify-center mt-4 pt-3 border-t border-white/5"}>
+          {onShowLiveChart && !isMobile && (
+            <button
+              onClick={onShowLiveChart}
+              className="flex items-center gap-2 text-gray-400 hover:text-cyan-400 transition-colors"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 3v18h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                <path d="M18 9l-5 5-3-3-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+              </svg>
+              <span className="text-xs">Chart</span>
+            </button>
+          )}
+          {onShowProvablyFair && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onShowProvablyFair(); }}
+              className="flex items-center gap-2 text-gray-400 hover:text-cyan-400 transition-colors"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
+                <path d="M12 8h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M11.5 12h1v4h-1z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <span className="text-xs">Fairness</span>
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 };

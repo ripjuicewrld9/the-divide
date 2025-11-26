@@ -42,7 +42,7 @@
   max-width: 320px;
   margin: 0 auto;
   box-sizing: border-box;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .divide-card:hover {
@@ -57,7 +57,7 @@
   font-weight: 600;
   text-shadow: 0 0 12px #940000;
   white-space: nowrap;
-  overflow: hidden;
+  overflow: visible;
   text-overflow: ellipsis;
 }
 
@@ -492,4 +492,8 @@
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
+}
+/* Mobile fixes for pot visibility */
+@media (max-width: 480px) {
+  .divide-card { padding-bottom: 2rem; }
 }

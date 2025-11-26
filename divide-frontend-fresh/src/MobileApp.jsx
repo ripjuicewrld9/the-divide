@@ -13,6 +13,7 @@ import BlackjackPage from "./games/blackjack/index.tsx";
 import PlinkoPage from "./games/plinko/index.tsx";
 import MobileMainLayout from "./components/MobileMainLayout.jsx";
 import MobileChatOverlay from "./components/MobileChatOverlay.jsx";
+import MobileBottomNav from "./components/MobileBottomNav.jsx";
 import ProfilePage from "./pages/Profile.jsx";
 
 function ProtectedRoute({ children, requiredRole = null }) {
@@ -53,6 +54,9 @@ export default function MobileApp() {
 
             {/* Chat Overlay */}
             <MobileChatOverlay isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+
+            {/* Global Bottom Navigation */}
+            <MobileBottomNav onOpenChat={() => setIsChatOpen(true)} />
         </div>
     );
 }

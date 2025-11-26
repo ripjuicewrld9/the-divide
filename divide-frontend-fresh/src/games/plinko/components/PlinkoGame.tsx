@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { usePlinkoStore } from '../store';
 import { PlinkoEngine } from '../lib/PlinkoEngine';
 import { PlinkoPathEngine } from '../lib/PlinkoPathEngine';
@@ -8,10 +9,10 @@ import { binPayouts, type RowCount, autoBetIntervalMs } from '../lib/constants';
 import Sidebar from './Sidebar';
 import BinsRow from './BinsRow';
 import LastWins from './LastWins';
-import PlinkoHUD from './PlinkoHUD';
 import LiveGamesFeed from '../../../components/LiveGamesFeed';
 import PlinkoLeaderboard from '../../../components/PlinkoLeaderboard';
 import MobileGameHeader from '../../../components/MobileGameHeader';
+import PlinkoProvablyFair from '../../../components/PlinkoProvablyFair';
 import { loadRecordingsFromStorage, loadRecordingsFromDatabase, saveRecordingsToStorage, saveRecordingsToDatabase, serializeRecordings } from '../utils/recordingManager';
 
 // Animation mode selection
@@ -55,6 +56,8 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({ onOpenChat }) => {
   const [isAutoRunning, setIsAutoRunning] = useState(false);
   const [binsWidthPercentage, setBinsWidthPercentage] = useState(1);
   const [isPlayingRound, setIsPlayingRound] = useState(false);
+  const [showProvablyFair, setShowProvablyFair] = useState(false);
+  const [showLiveChart, setShowLiveChart] = useState(false);
 
   // Load balance on component mount
   useEffect(() => {
@@ -249,7 +252,7 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({ onOpenChat }) => {
       }
 
       // Call backend API to play a round
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/plinko/play`, {
+      const response = await fetch(`${(import.meta as any).env.VITE_API_URL || 'http://localhost:3000'}/api/plinko/play`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -381,87 +384,126 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({ onOpenChat }) => {
   // Device detection for layout separation
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 600;
   return (
-    <div
-      className={isMobile ? 'relative flex min-h-dvh w-full flex-col bg-gradient-to-b from-gray-900 to-gray-800' : 'relative flex min-h-dvh w-full flex-col'}
-      style={isMobile ? {} : { background: 'linear-gradient(135deg, #0a0a14 0%, #1a1a2e 50%, #0f0f1e 100%)' }}
-    >
-      {/* Mobile Header - only shows on mobile */}
-      <div className="md:hidden">
-        <MobileGameHeader title="Plinko" onOpenChat={onOpenChat} />
-      </div>
+    <>
+      <div
+        className={isMobile ? 'relative flex min-h-dvh w-full flex-col bg-gradient-to-b from-gray-900 to-gray-800' : 'relative flex min-h-dvh w-full flex-col'}
+        style={isMobile ? {} : { background: 'linear-gradient(135deg, #0a0a14 0%, #1a1a2e 50%, #0f0f1e 100%)' }}
+      >
+        {/* Mobile Header - only shows on mobile */}
+        <MobileGameHeader title="Plinko" onOpenChat={onOpenChat} className="md:hidden" />
 
-      <div className={isMobile ? 'flex-1 px-2 py-2 pb-20' : 'flex-1 px-5'}>
-        {/* ...existing code... */}
-        <div className="mx-auto mt-5 max-w-xl min-w-[300px] drop-shadow-xl md:mt-10 lg:max-w-6xl" style={{ transform: 'scale(0.9)', transformOrigin: 'top center' }}>
-          <nav className="w-full drop-shadow-lg rounded-t-lg overflow-hidden" style={{ background: 'linear-gradient(135deg, #0a0a14 0%, #1a1a2e 50%, #0f0f1e 100%)' }}>
-            <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-5">
-              <h1 className="text-2xl font-bold text-white">Plinko</h1>
-            </div>
-          </nav>
-          <div className="relative overflow-hidden rounded-b-lg">
-            <div className={isMobile ? 'flex flex-col w-full gap-6' : 'flex flex-col-reverse lg:w-full lg:flex-row'}>
-              {/* Plinko Game Component */}
-              <div className={isMobile ? 'w-full relative bg-gradient-to-b from-gray-900 to-gray-800 rounded-xl shadow-lg p-2' : 'flex-1 relative'} style={isMobile ? {} : { background: 'linear-gradient(135deg, #0a0a14 0%, #1a1a2e 50%, #0f0f1e 100%)' }}>
-                <div className={isMobile ? 'mx-auto flex h-full flex-col px-1 pb-2' : 'mx-auto flex h-full flex-col px-4 pb-4'} style={{ maxWidth: '760px' }}>
-                  {/* HUD Bar */}
-                  <PlinkoHUD balance={balance} message="Drop a ball to play" />
-                  <div className={isMobile ? 'relative w-full' : 'relative w-full'} style={isMobile ? { aspectRatio: '760 / 570', minHeight: 220 } : { aspectRatio: '760 / 570' }}>
-                    <canvas
-                      ref={canvasRef}
-                      width={760}
-                      height={570}
-                      className="absolute inset-0 h-full w-full"
-                    />
+        <div className={isMobile ? 'flex-1 px-1 py-1 pb-4' : 'flex-1 px-5'}>
+          <div className="mx-auto mt-2 max-w-xl min-w-[300px] drop-shadow-xl md:mt-10 lg:max-w-6xl" style={isMobile ? {} : { transform: 'scale(0.9)', transformOrigin: 'top center' }}>
+            <div className="relative overflow-hidden rounded-lg">
+              <div className={isMobile ? 'flex flex-col w-full gap-2' : 'flex flex-col-reverse lg:w-full lg:flex-row'}>
+                {/* Plinko Game Component */}
+                <div className={isMobile ? 'w-full relative bg-gradient-to-b from-gray-900 to-gray-800 rounded-xl shadow-lg p-1' : 'flex-1 relative'} style={isMobile ? {} : { background: 'linear-gradient(135deg, #0a0a14 0%, #1a1a2e 50%, #0f0f1e 100%)' }}>
+                  <div className={isMobile ? 'mx-auto flex h-full flex-col px-0 pb-1' : 'mx-auto flex h-full flex-col px-4 pb-4'} style={{ maxWidth: '760px' }}>
+                    <div className={isMobile ? 'relative w-full' : 'relative w-full'} style={isMobile ? { aspectRatio: '760 / 570' } : { aspectRatio: '760 / 570' }}>
+                      <canvas
+                        ref={canvasRef}
+                        width={760}
+                        height={570}
+                        className="absolute inset-0 h-full w-full"
+                      />
+                    </div>
+                    <BinsRow rowCount={rowCount} riskLevel={riskLevel} binsWidthPercentage={binsWidthPercentage} />
                   </div>
-                  <BinsRow rowCount={rowCount} riskLevel={riskLevel} binsWidthPercentage={binsWidthPercentage} />
+                </div>
+                {/* Sidebar below game on mobile, right on desktop */}
+                <div className={isMobile ? 'w-full' : ''}>
+                  <Sidebar
+                    betAmount={betAmount}
+                    onBetAmountChange={setBetAmount}
+                    betMode={betMode}
+                    onBetModeChange={setBetMode}
+                    riskLevel={riskLevel}
+                    onRiskLevelChange={setRiskLevel}
+                    rowCount={rowCount}
+                    onRowCountChange={setRowCount}
+                    autoBetCount={autoBetCount}
+                    onAutoBetCountChange={setAutoBetCount}
+                    isAutoRunning={isAutoRunning}
+                    onDropBall={handleDropBall}
+                    onAutobet={handleAutobet}
+                    balance={balance}
+                    disabled={isAutoRunning}
+                    onShowLiveChart={() => setShowLiveChart(true)}
+                    onShowProvablyFair={() => { console.log('Fairness clicked'); setShowProvablyFair(true); }}
+                  />
                 </div>
               </div>
-              {/* Sidebar below game on mobile, right on desktop */}
-              <div className={isMobile ? 'w-full' : ''}>
-                <Sidebar
-                  betAmount={betAmount}
-                  onBetAmountChange={setBetAmount}
-                  betMode={betMode}
-                  onBetModeChange={setBetMode}
-                  riskLevel={riskLevel}
-                  onRiskLevelChange={setRiskLevel}
-                  rowCount={rowCount}
-                  onRowCountChange={setRowCount}
-                  autoBetCount={autoBetCount}
-                  onAutoBetCountChange={setAutoBetCount}
-                  isAutoRunning={isAutoRunning}
-                  onDropBall={handleDropBall}
-                  onAutobet={handleAutobet}
-                  balance={balance}
-                  disabled={isAutoRunning}
-                />
-              </div>
+            </div>
+          </div>
+          {/* Plinko Leaderboard */}
+          <div className="mx-auto mt-10 max-w-xl min-w-[300px] lg:max-w-7xl">
+            <PlinkoLeaderboard />
+          </div>
+          {/* Live Games Feed */}
+          <div className="mx-auto mt-10 max-w-xl min-w-[300px] lg:max-w-7xl">
+            <div style={{
+              background: 'rgba(11, 11, 11, 0.8)',
+              border: '1px solid rgba(0, 255, 255, 0.1)',
+              borderRadius: '16px',
+              padding: '24px'
+            }}>
+              <LiveGamesFeed maxGames={10} />
             </div>
           </div>
         </div>
-        {/* Plinko Leaderboard */}
-        <div className="mx-auto mt-10 max-w-xl min-w-[300px] lg:max-w-7xl">
-          <PlinkoLeaderboard />
-        </div>
-        {/* Live Games Feed */}
-        <div className="mx-auto mt-10 max-w-xl min-w-[300px] lg:max-w-7xl">
-          <div style={{
-            background: 'rgba(11, 11, 11, 0.8)',
-            border: '1px solid rgba(0, 255, 255, 0.1)',
-            borderRadius: '16px',
-            padding: '24px'
-          }}>
-            <LiveGamesFeed maxGames={10} />
+        {/* Desktop-only: LastWins floating panel */}
+        {!isMobile && (
+          <div className="absolute top-[15%] left-[5%]">
+            <LastWins />
           </div>
-        </div>
+        )}
       </div>
-      {/* Desktop-only: LastWins floating panel */}
-      {!isMobile && (
-        <div className="absolute top-[15%] left-[5%]">
-          <LastWins />
-        </div>
+
+      {/* Provably Fair modal - rendered via Portal to escape any parent clipping */}
+      {showProvablyFair && createPortal(
+        <PlinkoProvablyFair onClose={() => setShowProvablyFair(false)} initialTab="seed" />,
+        document.body
       )}
-    </div>
+
+      {/* Live Chart - rendered via Portal */}
+      {showLiveChart && createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            left: '40px',
+            top: '120px',
+            zIndex: 2000,
+            width: '420px',
+            background: 'linear-gradient(135deg, #071021, #0b1420)',
+            border: '1px solid rgba(148, 0, 0, 0.08)',
+            padding: '16px',
+            borderRadius: '8px',
+            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.6)',
+            color: '#9fe'
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <div style={{ fontWeight: 700 }}>Live Chart</div>
+            <button
+              onClick={() => setShowLiveChart(false)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#fff',
+                cursor: 'pointer',
+                fontSize: '1.2em'
+              }}
+            >
+              ×
+            </button>
+          </div>
+          <div style={{ textAlign: 'center', padding: '24px', color: '#999' }}>
+            Live chart coming soon...
+          </div>
+        </div>,
+        document.body
+      )}
+    </>
   );
 };
 

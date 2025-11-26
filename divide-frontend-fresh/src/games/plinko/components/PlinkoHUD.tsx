@@ -12,7 +12,7 @@ export default function PlinkoHUD({ balance, message = 'Drop a ball to play' }: 
 
   return (
     <>
-      <div style={{ 
+      <div style={{
         marginBottom: '12px',
         padding: '12px 16px',
         background: 'linear-gradient(135deg, rgba(26, 26, 46, 0.8) 0%, rgba(15, 15, 30, 0.8) 100%)',
@@ -20,22 +20,12 @@ export default function PlinkoHUD({ balance, message = 'Drop a ball to play' }: 
         borderRadius: '10px'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-          <div style={{ 
-            background: 'linear-gradient(135deg, #00ffff, #ffd700)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-            fontWeight: 700,
-            fontSize: '1.1em'
-          }}>
-            Balance: ${balance !== null && balance !== undefined ? balance.toFixed(2) : '0.00'}
-          </div>
           <div style={{ color: '#999', fontSize: '0.95em', flex: 1, textAlign: 'center' }}>
             {message}
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button 
-              style={{ 
+            <button
+              style={{
                 padding: '6px 14px',
                 background: 'linear-gradient(135deg, #00ffff, #ffd700)',
                 color: '#1a1a1a',
@@ -49,11 +39,11 @@ export default function PlinkoHUD({ balance, message = 'Drop a ball to play' }: 
             >
               {showLiveChart ? 'Hide Live Chart' : 'Live Chart'}
             </button>
-            <button 
+            <button
               title="Info"
               aria-label="Info"
               onClick={() => setShowProvablyFair(true)}
-              style={{ 
+              style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',

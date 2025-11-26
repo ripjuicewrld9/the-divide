@@ -9,7 +9,7 @@ const GameRow = memo(({ game, idx, onGameClick, isNew }) => {
   const isWin = multiplierNum > 0;
   const isHighWin = multiplierNum >= 2;
   const isLuckyWin = multiplierNum >= 10;
-  
+
   const getGameIcon = (gameName) => {
     const iconMap = {
       'Keno': '/tiles-svgrepo-com.svg',
@@ -19,7 +19,7 @@ const GameRow = memo(({ game, idx, onGameClick, isNew }) => {
     };
     return iconMap[gameName] || '/tiles-svgrepo-com.svg';
   };
-  
+
   return (
     <motion.div
       layout
@@ -53,8 +53,8 @@ const GameRow = memo(({ game, idx, onGameClick, isNew }) => {
         fontWeight: 600,
         color: '#fff'
       }}>
-        <img 
-          src={getGameIcon(game.game)} 
+        <img
+          src={getGameIcon(game.game)}
           alt={game.game}
           style={{
             width: '20px',
@@ -116,7 +116,7 @@ export default function LiveGamesFeed({ maxGames = 20 }) {
   const [selectedGame, setSelectedGame] = useState(null);
   const [showProvenFair, setShowProvenFair] = useState(false);
   const [prevGameIds, setPrevGameIds] = useState(new Set());
-  
+
   // Cap max games to prevent performance issues
   const effectiveMaxGames = Math.min(maxGames, 50);
 
@@ -135,20 +135,20 @@ export default function LiveGamesFeed({ maxGames = 20 }) {
     try {
       const token = localStorage.getItem('token');
       let url = (import.meta.env.VITE_API_URL || 'http://localhost:3000') + `/api/recent-games?limit=${effectiveMaxGames}`;
-      
+
       if (activeTab === 'my' && token) {
         url = (import.meta.env.VITE_API_URL || 'http://localhost:3000') + `/api/my-games?limit=${effectiveMaxGames}`;
       }
-      
+
       const headers = {};
       if (activeTab === 'my' && token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
-      
+
       const response = await fetch(url, { headers });
       if (!response.ok) throw new Error('Failed to fetch');
       const data = await response.json();
-      
+
       // Only update if games actually changed to prevent unnecessary re-renders
       const newGames = data.games || [];
       setRecentGames(prev => {
@@ -241,7 +241,7 @@ export default function LiveGamesFeed({ maxGames = 20 }) {
               My Wagers
             </button>
           </div>
-          
+
           <div style={{
             fontSize: '12px',
             color: '#9ca3af',
@@ -261,80 +261,85 @@ export default function LiveGamesFeed({ maxGames = 20 }) {
         </div>
       </div>
 
-      {/* Table Header */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1.5fr 1.2fr 1fr 1fr 1fr 1fr',
-        gap: '16px',
-        padding: '12px 16px',
-        background: 'rgba(0, 255, 255, 0.03)',
-        borderRadius: '8px',
-        marginBottom: '8px',
-        fontSize: '11px',
-        fontWeight: 700,
-        color: '#9ca3af',
-        textTransform: 'uppercase',
-        letterSpacing: '1px'
-      }}>
-        <div>Game</div>
-        <div>Username</div>
-        <div>Time</div>
-        <div style={{ textAlign: 'right' }}>Wager</div>
-        <div style={{ textAlign: 'right' }}>Multiplier</div>
-        <div style={{ textAlign: 'right' }}>Payout</div>
-      </div>
+      {/* Scrollable Table Container */}
+      <div style={{ overflowX: 'auto', paddingBottom: '10px' }}>
+        <div style={{ minWidth: '600px' }}>
+          {/* Table Header */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1.5fr 1.2fr 1fr 1fr 1fr 1fr',
+            gap: '16px',
+            padding: '12px 16px',
+            background: 'rgba(0, 255, 255, 0.03)',
+            borderRadius: '8px',
+            marginBottom: '8px',
+            fontSize: '11px',
+            fontWeight: 700,
+            color: '#9ca3af',
+            textTransform: 'uppercase',
+            letterSpacing: '1px'
+          }}>
+            <div>Game</div>
+            <div>Username</div>
+            <div>Time</div>
+            <div style={{ textAlign: 'right' }}>Wager</div>
+            <div style={{ textAlign: 'right' }}>Multiplier</div>
+            <div style={{ textAlign: 'right' }}>Payout</div>
+          </div>
 
-      {/* Games List */}
-      <AnimatePresence mode="popLayout">
-        <div 
-          className="games-list-scroll"
-          style={{
-            maxHeight: '600px',
-            overflowY: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '4px'
-          }}
-        >
-          {loading ? (
-            <div style={{
-              textAlign: 'center',
-              color: '#666',
-              padding: '40px',
-              fontSize: '14px'
-            }}>
-              Loading recent games...
+          {/* Games List */}
+          <AnimatePresence mode="popLayout">
+            <div
+              className="games-list-scroll"
+              style={{
+                maxHeight: '600px',
+                overflowY: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px'
+              }}
+            >
+              {loading ? (
+                <div style={{
+                  textAlign: 'center',
+                  color: '#666',
+                  padding: '40px',
+                  fontSize: '14px'
+                }}>
+                  Loading recent games...
+                </div>
+              ) : recentGames.length === 0 ? (
+                <div style={{
+                  textAlign: 'center',
+                  color: '#666',
+                  padding: '40px',
+                  fontSize: '14px'
+                }}>
+                  {activeTab === 'my' ? 'No wagers found. Play a game!' : 'No games played yet. Be the first!'}
+                </div>
+              ) : (
+                recentGames.map((game, idx) => {
+                  const gameId = game._id || game.id || `${game.username}-${game.time}-${idx}`;
+                  const isNew = !prevGameIds.has(gameId);
+
+                  return (
+                    <GameRow
+                      key={gameId}
+                      game={game}
+                      idx={idx}
+                      isNew={isNew}
+                      onGameClick={(g) => {
+                        setSelectedGame({ ...g, gameId: g._id || g.id });
+                        setShowProvenFair(true);
+                      }}
+                    />
+                  );
+                })
+              )}
             </div>
-          ) : recentGames.length === 0 ? (
-            <div style={{
-              textAlign: 'center',
-              color: '#666',
-              padding: '40px',
-              fontSize: '14px'
-            }}>
-              {activeTab === 'my' ? 'No wagers found. Play a game!' : 'No games played yet. Be the first!'}
-            </div>
-          ) : (
-            recentGames.map((game, idx) => {
-              const gameId = game._id || game.id || `${game.username}-${game.time}-${idx}`;
-              const isNew = !prevGameIds.has(gameId);
-              
-              return (
-                <GameRow
-                  key={gameId}
-                  game={game}
-                  idx={idx}
-                  isNew={isNew}
-                  onGameClick={(g) => {
-                    setSelectedGame({ ...g, gameId: g._id || g.id });
-                    setShowProvenFair(true);
-                  }}
-                />
-              );
-            })
-          )}
+          </AnimatePresence>
         </div>
-      </AnimatePresence>
+      </div>
 
       <style>{`
         @keyframes pulse {

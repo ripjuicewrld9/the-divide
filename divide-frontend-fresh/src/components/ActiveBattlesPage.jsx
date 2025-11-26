@@ -83,9 +83,8 @@ export default function ActiveBattlesPage({ onOpenChat }) {
   return (
     <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', padding: '20px' }}>
       {/* Mobile Header - only shows on mobile */}
-      <div className="md:hidden mb-4">
-        <MobileGameHeader title="Battles" onOpenChat={onOpenChat} />
-      </div>
+      {/* Mobile Header - only shows on mobile */}
+      <MobileGameHeader title="Battles" onOpenChat={onOpenChat} className="md:hidden mb-4" />
       <div style={{ maxWidth: '100%', margin: '0 auto' }}>
         {/* Hero Header Section */}
         <div style={{
