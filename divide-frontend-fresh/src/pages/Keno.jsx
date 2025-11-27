@@ -75,7 +75,16 @@ export default function KenoPage({ onOpenChat }) {
           {/* Persistent multiplier popup */}
           {k.popupData ? (
             <div className="modal screenOn no-overlay" onClick={() => k.closeResultPopup()}>
-              <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ textAlign: 'center', padding: 24 }}>
+              <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ textAlign: 'center', padding: 24, position: 'relative' }}>
+                {/* Mobile-friendly close button (X out) */}
+                <button
+                  aria-label="Close popup"
+                  className="absolute top-2 right-2 text-2xl font-bold text-gray-500 hover:text-gray-900 focus:outline-none"
+                  style={{ background: 'none', border: 'none', zIndex: 10, padding: '0 8px', lineHeight: 1 }}
+                  onClick={(e) => { e.stopPropagation(); k.closeResultPopup(); }}
+                >
+                  ×
+                </button>
                 <div className="win-card">
                   <div className="win-header">Round Result</div>
                   <div className="win-body">

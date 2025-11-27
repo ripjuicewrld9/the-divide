@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
 import { AnimatePresence } from 'framer-motion';
@@ -26,32 +26,75 @@ export default function UserSettingsModal({ isOpen, onClose }) {
 
   const handleUpdateProfileImage = async () => {
     if (!selectedFile) return;
-
     try {
       setUploading(true);
       setMessage({ type: '', text: '' });
-
       const formData = new FormData();
-      formData.append('profileImage', selectedFile);
-
+      formData.append('file', selectedFile);
       const token = localStorage.getItem('token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/user/upload-profile-image`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/upload`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
         },
         body: formData
       });
-
       const data = await response.json();
-
       if (!response.ok) {
         throw new Error(data.error || 'Failed to update profile');
       }
-
       setMessage({ type: 'success', text: 'Profile image updated successfully!' });
-      
-      // Refresh user data
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } catch (err) {
+      setMessage({ type: 'error', text: err.message });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Preloaded SVG selection
+  const [svgOptions, setSvgOptions] = useState([]);
+  const [selectedSvg, setSelectedSvg] = useState('');
+  useEffect(() => {
+    async function fetchSvgs() {
+      try {
+        const res = await fetch('/profilesvg');
+        if (!res.ok) return;
+        const parser = new DOMParser();
+        const html = await res.text();
+        // Parse directory listing (works in dev, for prod use a manifest)
+        const doc = parser.parseFromString(html, 'text/html');
+        const links = Array.from(doc.querySelectorAll('a'));
+        const files = links.map(a => a.getAttribute('href')).filter(f => f && f.endsWith('.svg'));
+        setSvgOptions(files);
+      } catch {}
+    }
+    fetchSvgs();
+  }, []);
+
+  const handleSelectSvg = async (svgPath) => {
+    setSelectedSvg(svgPath);
+    setPreviewUrl(`/profilesvg/${svgPath}`);
+    setSelectedFile(null);
+    try {
+      setUploading(true);
+      setMessage({ type: '', text: '' });
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/profile-image`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ imagePath: `/profilesvg/${svgPath}` })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update profile');
+      }
+      setMessage({ type: 'success', text: 'Profile image updated successfully!' });
       setTimeout(() => {
         window.location.reload();
       }, 1000);
@@ -307,6 +350,36 @@ export default function UserSettingsModal({ isOpen, onClose }) {
                           Selected: {selectedFile.name}
                         </div>
                       )}
+                    </div>
+
+                    {/* Preloaded SVG Options */}
+                    <div style={{ marginBottom: '16px' }}>
+                      <div style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '8px' }}>Or select a preloaded avatar:</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                        {svgOptions.map((svg, idx) => (
+                          <button
+                            key={svg}
+                            onClick={() => handleSelectSvg(svg)}
+                            style={{
+                              border: selectedSvg === svg ? '2px solid #00ffff' : '1px solid #333',
+                              borderRadius: '8px',
+                              padding: '6px',
+                              background: selectedSvg === svg ? 'rgba(0,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+                              cursor: 'pointer',
+                              outline: 'none',
+                              transition: 'all 0.2s',
+                              width: 48,
+                              height: 48,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                            title={svg}
+                          >
+                            <img src={`/profilesvg/${svg}`} alt={svg} style={{ width: 32, height: 32, borderRadius: 6 }} />
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
 

@@ -12,6 +12,7 @@ import AuthModal from "./AuthModal.jsx";
 import LiveGamesFeed from "./LiveGamesFeed";
 import MobileGameHeader from "./MobileGameHeader";
 import "../styles/Divides.css";
+import { useAuth } from '../context/AuthContext';
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000"; // use VITE_API_URL when available, fallback to dev server port 3000
 
@@ -25,7 +26,7 @@ const randomColors = () => {
 const shortId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
 export default function Divides({ onOpenChat }) {
-  const { user, refreshUser } = useContext(AuthContext);
+  const { user, refreshUser, updateUser } = useAuth();
   const [showModal, setShowModal] = useState(false);
   const [isRegister, setIsRegister] = useState(false);
   const [divides, setDivides] = useState([]);
@@ -268,8 +269,9 @@ export default function Divides({ onOpenChat }) {
       } catch { /* ignore audio errors */ }
 
       // If server returned an updated balance, refresh local user state
-      if (updated && typeof updated.balance !== 'undefined' && refreshUser) {
-        try { await refreshUser(); } catch { /* ignore */ }
+      if (updated && typeof updated.balance !== 'undefined') {
+        if (updateUser) updateUser({ balance: updated.balance });
+        if (refreshUser) await refreshUser();
       }
     } catch (err) {
       console.error(err);
@@ -415,9 +417,121 @@ export default function Divides({ onOpenChat }) {
         </div>
       </div>
     ) : (
-      // Desktop layout (unchanged)
-      <div className="divides-container">
-        ...existing code...
+      // Desktop layout (adapted from mobile)
+      <div className="divides-desktop-container px-8 py-8">
+        <div className="page-title text-center text-3xl font-bold text-cyan-400 mb-6">THE DIVIDE</div>
+        <div className="top-stats flex justify-center mb-6">
+          <div className="stat-wrapper bg-gray-900 rounded-lg px-6 py-4">
+            <div className="stat-title text-base text-gray-300">Jackpot</div>
+            <div className="stat-value text-2xl font-bold text-yellow-400">${formatCurrency(jackpot.amount, 2)}</div>
+          </div>
+        </div>
+        <div className="create-divide-section flex justify-center mb-8">
+          <button
+            className="btn-create-divide bg-cyan-600 text-white font-bold px-6 py-3 rounded-lg shadow-lg text-xl"
+            onClick={() => {
+              if (!user) {
+                setShowModal(true);
+              } else {
+                setShowCreateDivideModal(true);
+              }
+            }}
+          >
+            + Create a Divide
+          </button>
+        </div>
+        <div className="divides-grid-desktop grid grid-cols-2 gap-6">
+          {activeDivides.map((d) => (
+            <DivideCard
+              key={d._id || d.id}
+              divideId={d._id || d.id}
+              title={d.title}
+              creatorUsername={d.creatorUsername}
+              left={d.optionA}
+              right={d.optionB}
+              imageA={d.imageA}
+              imageB={d.imageB}
+              soundA={d.soundA}
+              soundB={d.soundB}
+              leftVotes={d.votesA}
+              rightVotes={d.votesB}
+              pot={d.pot}
+              endTime={d.endTime}
+              status={d.status}
+              winner={d.winnerSide}
+              isUserCreated={d.isUserCreated}
+              onVote={(side, boostAmount) => handleVote(d.id || d._id, side, boostAmount)}
+              allExpanded={allExpanded}
+              onRequestExpand={() => {
+                setAllExpanded((s) => !s);
+              }}
+              colorA={d.colors[0]}
+              colorB={d.colors[1]}
+              active={true}
+            />
+          ))}
+        </div>
+        {previousDivides.length > 0 && (
+          <section className="previous-divides-desktop mt-10">
+            <h3 className="text-xl font-bold text-gray-300 mb-4">Previous Divides</h3>
+            <div className="divides-grid-desktop grid grid-cols-2 gap-4">
+              {previousDivides.map((d) => (
+                <DivideCard
+                  key={`prev-${d._id || d.id}`}
+                  title={d.title}
+                  creatorUsername={d.creatorUsername}
+                  left={d.optionA}
+                  right={d.optionB}
+                  leftVotes={d.votesA}
+                  rightVotes={d.votesB}
+                  pot={d.pot}
+                  endTime={d.endTime}
+                  status={d.status}
+                  winner={d.winnerSide}
+                  onVote={() => { }}
+                  imageA={d.imageA}
+                  imageB={d.imageB}
+                  soundA={d.soundA}
+                  soundB={d.soundB}
+                  colorA={d.colors[0]}
+                  colorB={d.colors[1]}
+                  active={false}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+        {showModal && (
+          <AuthModal
+            onClose={() => setShowModal(false)}
+            isRegister={isRegister}
+            setIsRegister={setIsRegister}
+          />
+        )}
+        <CreateDivideModal
+          isOpen={showCreateDivideModal}
+          onClose={() => setShowCreateDivideModal(false)}
+          onDivideCreated={() => {
+            setShowCreateDivideModal(false);
+          }}
+        />
+        <VoteWithBetModal
+          isOpen={showVoteBetModal}
+          onClose={() => {
+            setShowVoteBetModal(false);
+            setSelectedDivideForVote(null);
+          }}
+          divide={selectedDivideForVote}
+          onVoted={() => {
+            setShowVoteBetModal(false);
+            setSelectedDivideForVote(null);
+          }}
+        />
+        <div className="live-games-feed-desktop mt-10">
+          <div className="bg-gray-900 rounded-xl p-6">
+            <LiveGamesFeed />
+          </div>
+        </div>
       </div>
     )
   );

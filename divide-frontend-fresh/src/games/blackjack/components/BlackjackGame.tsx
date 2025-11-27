@@ -138,7 +138,7 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
   // Device detection
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 600;
   const gameState = useGameStore();
-  const { balance: userBalance, token, refreshUser } = useAuth();
+  const { balance: userBalance, token, refreshUser, updateUser } = useAuth();
   const [showRules, setShowRules] = useState(false);
   const [showVerification, setShowVerification] = useState(false);
   const [verificationResult, setVerificationResult] = useState<any>(null);
@@ -322,6 +322,13 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
       console.error('[Blackjack] Error starting session:', error);
     }
   }, [gameState, token]);
+
+  // Whenever local gameState.balance changes (bet deduction or win), sync to global AuthContext
+  useEffect(() => {
+    if (updateUser && typeof gameState.balance === 'number') {
+      updateUser({ balance: gameState.balance });
+    }
+  }, [gameState.balance]);
 
   // When a new round result appears, compute total won for that round and show overlay
   useEffect(() => {

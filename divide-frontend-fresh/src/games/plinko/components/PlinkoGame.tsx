@@ -14,6 +14,7 @@ import PlinkoLeaderboard from '../../../components/PlinkoLeaderboard';
 import MobileGameHeader from '../../../components/MobileGameHeader';
 import PlinkoProvablyFair from '../../../components/PlinkoProvablyFair';
 import { loadRecordingsFromStorage, loadRecordingsFromDatabase, saveRecordingsToStorage, saveRecordingsToDatabase, serializeRecordings } from '../utils/recordingManager';
+import { useAuth } from '../../../context/AuthContext';
 
 // Animation mode selection
 const USE_PATH_ANIMATION = true;   // Path-based (refined physics)
@@ -50,6 +51,7 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({ onOpenChat }) => {
     loadBalanceFromBackend,
     addWinRecord,
   } = usePlinkoStore();
+  const { updateUser } = useAuth();
 
   const [betMode, setBetMode] = useState<'manual' | 'auto'>('manual');
   const [autoBetCount, setAutoBetCount] = useState(0);
@@ -142,6 +144,7 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({ onOpenChat }) => {
 
         // Update balance with the authoritative balance from backend (already in dollars)
         setBalance(newBalanceInDollars);
+        if (updateUser) updateUser({ balance: newBalanceInDollars });
 
         // Add win record for visual feedback
         addWinRecord({
@@ -236,10 +239,11 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({ onOpenChat }) => {
 
     try {
       lastBetAmountRef.current = betAmount;
-
-      // Deduct bet immediately from display balance
+      // Deduct bet immediately from display balance and sync global balance
       const currentBalance = typeof balance === 'number' && !isNaN(balance) ? balance : 0;
-      setBalance(Math.max(0, currentBalance - betAmount));
+      const newLocalBalance = Math.max(0, currentBalance - betAmount);
+      setBalance(newLocalBalance);
+      if (updateUser) updateUser({ balance: newLocalBalance });
 
       // Get token from localStorage
       const token = localStorage.getItem('token');
@@ -399,15 +403,26 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({ onOpenChat }) => {
                 {/* Plinko Game Component */}
                 <div className={isMobile ? 'w-full relative bg-gradient-to-b from-gray-900 to-gray-800 rounded-xl shadow-lg p-1' : 'flex-1 relative'} style={isMobile ? {} : { background: 'linear-gradient(135deg, #0a0a14 0%, #1a1a2e 50%, #0f0f1e 100%)' }}>
                   <div className={isMobile ? 'mx-auto flex h-full flex-col px-0 pb-1' : 'mx-auto flex h-full flex-col px-4 pb-4'} style={{ maxWidth: '760px' }}>
-                    <div className={isMobile ? 'relative w-full' : 'relative w-full'} style={isMobile ? { aspectRatio: '760 / 570' } : { aspectRatio: '760 / 570' }}>
-                      <canvas
-                        ref={canvasRef}
-                        width={760}
-                        height={570}
-                        className="absolute inset-0 h-full w-full"
-                      />
+                    <div className={isMobile ? 'flex flex-row items-start w-full gap-2' : 'flex flex-row items-start w-full gap-4'}>
+                      {/* Canvas and bins stacked vertically, LastWins beside */}
+                      <div className={isMobile ? 'flex flex-col flex-1' : 'flex flex-col flex-1'}>
+                        <div className={isMobile ? 'relative w-full' : 'relative w-full'} style={isMobile ? { aspectRatio: '760 / 570' } : { aspectRatio: '760 / 570' }}>
+                          <canvas
+                            ref={canvasRef}
+                            width={760}
+                            height={570}
+                            className="absolute inset-0 h-full w-full"
+                          />
+                        </div>
+                        <div className={isMobile ? 'w-full' : 'w-full'}>
+                          <BinsRow rowCount={rowCount} riskLevel={riskLevel} binsWidthPercentage={binsWidthPercentage} />
+                        </div>
+                      </div>
+                      {/* LastWins: Multiplier stack, always visible and beside the game */}
+                      <div className={isMobile ? 'flex-shrink-0 flex flex-col justify-start items-center min-w-[48px]' : 'flex-shrink-0 flex flex-col justify-start items-center min-w-[56px]'}>
+                        <LastWins winCount={4} />
+                      </div>
                     </div>
-                    <BinsRow rowCount={rowCount} riskLevel={riskLevel} binsWidthPercentage={binsWidthPercentage} />
                   </div>
                 </div>
                 {/* Sidebar below game on mobile, right on desktop */}
@@ -451,12 +466,7 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({ onOpenChat }) => {
             </div>
           </div>
         </div>
-        {/* Desktop-only: LastWins floating panel */}
-        {!isMobile && (
-          <div className="absolute top-[15%] left-[5%]">
-            <LastWins />
-          </div>
-        )}
+        {/* Remove floating LastWins panel for desktop, now always visible near game */}
       </div>
 
       {/* Provably Fair modal - rendered via Portal to escape any parent clipping */}
