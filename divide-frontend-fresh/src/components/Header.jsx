@@ -101,14 +101,6 @@ export default function Header() {
                   <span className="font-bold text-lg leading-none">+</span>
                 </button>
                 <DepositWithdrawModal isOpen={showDepositModal} onClose={() => setShowDepositModal(false)} />
-                {/* ...existing code... */}
-
-                <div className="flex flex-col items-end leading-none">
-                  <span className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Balance</span>
-                  <span className="bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-sm font-bold text-transparent">
-                    ${formatCurrency(Number(user.balance || 0), 2)}
-                  </span>
-                </div>
               </div>
 
               {/* User Menu */}

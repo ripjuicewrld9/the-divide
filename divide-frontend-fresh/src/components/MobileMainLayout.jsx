@@ -192,7 +192,11 @@ export default function MobileMainLayout({ onOpenChat }) {
               placeholder="Search games..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-3 pl-11 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500/50 transition-colors"
+              className="w-full px-4 py-3 pl-11 rounded-xl bg-black/40 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500/50 transition-colors"
+              style={{
+                WebkitTextFillColor: 'white',
+                opacity: 1
+              }}
             />
             <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-lg">
               🔍
