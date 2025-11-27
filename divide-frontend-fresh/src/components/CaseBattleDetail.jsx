@@ -11,7 +11,7 @@ import '../styles/rarities.css';
 import '../styles/BattleWrapper.css';
 
 export default function CaseBattleDetail({ onOpenChat }) {
-  const { battleId } = useParams();
+  const { id: battleId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const socket = useSocket(null);

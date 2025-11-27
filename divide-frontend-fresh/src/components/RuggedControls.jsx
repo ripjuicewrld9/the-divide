@@ -136,14 +136,23 @@ export default function RuggedControls({ pool = 0, onBuy, onSellAll, positions =
 
       <div style={{ width: 260 }}>
         <div className="stat-panel">
-          <div className="stat-label">Your open positions</div>
-          <div className="stat-value">{positions.length}</div>
-          <div style={{ fontSize: 12, color: '#777' }}>${totalPositionValue.toFixed(2)} committed</div>
-          <div style={{ marginTop: 8 }}>
-            <div style={{ fontSize: 12, color: '#9fb' }}>My Multiplier</div>
-            <div style={{ fontSize: 16, fontWeight: 700 }}>{Number(myMultiplier || 1).toFixed(6)}x</div>
-            <div style={{ fontSize: 12, color: '#9fb', marginTop: 6 }}>Cashout</div>
-            <div style={{ fontSize: 16, fontWeight: 700 }}>${Number(myCashout || 0).toFixed(2)}</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <div style={{ fontSize: 11, color: '#9fb' }}>Positions</div>
+            <div style={{ fontSize: 16, fontWeight: 700 }}>{positions.length}</div>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: '#777', marginBottom: 12 }}>
+            <span>Committed</span>
+            <span style={{ color: '#fff' }}>${totalPositionValue.toFixed(2)}</span>
+          </div>
+          <div style={{ display: 'flex', gap: 16, fontSize: 11 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ color: '#9fb', marginBottom: 4 }}>Multiplier</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#00ffff' }}>{Number(myMultiplier || 1).toFixed(2)}x</div>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ color: '#9fb', marginBottom: 4 }}>Cashout</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#10b981' }}>${Number(myCashout || 0).toFixed(2)}</div>
+            </div>
           </div>
           {debugEnabled && debugInfo ? (
             <div style={{ marginTop: 8, background: 'rgba(255,255,255,0.02)', padding: 8, borderRadius: 6, fontSize: 12 }}>
@@ -162,10 +171,6 @@ export default function RuggedControls({ pool = 0, onBuy, onSellAll, positions =
               </div>
             </div>
           ) : null}
-          <div style={{ marginTop: 8 }}>
-            <div className="stat-label">Wallet balance</div>
-            <div className="stat-value">${Number(balance || 0).toFixed(2)}</div>
-          </div>
         </div>
       </div>
     </div>

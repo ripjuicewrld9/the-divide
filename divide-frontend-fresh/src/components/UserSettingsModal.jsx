@@ -5,12 +5,29 @@ import { AnimatePresence } from 'framer-motion';
 import UserAvatar from './UserAvatar';
 
 export default function UserSettingsModal({ isOpen, onClose }) {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const [activeTab, setActiveTab] = useState('settings');
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(user?.profileImage || '');
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+
+  const presetAvatars = [
+    '/profilesvg/account-avatar-profile-user-svgrepo-com.svg',
+    '/profilesvg/account-avatar-profile-user-2-svgrepo-com.svg',
+    '/profilesvg/account-avatar-profile-user-3-svgrepo-com.svg',
+    '/profilesvg/account-avatar-profile-user-4-svgrepo-com.svg',
+    '/profilesvg/account-avatar-profile-user-5-svgrepo-com.svg',
+    '/profilesvg/account-avatar-profile-user-6-svgrepo-com.svg',
+    '/profilesvg/account-avatar-profile-user-7-svgrepo-com.svg',
+    '/profilesvg/account-avatar-profile-user-9-svgrepo-com.svg',
+    '/profilesvg/account-avatar-profile-user-10-svgrepo-com.svg',
+    '/profilesvg/account-avatar-profile-user-11-svgrepo-com.svg',
+    '/profilesvg/account-avatar-profile-user-12-svgrepo-com.svg',
+    '/profilesvg/account-avatar-profile-user-13-svgrepo-com.svg',
+    '/profilesvg/account-avatar-profile-user-14-svgrepo-com.svg',
+    '/profilesvg/account-avatar-profile-user-16-svgrepo-com.svg',
+  ];
 
   const handleFileSelect = (e) => {
     const file = e.target.files?.[0];
@@ -30,9 +47,11 @@ export default function UserSettingsModal({ isOpen, onClose }) {
       setUploading(true);
       setMessage({ type: '', text: '' });
       const formData = new FormData();
-      formData.append('file', selectedFile);
+      formData.append('profileImage', selectedFile); // Changed key to match server expectation if using multer
       const token = localStorage.getItem('token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/upload`, {
+      // Note: File upload still needs the specific endpoint if it handles multipart/form-data
+      // Assuming /api/user/upload-profile-image exists as seen in server.js
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/user/upload-profile-image`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -44,6 +63,8 @@ export default function UserSettingsModal({ isOpen, onClose }) {
         throw new Error(data.error || 'Failed to update profile');
       }
       setMessage({ type: 'success', text: 'Profile image updated successfully!' });
+      // Update context
+      updateUser({ profileImage: data.profileImage });
       setTimeout(() => {
         window.location.reload();
       }, 1000);
@@ -55,48 +76,23 @@ export default function UserSettingsModal({ isOpen, onClose }) {
   };
 
   // Preloaded SVG selection
-  const [svgOptions, setSvgOptions] = useState([]);
   const [selectedSvg, setSelectedSvg] = useState('');
-  useEffect(() => {
-    async function fetchSvgs() {
-      try {
-        const res = await fetch('/profilesvg');
-        if (!res.ok) return;
-        const parser = new DOMParser();
-        const html = await res.text();
-        // Parse directory listing (works in dev, for prod use a manifest)
-        const doc = parser.parseFromString(html, 'text/html');
-        const links = Array.from(doc.querySelectorAll('a'));
-        const files = links.map(a => a.getAttribute('href')).filter(f => f && f.endsWith('.svg'));
-        setSvgOptions(files);
-      } catch {}
-    }
-    fetchSvgs();
-  }, []);
 
   const handleSelectSvg = async (svgPath) => {
     setSelectedSvg(svgPath);
-    setPreviewUrl(`/profilesvg/${svgPath}`);
+    setPreviewUrl(svgPath);
     setSelectedFile(null);
     try {
       setUploading(true);
       setMessage({ type: '', text: '' });
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/profile-image`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ imagePath: `/profilesvg/${svgPath}` })
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to update profile');
-      }
+
+      // Use updateUser from context which handles PATCH /api/me
+      await updateUser({ profileImage: svgPath });
+
       setMessage({ type: 'success', text: 'Profile image updated successfully!' });
       setTimeout(() => {
-        window.location.reload();
+        // No reload needed really, but keeping for consistency if desired
+        // window.location.reload();
       }, 1000);
     } catch (err) {
       setMessage({ type: 'error', text: err.message });
@@ -307,7 +303,7 @@ export default function UserSettingsModal({ isOpen, onClose }) {
                     }}>
                       Profile Image
                     </label>
-                    
+
                     {/* File Upload Button */}
                     <div style={{ position: 'relative', marginBottom: '16px' }}>
                       <input
@@ -342,10 +338,10 @@ export default function UserSettingsModal({ isOpen, onClose }) {
                         📁 Choose Image File
                       </label>
                       {selectedFile && (
-                        <div style={{ 
-                          marginTop: '8px', 
-                          fontSize: '12px', 
-                          color: '#9ca3af' 
+                        <div style={{
+                          marginTop: '8px',
+                          fontSize: '12px',
+                          color: '#9ca3af'
                         }}>
                           Selected: {selectedFile.name}
                         </div>

@@ -4,9 +4,10 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { formatCurrency } from '../utils/format';
 import UserAvatar from './UserAvatar.jsx';
 import AuthModal from './AuthModal.jsx';
+import DepositWithdrawModal from './DepositWithdrawModal.jsx';
 
 export default function MobileMainLayout({ onOpenChat }) {
-  const { user, logout } = useAuth();
+  const { user, logout, addFunds } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -14,6 +15,7 @@ export default function MobileMainLayout({ onOpenChat }) {
   const [hoveredCard, setHoveredCard] = useState(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showDepositModal, setShowDepositModal] = useState(false);
 
   // Game data - using exact same data as desktop Home.jsx
   const games = [
@@ -105,12 +107,22 @@ export default function MobileMainLayout({ onOpenChat }) {
           <div className="flex items-center gap-2">
             {user ? (
               <>
-                {/* Balance */}
-                <div className="flex flex-col items-end rounded-lg border border-white/10 bg-black/40 px-3 py-1">
-                  <span className="text-[9px] font-medium text-gray-500 uppercase">Balance</span>
-                  <span className="bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-sm font-bold text-transparent leading-none">
-                    ${formatCurrency(Number(user.balance || 0), 2)}
-                  </span>
+                {/* Balance with + Button */}
+                <div className="flex items-center gap-2">
+                  <div className="flex flex-col items-end rounded-lg border border-white/10 bg-black/40 px-3 py-1">
+                    <span className="text-[9px] font-medium text-gray-500 uppercase">Balance</span>
+                    <span className="bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-sm font-bold text-transparent leading-none">
+                      ${formatCurrency(Number(user.balance || 0), 2)}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setShowDepositModal(true)}
+                    className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-r from-cyan-400 to-emerald-400 hover:from-cyan-500 hover:to-emerald-500 transition-all active:scale-95"
+                    style={{ boxShadow: '0 2px 8px rgba(6, 182, 212, 0.3)' }}
+                    title="Add funds"
+                  >
+                    <span className="text-black font-bold text-lg leading-none">+</span>
+                  </button>
                 </div>
 
                 {/* User Button */}
@@ -125,6 +137,17 @@ export default function MobileMainLayout({ onOpenChat }) {
                 {showUserMenu && (
                   <div className="absolute right-4 top-14 mt-2 w-48 rounded-xl border border-white/10 bg-[#111] shadow-2xl z-50">
                     <div className="p-2">
+                      {user.role === 'admin' && (
+                        <button
+                          onClick={() => {
+                            setShowUserMenu(false);
+                            navigate('/admin');
+                          }}
+                          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-cyan-400 hover:bg-cyan-500/10 mb-1"
+                        >
+                          ⚡ Admin Dashboard
+                        </button>
+                      )}
                       <button
                         onClick={() => {
                           setShowUserMenu(false);
@@ -337,6 +360,12 @@ export default function MobileMainLayout({ onOpenChat }) {
           setIsRegister={setIsRegister}
         />
       )}
+
+      {/* Deposit/Withdraw Modal */}
+      <DepositWithdrawModal
+        isOpen={showDepositModal}
+        onClose={() => setShowDepositModal(false)}
+      />
     </div>
   );
 }

@@ -1,12 +1,38 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import UserAvatar from '../components/UserAvatar';
 import { formatCurrency } from '../utils/format';
 import MobileGameHeader from '../components/MobileGameHeader';
 
 export default function ProfilePage({ onOpenChat }) {
-    const { user, logout } = useAuth();
-    const isMobile = window.innerWidth <= 768;
+    const { user, logout, updateUser } = useAuth();
+    const [showAvatarModal, setShowAvatarModal] = useState(false);
+
+    const presetAvatars = [
+        '/profilesvg/account-avatar-profile-user-svgrepo-com.svg',
+        '/profilesvg/account-avatar-profile-user-2-svgrepo-com.svg',
+        '/profilesvg/account-avatar-profile-user-3-svgrepo-com.svg',
+        '/profilesvg/account-avatar-profile-user-4-svgrepo-com.svg',
+        '/profilesvg/account-avatar-profile-user-5-svgrepo-com.svg',
+        '/profilesvg/account-avatar-profile-user-6-svgrepo-com.svg',
+        '/profilesvg/account-avatar-profile-user-7-svgrepo-com.svg',
+        '/profilesvg/account-avatar-profile-user-9-svgrepo-com.svg',
+        '/profilesvg/account-avatar-profile-user-10-svgrepo-com.svg',
+        '/profilesvg/account-avatar-profile-user-11-svgrepo-com.svg',
+        '/profilesvg/account-avatar-profile-user-12-svgrepo-com.svg',
+        '/profilesvg/account-avatar-profile-user-13-svgrepo-com.svg',
+        '/profilesvg/account-avatar-profile-user-14-svgrepo-com.svg',
+        '/profilesvg/account-avatar-profile-user-16-svgrepo-com.svg',
+    ];
+
+    const handleAvatarSelect = async (avatarPath) => {
+        try {
+            await updateUser({ profileImage: avatarPath });
+            setShowAvatarModal(false);
+        } catch (error) {
+            console.error('Failed to update avatar:', error);
+        }
+    };
 
     if (!user) {
         return (
@@ -22,7 +48,6 @@ export default function ProfilePage({ onOpenChat }) {
     return (
         <div className="min-h-screen bg-[#0b0b0b] text-white pb-24">
             {/* Mobile Header */}
-            {/* Mobile Header */}
             <MobileGameHeader title="Profile" onOpenChat={onOpenChat} className="md:hidden" />
 
             <div className="max-w-4xl mx-auto p-4 md:p-8 pt-20 md:pt-8">
@@ -31,8 +56,14 @@ export default function ProfilePage({ onOpenChat }) {
                     <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-cyan-500/10 to-purple-500/10 pointer-events-none" />
 
                     <div className="relative z-10 flex flex-col md:flex-row items-center gap-6">
-                        <div className="relative">
+                        <div className="relative group">
                             <UserAvatar user={user} size={100} />
+                            <button
+                                onClick={() => setShowAvatarModal(true)}
+                                className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity cursor-pointer border-2 border-dashed border-white/50"
+                            >
+                                <span className="text-xs font-bold">EDIT</span>
+                            </button>
                             <div className="absolute bottom-0 right-0 w-6 h-6 bg-green-500 rounded-full border-4 border-[#1a1a2e]" />
                         </div>
 
@@ -105,6 +136,29 @@ export default function ProfilePage({ onOpenChat }) {
                     <span>🚪</span> Sign Out
                 </button>
             </div>
+
+            {/* Avatar Selection Modal */}
+            {showAvatarModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" onClick={() => setShowAvatarModal(false)}>
+                    <div className="bg-[#1a1a2e] border border-white/10 rounded-2xl p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-xl font-bold">Select Avatar</h2>
+                            <button onClick={() => setShowAvatarModal(false)} className="text-gray-400 hover:text-white">✕</button>
+                        </div>
+                        <div className="grid grid-cols-4 gap-4">
+                            {presetAvatars.map((avatar, index) => (
+                                <button
+                                    key={index}
+                                    onClick={() => handleAvatarSelect(avatar)}
+                                    className={`relative aspect-square rounded-full overflow-hidden border-2 transition-all ${user.profileImage === avatar ? 'border-cyan-400 scale-105 shadow-[0_0_15px_rgba(34,211,238,0.5)]' : 'border-white/10 hover:border-white/50 hover:scale-105'}`}
+                                >
+                                    <img src={avatar} alt={`Avatar ${index + 1}`} className="w-full h-full object-cover" />
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

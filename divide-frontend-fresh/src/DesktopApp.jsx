@@ -19,7 +19,8 @@ import Sidebar from "./components/Sidebar.jsx";
 import ChatSidebar from "./components/ChatSidebar.jsx";
 import BlackjackPage from "./games/blackjack/index.tsx";
 import PlinkoPage from "./games/plinko/index.tsx";
-import ProfilePage from "./pages/Profile.jsx";
+import ProfilePage from "./pages/ProfileNew.jsx";
+import CaseBattlesPage from "./components/CaseBattlesPage.jsx";
 
 function ProtectedRoute({ children, requiredRole = null }) {
   const { user } = React.useContext(AuthContext);
@@ -58,6 +59,9 @@ export default function DesktopApp() {
             <Route path="/blackjack" element={<BlackjackPage />} />
             <Route path="/plinko" element={<PlinkoPage />} />
             <Route path="/battles" element={<ActiveBattlesPage />} />
+            <Route path="/case-battles" element={<CaseBattlesPage />} />
+            <Route path="/case-battles/create" element={<CreateBattlePage />} />
+            <Route path="/case-battles/:id" element={<CaseBattleDetail />} />
             <Route path="/battles/create" element={<CreateBattlePage />} />
             <Route path="/battles/:id" element={<CaseBattleDetail />} />
             <Route path="/profile" element={<ProfilePage />} />

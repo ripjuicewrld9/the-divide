@@ -14,7 +14,7 @@ import PlinkoPage from "./games/plinko/index.tsx";
 import MobileMainLayout from "./components/MobileMainLayout.jsx";
 import MobileChatOverlay from "./components/MobileChatOverlay.jsx";
 import MobileBottomNav from "./components/MobileBottomNav.jsx";
-import ProfilePage from "./pages/Profile.jsx";
+import ProfilePage from "./pages/ProfileNew.jsx";
 
 function ProtectedRoute({ children, requiredRole = null }) {
     const { user } = React.useContext(AuthContext);
@@ -41,12 +41,37 @@ export default function MobileApp() {
 
                 {/* Case Battles */}
                 <Route path="/case-battles" element={<ActiveBattlesPage onOpenChat={() => setIsChatOpen(true)} />} />
+                <Route path="/case-battles/create" element={<CreateBattlePage onOpenChat={() => setIsChatOpen(true)} />} />
+                <Route path="/case-battles/:id" element={<CaseBattleDetail onOpenChat={() => setIsChatOpen(true)} />} />
                 <Route path="/battles" element={<ActiveBattlesPage onOpenChat={() => setIsChatOpen(true)} />} />
                 <Route path="/battles/create" element={<CreateBattlePage onOpenChat={() => setIsChatOpen(true)} />} />
                 <Route path="/battles/:id" element={<CaseBattleDetail onOpenChat={() => setIsChatOpen(true)} />} />
 
                 {/* Profile */}
                 <Route path="/profile" element={<ProfilePage onOpenChat={() => setIsChatOpen(true)} />} />
+
+                {/* Admin Routes */}
+                <Route path="/admin" element={
+                    <ProtectedRoute requiredRole="admin">
+                        <React.Suspense fallback={<div>Loading...</div>}>
+                            {React.createElement(React.lazy(() => import("./components/Admin")))}
+                        </React.Suspense>
+                    </ProtectedRoute>
+                } />
+                <Route path="/admin/finance" element={
+                    <ProtectedRoute requiredRole="admin">
+                        <React.Suspense fallback={<div>Loading...</div>}>
+                            {React.createElement(React.lazy(() => import("./pages/AdminFinance")))}
+                        </React.Suspense>
+                    </ProtectedRoute>
+                } />
+                <Route path="/admin/ledger" element={
+                    <ProtectedRoute requiredRole="admin">
+                        <React.Suspense fallback={<div>Loading...</div>}>
+                            {React.createElement(React.lazy(() => import("./pages/AdminLedger")))}
+                        </React.Suspense>
+                    </ProtectedRoute>
+                } />
 
                 {/* Catch all */}
                 <Route path="*" element={<Navigate to="/" />} />

@@ -21,6 +21,10 @@ export default function UserAvatar({ user, size = 32 }) {
     if (profileImage.startsWith('http://') || profileImage.startsWith('https://')) {
       return profileImage;
     }
+    // Static frontend assets
+    if (profileImage.startsWith('/profilesvg/')) {
+      return profileImage;
+    }
     const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
     const fullUrl = `${baseUrl}${profileImage}`;
     return fullUrl;
@@ -31,8 +35,8 @@ export default function UserAvatar({ user, size = 32 }) {
   if (imageUrl) {
     return (
       <>
-        <img 
-          src={imageUrl} 
+        <img
+          src={imageUrl}
           alt={user.username}
           style={{
             width: `${size}px`,

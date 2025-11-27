@@ -1,4 +1,3 @@
-// src/context/AuthContext.jsx
 import React, { createContext, useState, useEffect, useContext } from "react";
 import { API_BASE } from "../config";
 
@@ -13,30 +12,30 @@ export const AuthProvider = ({ children }) => {
     else localStorage.removeItem("token");
   }, [token]);
 
-useEffect(() => {
-  const loadUser = async () => {
-    if (!token) return;
+  useEffect(() => {
+    const loadUser = async () => {
+      if (!token) return;
 
-    try {
-      const res = await fetch(`${API_BASE}/api/me`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error('Failed to fetch /api/me');
-      const data = await res.json();
-      setUser({
-        id: data.id,
-        username: data.username,
-        balance: data.balance,
-        role: data.role || data?.role || 'user',
-        profileImage: data.profileImage || ''
-      });
-    } catch (err) {
-      console.error('[Auth] loadUser error:', err.message);
-      logout();
-    }
-  };
-  loadUser();
-}, [token]);
+      try {
+        const res = await fetch(`${API_BASE}/api/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error('Failed to fetch /api/me');
+        const data = await res.json();
+        setUser({
+          id: data.id,
+          username: data.username,
+          balance: data.balance,
+          role: data.role || data?.role || 'user',
+          profileImage: data.profileImage || ''
+        });
+      } catch (err) {
+        console.error('[Auth] loadUser error:', err.message);
+        logout();
+      }
+    };
+    loadUser();
+  }, [token]);
 
   // REGISTER
   const register = async (username, password) => {
@@ -49,8 +48,8 @@ useEffect(() => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Registration failed");
 
-  setToken(data.token);
-  setUser({ username, id: data.userId, role: data.role || 'user' });
+      setToken(data.token);
+      setUser({ username, id: data.userId, role: data.role || 'user' });
       return true;
     } catch (err) {
       console.error("Register error:", err);
@@ -70,8 +69,8 @@ useEffect(() => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Login failed");
 
-  setToken(data.token);
-  setUser({ username, id: data.userId, role: data.role || 'user' });
+      setToken(data.token);
+      setUser({ username, id: data.userId, role: data.role || 'user' });
       return true;
     } catch (err) {
       console.error("Login error:", err);
@@ -148,18 +147,31 @@ useEffect(() => {
     }
   };
 
-  // Update user object locally (used for optimistic UI updates)
-  const updateUser = (patch = {}) => {
-    // Defer the update to avoid triggering React's "setState during render" warning
-    // when child components call updateUser synchronously during their render.
-    // Using a macrotask ensures the update runs after the current render completes.
-    setTimeout(() => {
-      try {
-        setUser((u) => ({ ...(u || {}), ...patch }));
-      } catch (e) {
-        console.error('updateUser deferred setUser failed', e);
+  // Update user object locally AND persist to server
+  const updateUser = async (patch = {}) => {
+    try {
+      // 1. Optimistic update
+      setUser((u) => ({ ...(u || {}), ...patch }));
+
+      // 2. Persist to backend
+      if (token) {
+        const res = await fetch(`${API_BASE}/api/me`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify(patch)
+        });
+
+        if (!res.ok) {
+          console.error('Failed to persist user update');
+          refreshUser();
+        }
       }
-    }, 0);
+    } catch (e) {
+      console.error('updateUser failed', e);
+    }
   };
 
   return (

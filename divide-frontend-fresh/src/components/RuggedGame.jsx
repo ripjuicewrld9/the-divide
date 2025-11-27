@@ -8,6 +8,7 @@ import RuggedControls from './RuggedControls';
 import Countdown from './Countdown';
 import LiveGamesFeed from './LiveGamesFeed';
 import MobileGameHeader from './MobileGameHeader';
+import RuggedLeaderboard from './RuggedLeaderboard';
 
 export default function RuggedGame({ onOpenChat }) {
   const socket = useSocket('rugged');
@@ -201,9 +202,12 @@ export default function RuggedGame({ onOpenChat }) {
         alert('Rug pull occurred: ' + (data.reason || 'unknown'));
       }
 
-      // update status to reflect rug state and cooldown if present and clear chart data
-      setStatus(prev => ({ ...prev, rugged: true, ruggedCooldownUntil: data.ruggedCooldownUntil || data.ruggedCooldownUntil || prev.ruggedCooldownUntil || null, priceHistory: [], price: 0 }));
-      try { localStorage.removeItem(LOCAL_KEY); } catch (e) { }
+      // update status to reflect rug state and add a zero price point to show the drop
+      setStatus(prev => {
+        const newHistory = [...(prev.priceHistory || []), { ts: new Date(), price: 0 }];
+        saveLocalHistory(newHistory.map(p => ({ ts: p.ts instanceof Date ? p.ts.toISOString() : p.ts, price: p.price })));
+        return { ...prev, rugged: true, ruggedCooldownUntil: data.ruggedCooldownUntil || prev.ruggedCooldownUntil || null, priceHistory: newHistory, price: 0 };
+      });
       // Reset frontend fake-price and per-user UI state on crash
       setPool(0);
       setFirstPrice(null);
@@ -309,8 +313,16 @@ export default function RuggedGame({ onOpenChat }) {
       // normal buy: reconcile with server state and position info
       const srvPool = Number(resp.pool || 0); // server sends dollars
       const srvJackpot = Number(resp.jackpot || 0);
-      // store pool as dollars
-      setStatus(prev => ({ ...prev, pool: srvPool, jackpot: srvJackpot }));
+
+      // If this is the first buy after a rug (pool was at/near zero), clear the chart history
+      const wasAtZero = Number(pool || 0) <= 0.01;
+      if (wasAtZero && srvPool > 0) {
+        setStatus(prev => ({ ...prev, pool: srvPool, jackpot: srvJackpot, priceHistory: [], price: 0, rugged: false }));
+        try { localStorage.removeItem(LOCAL_KEY); } catch (e) { }
+      } else {
+        // store pool as dollars
+        setStatus(prev => ({ ...prev, pool: srvPool, jackpot: srvJackpot }));
+      }
       setPool(srvPool);
       if (typeof resp.balance !== 'undefined') {
         setBalance(Number(resp.balance));
@@ -414,7 +426,6 @@ export default function RuggedGame({ onOpenChat }) {
               <span className="font-bold text-lg text-cyan-400">Rugged Market</span>
               <span className="text-base text-white">Pool: <span className="font-bold">${Number(status.pool || 0).toFixed(2)}</span></span>
             </div>
-            <span className="text-sm text-pink-400">Jackpot: ${Number(status.jackpot || 0).toFixed(2)}</span>
             <span className="text-xs text-green-300">{(() => {
               const baselinePrice = status.priceHistory && status.priceHistory.length ? Number(status.priceHistory[0].price || 0) : null;
               const last = status.priceHistory && status.priceHistory.length ? Number(status.priceHistory[status.priceHistory.length - 1].price || 0) : null;
@@ -425,8 +436,8 @@ export default function RuggedGame({ onOpenChat }) {
               return `${sign}${pct.toFixed(2)}%`;
             })()}</span>
           </div>
-          <div className="relative mt-2">
-            <RuggedChart priceHistory={status.priceHistory || []} width={350} height={120} />
+          <div className="relative mt-3">
+            <RuggedChart priceHistory={status.priceHistory || []} width={350} height={200} />
             {(status && status.rugged && status.ruggedCooldownUntil) && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div className="bg-gray-800 bg-opacity-80 p-2 rounded-lg pointer-events-auto">
@@ -455,6 +466,11 @@ export default function RuggedGame({ onOpenChat }) {
             debugEnabled={debugEnabled}
             debugInfo={debugInfo}
           />
+        </div>
+        <div className="mb-4">
+          <div className="bg-gray-900 rounded-xl p-4">
+            <RuggedLeaderboard />
+          </div>
         </div>
         <div className="mb-4">
           <div className="bg-gray-900 rounded-xl p-4">
@@ -554,8 +570,20 @@ export default function RuggedGame({ onOpenChat }) {
             />
           </div>
 
-          {/* Live Games Feed */}
+          {/* Leaderboard */}
           <div style={{ marginTop: 24 }}>
+            <div style={{
+              background: 'rgba(11, 11, 11, 0.8)',
+              border: '1px solid rgba(0, 255, 255, 0.1)',
+              borderRadius: '16px',
+              padding: '24px'
+            }}>
+              <RuggedLeaderboard />
+            </div>
+          </div>
+
+          {/* Live Games Feed */}
+          <div style={{ marginTop: 16 }}>
             <div style={{
               background: 'rgba(11, 11, 11, 0.8)',
               border: '1px solid rgba(0, 255, 255, 0.1)',

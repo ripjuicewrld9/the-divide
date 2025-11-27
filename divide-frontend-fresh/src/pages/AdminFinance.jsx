@@ -36,73 +36,145 @@ export default function AdminFinance() {
     return () => { mounted = false; };
   }, []);
 
-  if (loading) return <div style={{ padding: 20, color: '#fff' }}>Loading...</div>;
-  if (error) return <div style={{ padding: 20, color: '#ff6666' }}>Error: {error}</div>;
+  if (loading) return <div className="p-8 text-white">Loading...</div>;
+  if (error) return <div className="p-8 text-red-400">Error: {error}</div>;
 
-  const k = data.keno || {};
-  const d = data.divides || {};
-  const g = data.global || {};
+  // Mock data fallback if backend returns empty/old structure
+  const financeData = data?.games ? data : {
+    global: {
+      jackpotAmount: 12450.50,
+      houseTotal: 54320.00
+    },
+    games: {
+      plinko: { handle: 15000, payouts: 14200, jackpotFee: 150, houseProfit: 650 },
+      blackjack: { handle: 8000, payouts: 7800, jackpotFee: 80, houseProfit: 120 },
+      keno: { handle: 5000, payouts: 4500, jackpotFee: 50, houseProfit: 450 },
+      rugged: { handle: 2000, payouts: 1800, jackpotFee: 20, houseProfit: 180 },
+      mines: { handle: 3500, payouts: 3100, jackpotFee: 35, houseProfit: 365 }
+    }
+  };
+
+  const { global, games } = financeData;
 
   return (
-    <div style={{ padding: 20, color: '#fff' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2>Finance — Keno & Divides</h2>
+    <div className="min-h-screen bg-[#0b0b0b] p-8 text-white">
+      <div className="flex justify-between items-center mb-8">
         <div>
-          <button onClick={() => navigate('/admin')} style={{ marginRight: 8 }}>Back</button>
-          <button onClick={() => window.location.reload()}>Refresh</button>
+          <h2 className="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent">
+            Admin Finance
+          </h2>
+          <p className="text-gray-400 mt-1">PnL & Jackpot Tracking</p>
+        </div>
+        <div className="flex gap-3">
+          <button
+            onClick={() => navigate('/admin')}
+            className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+          >
+            Back
+          </button>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 transition-colors font-bold"
+          >
+            Refresh
+          </button>
         </div>
       </div>
 
-      <section style={{ marginTop: 16, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-        <div style={{ background: '#0b0b0b', padding: 16, borderRadius: 8 }}>
-          <h3>Keno (money in / money out)</h3>
-          <div>Total rounds: {k.rounds || 0}</div>
-          <div>Money in (handle): ${formatCurrency(k.moneyIn || 0, 2)}</div>
-          <div>Money out (player payouts): ${formatCurrency(k.moneyOut || 0, 2)}</div>
-          <div>Net: ${formatCurrency(k.net || 0, 2)}</div>
+      {/* Global Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="bg-[#151515] border border-white/10 rounded-2xl p-6 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <span className="text-6xl">🎰</span>
+          </div>
+          <h3 className="text-gray-400 font-medium mb-2">Global Jackpot Pool</h3>
+          <div className="text-4xl font-bold text-yellow-400">
+            ${formatCurrency(global.jackpotAmount || 0, 2)}
+          </div>
+          <div className="text-sm text-gray-500 mt-2">
+            Accumulated from 1% of all bets
+          </div>
         </div>
 
-        <div style={{ background: '#0b0b0b', padding: 16, borderRadius: 8 }}>
-          <h3>Divides (money in / money out)</h3>
-          <div>Total rounds: {d.rounds || 0}</div>
-          <div>Money in (handle/pots): ${formatCurrency(d.moneyIn || 0, 2)}</div>
-          <div>Money out (paid to winners): ${formatCurrency(d.moneyOut || 0, 2)}</div>
-          <div>Net: ${formatCurrency(d.net || 0, 2)}</div>
+        <div className="bg-[#151515] border border-white/10 rounded-2xl p-6 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <span className="text-6xl">🏠</span>
+          </div>
+          <h3 className="text-gray-400 font-medium mb-2">Total House Profit</h3>
+          <div className="text-4xl font-bold text-emerald-400">
+            ${formatCurrency(global.houseTotal || 0, 2)}
+          </div>
+          <div className="text-sm text-gray-500 mt-2">
+            Net profit after payouts and jackpot fees
+          </div>
         </div>
+      </div>
 
-        <div style={{ background: '#0b0b0b', padding: 16, borderRadius: 8 }}>
-          <h3>Global pots</h3>
-          <div>Jackpot amount: ${formatCurrency(g.jackpotAmount || 0, 2)}</div>
-          <div>House total: ${formatCurrency(g.houseTotal || 0, 2)}</div>
-          <div style={{ marginTop: 6, fontSize: '0.95em', color: '#ddd' }}>Keno Reserve: ${formatCurrency((typeof g.kenoReserve !== 'undefined' ? g.kenoReserve : g.houseTotal) || 0, 2)}</div>
+      {/* Per-Game PnL Table */}
+      <div className="bg-[#151515] border border-white/10 rounded-2xl overflow-hidden">
+        <div className="p-6 border-b border-white/10">
+          <h3 className="text-xl font-bold">Game Performance (PnL)</h3>
         </div>
-
-        <div style={{ background: '#0b0b0b', padding: 16, borderRadius: 8 }}>
-          <h3>Token Wallets</h3>
-          {Array.isArray(data.wallets) && data.wallets.length > 0 ? (
-            <div style={{ display: 'grid', gap: 8 }}>
-              {data.wallets.map((w) => (
-                <div key={w.id} style={{ padding: 8, background: '#071218', borderRadius: 6 }}>
-                  <div style={{ fontWeight: 700, color: '#e6fffa' }}>{w.id} <span style={{ fontSize: 12, color: '#9fb', marginLeft: 8 }}>({w.kind})</span></div>
-                  <div style={{ fontSize: 13, color: '#cfe' }}>DC balance: {Number(w.dcBalance || 0).toLocaleString()} DC</div>
-                  <div style={{ fontSize: 13, color: '#cfe' }}>USD balance: ${formatCurrency(Number(w.usdBalance || 0), 2)}</div>
-                </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead className="bg-white/5 text-gray-400 text-sm uppercase">
+              <tr>
+                <th className="px-6 py-4 font-medium">Game</th>
+                <th className="px-6 py-4 font-medium text-right">Handle (Bets)</th>
+                <th className="px-6 py-4 font-medium text-right">Payouts (Wins)</th>
+                <th className="px-6 py-4 font-medium text-right text-yellow-500">Jackpot Fee (1%)</th>
+                <th className="px-6 py-4 font-medium text-right text-emerald-500">House Profit</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {Object.entries(games).map(([gameKey, stats]) => (
+                <tr key={gameKey} className="hover:bg-white/5 transition-colors">
+                  <td className="px-6 py-4 font-bold capitalize">{gameKey}</td>
+                  <td className="px-6 py-4 text-right font-mono text-gray-300">
+                    ${formatCurrency(stats.handle || 0, 2)}
+                  </td>
+                  <td className="px-6 py-4 text-right font-mono text-red-400">
+                    -${formatCurrency(stats.payouts || 0, 2)}
+                  </td>
+                  <td className="px-6 py-4 text-right font-mono text-yellow-400">
+                    ${formatCurrency(stats.jackpotFee || 0, 2)}
+                  </td>
+                  <td className={`px-6 py-4 text-right font-mono font-bold ${stats.houseProfit >= 0 ? 'text-emerald-400' : 'text-red-500'}`}>
+                    ${formatCurrency(stats.houseProfit || 0, 2)}
+                  </td>
+                </tr>
               ))}
-            </div>
-          ) : (
-            <div style={{ color: '#999' }}>No token wallets found.</div>
-          )}
+            </tbody>
+            <tfoot className="bg-white/5 font-bold">
+              <tr>
+                <td className="px-6 py-4">TOTAL</td>
+                <td className="px-6 py-4 text-right text-gray-300">
+                  ${formatCurrency(Object.values(games).reduce((acc, g) => acc + g.handle, 0), 2)}
+                </td>
+                <td className="px-6 py-4 text-right text-red-400">
+                  -${formatCurrency(Object.values(games).reduce((acc, g) => acc + g.payouts, 0), 2)}
+                </td>
+                <td className="px-6 py-4 text-right text-yellow-400">
+                  ${formatCurrency(Object.values(games).reduce((acc, g) => acc + g.jackpotFee, 0), 2)}
+                </td>
+                <td className="px-6 py-4 text-right text-emerald-400">
+                  ${formatCurrency(Object.values(games).reduce((acc, g) => acc + g.houseProfit, 0), 2)}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
         </div>
+      </div>
 
-        <div style={{ background: '#0b0b0b', padding: 16, borderRadius: 8 }}>
-          <h3>Notes</h3>
-          <ul>
-            <li>Money In = handle (bets / pots). Money Out = payouts to players.</li>
-            <li>Global pots (jackpot/house) are shown separately and are not double-counted here.</li>
-            <li>Divides paidOut is persisted when a divide ends for accurate historical reporting.</li>
-          </ul>
-        </div>
-      </section>
+      <div className="mt-8 bg-[#151515] border border-white/10 rounded-xl p-6">
+        <h3 className="font-bold text-gray-300 mb-2">Notes</h3>
+        <ul className="list-disc list-inside text-sm text-gray-500 space-y-1">
+          <li><strong>Handle:</strong> Total amount wagered by players.</li>
+          <li><strong>Jackpot Fee:</strong> 1% of every bet is deducted and added to the Global Jackpot Pool.</li>
+          <li><strong>House Profit:</strong> Calculated as <code>Handle - Payouts - Jackpot Fee</code>.</li>
+          <li>Data shown is currently mocked until backend integration is complete.</li>
+        </ul>
+      </div>
     </div>
   );
 }

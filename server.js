@@ -174,8 +174,9 @@ const upload = multer({
 app.use('/uploads', express.static(uploadDir));
 
 // Image upload endpoint
-app.post('/upload', (req, res, next) => {
-  upload.single('file')(req, res, (err) => {
+// Image upload endpoint
+app.post('/upload', auth, (req, res, next) => {
+  upload.single('file')(req, res, async (err) => {
     if (err) {
       console.error('Multer error:', err.message);
       return res.status(400).json({ error: err.message || 'File upload failed' });
@@ -185,6 +186,10 @@ app.post('/upload', (req, res, next) => {
         return res.status(400).json({ error: 'No file uploaded' });
       }
       const url = `/uploads/${req.file.filename}`;
+      // Save to user profile if authenticated
+      if (req.userId) {
+        await User.findByIdAndUpdate(req.userId, { profileImage: url });
+      }
       console.log('File uploaded successfully:', req.file.filename);
       res.json({ url });
     } catch (err) {
@@ -192,6 +197,20 @@ app.post('/upload', (req, res, next) => {
       res.status(500).json({ error: err.message || 'Upload failed' });
     }
   });
+});
+
+// Endpoint to set profile image from preloaded SVGs
+app.post('/api/profile-image', auth, async (req, res) => {
+  try {
+    if (!req.userId) return res.status(401).json({ error: 'Not authenticated' });
+    const { imagePath } = req.body || {};
+    if (!imagePath || typeof imagePath !== 'string') return res.status(400).json({ error: 'Missing imagePath' });
+    await User.findByIdAndUpdate(req.userId, { profileImage: imagePath });
+    res.json({ success: true, imagePath });
+  } catch (err) {
+    console.error('Set profile image error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
 // Serve static assets from the frontend `public/` folder so backend can
@@ -210,19 +229,19 @@ app.post('/register', async (req, res) => {
   try {
     const { username, password } = req.body || {};
     if (!username || !password) return res.status(400).json({ error: 'Missing username or password' });
-    
+
     // Validate password strength
     if (password.length < 6) {
       return res.status(400).json({ error: 'Password must be at least 6 characters' });
     }
-    
+
     // prevent duplicate username
     const existing = await User.findOne({ username });
     if (existing) return res.status(400).json({ error: 'Username already exists' });
-    
+
     // Hash password with bcrypt (10 salt rounds)
     const hashedPassword = await bcrypt.hash(password, 10);
-    
+
     const u = await User.create({ username, password: hashedPassword, balance: 1000 });
     const token = jwt.sign({ userId: u._id }, JWT_SECRET, { expiresIn: '7d' });
     res.json({ token, userId: u._id, balance: toDollars(u.balance), role: u.role });
@@ -237,14 +256,14 @@ app.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body || {};
     if (!username || !password) return res.status(400).json({ error: 'Missing username or password' });
-    
+
     const u = await User.findOne({ username });
     if (!u) return res.status(400).json({ error: 'Invalid credentials' });
-    
+
     // Verify password using bcrypt
     const isValidPassword = await bcrypt.compare(password, u.password);
     if (!isValidPassword) return res.status(400).json({ error: 'Invalid credentials' });
-    
+
     const token = jwt.sign({ userId: u._id }, JWT_SECRET, { expiresIn: '7d' });
     res.json({ token, userId: u._id, balance: toDollars(u.balance), role: u.role });
   } catch (e) {
@@ -366,10 +385,10 @@ app.post('/divides/vote', auth, async (req, res) => {
       return res.status(400).json({ error: 'Divide not active' });
     }
 
-      // Enforce creator lock: creator can only vote on their chosen side
-      if (divide.isUserCreated && divide.creatorId === req.userId && divide.creatorSide && side !== divide.creatorSide) {
-        return res.status(400).json({ error: 'Creator is locked to their chosen side and cannot vote on the other side.' });
-      }
+    // Enforce creator lock: creator can only vote on their chosen side
+    if (divide.isUserCreated && divide.creatorId === req.userId && divide.creatorSide && side !== divide.creatorSide) {
+      return res.status(400).json({ error: 'Creator is locked to their chosen side and cannot vote on the other side.' });
+    }
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
@@ -390,18 +409,18 @@ app.post('/divides/vote', auth, async (req, res) => {
     if (isFree) user.lastFreeVoteDate = today;
 
     const existing = divide.votes.find(v => v.userId === req.userId);
-      if (existing) {
-        // If creator, only allow updating vote if side matches locked side
-        if (divide.isUserCreated && divide.creatorId === req.userId && divide.creatorSide && side !== divide.creatorSide) {
-          return res.status(400).json({ error: 'Creator is locked to their chosen side and cannot vote on the other side.' });
-        } else {
-          existing.voteCount += voteCount;
-          existing.side = side;
-          existing.isFree = isFree;
-        }
+    if (existing) {
+      // If creator, only allow updating vote if side matches locked side
+      if (divide.isUserCreated && divide.creatorId === req.userId && divide.creatorSide && side !== divide.creatorSide) {
+        return res.status(400).json({ error: 'Creator is locked to their chosen side and cannot vote on the other side.' });
       } else {
-        divide.votes.push({ userId: req.userId, side, voteCount, isFree });
+        existing.voteCount += voteCount;
+        existing.side = side;
+        existing.isFree = isFree;
       }
+    } else {
+      divide.votes.push({ userId: req.userId, side, voteCount, isFree });
+    }
 
     divide.totalVotes += voteCount;
     if (side === 'A') divide.votesA += voteCount;
@@ -1363,7 +1382,7 @@ app.get('/api/recent-games', async (req, res) => {
     const limit = Math.min(parseInt(req.query.limit) || 50, 100); // Cap at 100
     const games = [];
     const userCache = new Map(); // Cache user lookups
-    
+
     // Helper to get user with caching
     const getUserCached = async (userId) => {
       if (!userId) return null;
@@ -1381,7 +1400,7 @@ app.get('/api/recent-games', async (req, res) => {
       .limit(limit)
       .select('_id userId betAmount win timestamp')
       .lean();
-    
+
     for (const game of kenoGames) {
       const user = await getUserCached(game.userId);
       games.push({
@@ -1403,7 +1422,7 @@ app.get('/api/recent-games', async (req, res) => {
       .limit(limit)
       .select('_id userId betAmount multiplier payout createdAt')
       .lean();
-    
+
     for (const game of plinkoGames) {
       const user = await getUserCached(game.userId);
       games.push({
@@ -1425,13 +1444,13 @@ app.get('/api/recent-games', async (req, res) => {
       .limit(limit)
       .select('_id userId mainBet perfectPairsBet twentyPlusThreeBet blazingSevensBet mainPayout perfectPairsPayout twentyPlusThreePayout blazingSevensPayout mainResult createdAt')
       .lean();
-    
+
     for (const game of blackjackGames) {
       const user = await getUserCached(game.userId);
       const totalBet = game.mainBet + game.perfectPairsBet + game.twentyPlusThreeBet + game.blazingSevensBet;
       const totalPayout = game.mainPayout + game.perfectPairsPayout + game.twentyPlusThreePayout + game.blazingSevensPayout;
       const mult = totalPayout > 0 ? (totalPayout / totalBet).toFixed(2) + 'x' : '0.00x';
-      
+
       games.push({
         _id: game._id,
         game: 'Blackjack',
@@ -1451,7 +1470,7 @@ app.get('/api/recent-games', async (req, res) => {
       .limit(Math.floor(limit / 2))
       .select('_id winnerId players pot createdAt')
       .lean();
-    
+
     for (const battle of caseBattles) {
       const winnerPlayer = battle.players?.find(p => p.userId === battle.winnerId);
       const user = await getUserCached(battle.winnerId);
@@ -1502,7 +1521,7 @@ app.get('/api/my-games', auth, async (req, res) => {
     if (!req.userId) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
-    
+
     const userId = req.userId;
     const limit = parseInt(req.query.limit) || 50;
     const games = [];
@@ -1512,7 +1531,7 @@ app.get('/api/my-games', auth, async (req, res) => {
       .sort({ timestamp: -1 })
       .limit(limit)
       .lean();
-    
+
     for (const game of kenoGames) {
       const user = await User.findById(game.userId).select('username profileImage').lean();
       games.push({
@@ -1533,7 +1552,7 @@ app.get('/api/my-games', auth, async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(limit)
       .lean();
-    
+
     for (const game of plinkoGames) {
       const user = await User.findById(game.userId).select('username profileImage').lean();
       games.push({
@@ -1554,13 +1573,13 @@ app.get('/api/my-games', auth, async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(limit)
       .lean();
-    
+
     for (const game of blackjackGames) {
       const user = await User.findById(game.userId).select('username profileImage').lean();
       const totalBet = game.mainBet + game.perfectPairsBet + game.twentyPlusThreeBet + game.blazingSevensBet;
       const totalPayout = game.mainPayout + game.perfectPairsPayout + game.twentyPlusThreePayout + game.blazingSevensPayout;
       const mult = totalPayout > 0 ? (totalPayout / totalBet).toFixed(2) + 'x' : '0.00x';
-      
+
       games.push({
         _id: game._id,
         game: 'Blackjack',
@@ -1579,7 +1598,7 @@ app.get('/api/my-games', auth, async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(limit / 2)
       .lean();
-    
+
     for (const battle of caseBattles) {
       const winnerPlayer = battle.players?.find(p => p.userId.toString() === userId.toString());
       const user = await User.findById(userId).select('username profileImage').lean();
@@ -1971,7 +1990,7 @@ chatNamespace.on('connection', (socket) => {
   socket.on('chat:sendMessage', async (data) => {
     try {
       const { username, message } = data;
-      
+
       if (!username || !message || message.trim().length === 0) {
         return;
       }
@@ -2731,11 +2750,49 @@ app.get("/api/me", auth, async (req, res) => {
   }
 });
 
+// PATCH /api/me - Update user profile (e.g. profileImage)
+app.patch("/api/me", auth, async (req, res) => {
+  try {
+    const { profileImage } = req.body;
+    const updates = {};
+
+    if (profileImage !== undefined) {
+      if (typeof profileImage !== 'string') return res.status(400).json({ error: "profileImage must be a string" });
+      updates.profileImage = profileImage;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: "No fields to update" });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.userId,
+      { $set: updates },
+      { new: true }
+    ).select("_id username balance role holdingsDC holdingsInvested profileImage");
+
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    res.json({
+      id: user._id,
+      username: user.username,
+      balance: toDollars(user.balance),
+      role: user.role,
+      holdingsDC: user.holdingsDC || 0,
+      holdingsInvested: user.holdingsInvested || 0,
+      profileImage: user.profileImage || ''
+    });
+  } catch (err) {
+    console.error('PATCH /api/me error', err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 // POST /api/user/update-profile - Update user profile
 app.post("/api/user/update-profile", auth, async (req, res) => {
   try {
     const { profileImage } = req.body;
-    
+
     if (profileImage !== undefined && typeof profileImage !== 'string') {
       return res.status(400).json({ error: "profileImage must be a string" });
     }
@@ -2747,11 +2804,11 @@ app.post("/api/user/update-profile", auth, async (req, res) => {
     ).select("_id username balance role profileImage");
 
     if (!user) return res.status(404).json({ error: "User not found" });
-    res.json({ 
+    res.json({
       success: true,
-      id: user._id, 
-      username: user.username, 
-      balance: toDollars(user.balance), 
+      id: user._id,
+      username: user.username,
+      balance: toDollars(user.balance),
       role: user.role,
       profileImage: user.profileImage || ''
     });
@@ -2771,7 +2828,7 @@ app.post("/api/user/upload-profile-image", auth, (req, res, next) => {
       if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
       }
-      
+
       const imageUrl = `/uploads/${req.file.filename}`;
       console.log('Profile image uploaded:', req.file.filename);
 
@@ -2783,12 +2840,12 @@ app.post("/api/user/upload-profile-image", auth, (req, res, next) => {
       ).select("_id username balance role profileImage");
 
       if (!user) return res.status(404).json({ error: "User not found" });
-      
-      res.json({ 
+
+      res.json({
         success: true,
-        id: user._id, 
-        username: user.username, 
-        balance: toDollars(user.balance), 
+        id: user._id,
+        username: user.username,
+        balance: toDollars(user.balance),
         role: user.role,
         profileImage: user.profileImage
       });
@@ -2963,7 +3020,7 @@ server.listen(PORT, () => console.log(`✅ Server running at http://localhost:${
 async function snapshotLeaderboardAndJackpot() {
   try {
     console.log('Snapshot job: computing leaderboard snapshot');
-    
+
     // Keno leaderboard
     const kenoTop = await KenoRound.aggregate([
       { $match: { win: { $gt: 0 } } },

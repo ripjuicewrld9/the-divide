@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency } from '../utils/format';
+import DepositWithdrawModal from './DepositWithdrawModal';
 
 export default function MobileGameHeader({ title, onOpenChat, className = "" }) {
     const navigate = useNavigate();
     const { user } = useAuth();
+    const [showDepositModal, setShowDepositModal] = useState(false);
 
     return (
         <>
@@ -32,19 +34,34 @@ export default function MobileGameHeader({ title, onOpenChat, className = "" }) 
                     </button>
 
                     {/* Balance Display (Centered) */}
-                    <div className="flex flex-col items-center rounded-lg border border-white/10 bg-black/40 px-4 py-1">
-                        <span className="text-[9px] font-medium text-gray-500 uppercase">Balance</span>
-                        <span className="bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-sm font-bold text-transparent leading-none">
-                            ${formatCurrency(Number(user?.balance || 0), 2)}
-                        </span>
+                    <div className="flex items-center gap-2">
+                        <div className="flex flex-col items-center rounded-lg border border-white/10 bg-black/40 px-4 py-1">
+                            <span className="text-[9px] font-medium text-gray-500 uppercase">Balance</span>
+                            <span className="bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-sm font-bold text-transparent leading-none">
+                                ${formatCurrency(Number(user?.balance || 0), 2)}
+                            </span>
+                        </div>
+                        <button
+                            onClick={() => setShowDepositModal(true)}
+                            className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-r from-cyan-400 to-emerald-400 hover:from-cyan-500 hover:to-emerald-500 transition-all active:scale-95"
+                            style={{ boxShadow: '0 2px 8px rgba(6, 182, 212, 0.3)' }}
+                            title="Add funds"
+                        >
+                            <span className="text-black font-bold text-lg leading-none">+</span>
+                        </button>
                     </div>
 
-                    {/* Placeholder to balance layout (since chat button is removed) */}
+                    {/* Placeholder to balance layout */}
                     <div className="w-10" />
                 </div>
             </header>
             {/* Spacer to prevent content from hiding behind fixed header */}
             <div className="h-14 w-full flex-shrink-0" />
+
+            <DepositWithdrawModal
+                isOpen={showDepositModal}
+                onClose={() => setShowDepositModal(false)}
+            />
         </>
     );
 }
