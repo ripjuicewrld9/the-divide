@@ -17,6 +17,7 @@ import LiveGamesFeed from '../../../components/LiveGamesFeed';
 import BlackjackLeaderboard from '../../../components/BlackjackLeaderboard';
 import BlackjackVerification from './BlackjackVerification';
 import MobileGameHeader from '../../../components/MobileGameHeader';
+import { BetHistory } from './BetHistory';
 
 interface BlackjackGameProps {
   onOpenChat?: () => void;
@@ -724,6 +725,11 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
                         streakType={gameState.streakType}
                       />
                     </AnimatePresence>
+                  </div>
+
+                  {/* Bet History */}
+                  <div className="mt-4 order-4">
+                    <BetHistory history={gameState.roundResults} isMobile={isMobile} />
                   </div>
                 </aside >
               </div >
