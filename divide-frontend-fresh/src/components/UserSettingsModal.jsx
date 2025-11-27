@@ -14,13 +14,11 @@ export default function UserSettingsModal({ isOpen, onClose }) {
 
   const presetAvatars = [
     '/profilesvg/account-avatar-profile-user-svgrepo-com.svg',
-    '/profilesvg/account-avatar-profile-user-2-svgrepo-com.svg',
     '/profilesvg/account-avatar-profile-user-3-svgrepo-com.svg',
     '/profilesvg/account-avatar-profile-user-4-svgrepo-com.svg',
     '/profilesvg/account-avatar-profile-user-5-svgrepo-com.svg',
     '/profilesvg/account-avatar-profile-user-6-svgrepo-com.svg',
     '/profilesvg/account-avatar-profile-user-7-svgrepo-com.svg',
-    '/profilesvg/account-avatar-profile-user-9-svgrepo-com.svg',
     '/profilesvg/account-avatar-profile-user-10-svgrepo-com.svg',
     '/profilesvg/account-avatar-profile-user-11-svgrepo-com.svg',
     '/profilesvg/account-avatar-profile-user-12-svgrepo-com.svg',
@@ -352,27 +350,27 @@ export default function UserSettingsModal({ isOpen, onClose }) {
                     <div style={{ marginBottom: '16px' }}>
                       <div style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '8px' }}>Or select a preloaded avatar:</div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-                        {svgOptions.map((svg, idx) => (
+                        {presetAvatars.map((svg, idx) => (
                           <button
                             key={svg}
                             onClick={() => handleSelectSvg(svg)}
                             style={{
                               border: selectedSvg === svg ? '2px solid #00ffff' : '1px solid #333',
                               borderRadius: '8px',
-                              padding: '6px',
+                              padding: '8px',
                               background: selectedSvg === svg ? 'rgba(0,255,255,0.1)' : 'rgba(0,0,0,0.1)',
                               cursor: 'pointer',
                               outline: 'none',
                               transition: 'all 0.2s',
-                              width: 48,
-                              height: 48,
+                              width: 56,
+                              height: 56,
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center'
                             }}
                             title={svg}
                           >
-                            <img src={`/profilesvg/${svg}`} alt={svg} style={{ width: 32, height: 32, borderRadius: 6 }} />
+                            <img src={svg} alt={svg} style={{ width: 40, height: 40, objectFit: 'contain' }} />
                           </button>
                         ))}
                       </div>

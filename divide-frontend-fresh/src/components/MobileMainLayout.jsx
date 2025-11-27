@@ -5,6 +5,8 @@ import { formatCurrency } from '../utils/format';
 import UserAvatar from './UserAvatar.jsx';
 import AuthModal from './AuthModal.jsx';
 import DepositWithdrawModal from './DepositWithdrawModal.jsx';
+import GlobalLeaderboard from './GlobalLeaderboard.jsx';
+import LiveGames from './LiveGames.jsx';
 
 export default function MobileMainLayout({ onOpenChat }) {
   const { user, logout, addFunds } = useAuth();
@@ -344,12 +346,15 @@ export default function MobileMainLayout({ onOpenChat }) {
         </div>
 
         {/* Additional Content Below (Scrollable) */}
-        <div className="px-4 pb-8">
-          <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">
-            Recent Activity
-          </h2>
-          <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-center text-gray-500 text-sm">
-            Play games to see your recent activity here
+        <div className="px-4 pb-8 space-y-6">
+          {/* Global Leaderboard */}
+          <div>
+            <GlobalLeaderboard />
+          </div>
+
+          {/* Live Games Feed */}
+          <div>
+            <LiveGames isMobile={true} />
           </div>
         </div>
       </main>

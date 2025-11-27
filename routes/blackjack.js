@@ -189,6 +189,7 @@ router.post('/game/save', authMiddleware, async (req, res) => {
         // Update user statistics
         user.totalBets = (user.totalBets || 0) + 1;
         user.wagered = (user.wagered || 0) + totalBetCents;
+        user.totalWon = (user.totalWon || 0) + totalPayoutCents;
         if (profit > 0) {
           user.totalWins = (user.totalWins || 0) + 1;
         } else {

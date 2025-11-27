@@ -140,6 +140,7 @@ export default function registerPlinko(app, io, { auth } = {}) {
       // Update user statistics
       user.totalBets = (user.totalBets || 0) + 1;
       user.wagered = (user.wagered || 0) + betInCents;
+      user.totalWon = (user.totalWon || 0) + payoutInCents;
       if (payoutInCents > betInCents) {
         user.totalWins = (user.totalWins || 0) + 1;
       } else {

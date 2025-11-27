@@ -37,6 +37,7 @@ async function backfillUserStats() {
                 let totalWins = 0;
                 let totalLosses = 0;
                 let wagered = 0; // in cents
+                let totalWon = 0; // in cents
 
                 // ========== KENO ==========
                 const kenoRounds = await KenoRound.find({ userId: user._id.toString() });
@@ -45,6 +46,7 @@ async function backfillUserStats() {
                 for (const round of kenoRounds) {
                     totalBets++;
                     wagered += Math.round((round.betAmount || 0) * 100); // Convert to cents
+                    totalWon += Math.round((round.win || 0) * 100); // Convert to cents
 
                     if ((round.win || 0) > 0) {
                         totalWins++;
@@ -60,6 +62,7 @@ async function backfillUserStats() {
                 for (const game of plinkoGames) {
                     totalBets++;
                     wagered += game.betAmount || 0; // Already in cents
+                    totalWon += game.payout || 0; // Already in cents
 
                     if ((game.payout || 0) > (game.betAmount || 0)) {
                         totalWins++;
@@ -83,6 +86,7 @@ async function backfillUserStats() {
 
                     const totalPayout = (game.mainPayout || 0) + (game.perfectPairsPayout || 0) +
                         (game.twentyPlusThreePayout || 0) + (game.blazingSevensPayout || 0);
+                    totalWon += Math.round(totalPayout * 100); // Convert to cents
 
                     if (totalPayout > totalBet) {
                         totalWins++;
@@ -96,10 +100,11 @@ async function backfillUserStats() {
                 user.totalWins = totalWins;
                 user.totalLosses = totalLosses;
                 user.wagered = wagered;
+                user.totalWon = totalWon;
 
                 await user.save();
 
-                console.log(`  ✅ Updated: ${totalBets} bets, ${totalWins} wins, ${totalLosses} losses, $${(wagered / 100).toFixed(2)} wagered\n`);
+                console.log(`  ✅ Updated: ${totalBets} bets, ${totalWins} wins, ${totalLosses} losses, $${(wagered / 100).toFixed(2)} wagered, $${(totalWon / 100).toFixed(2)} won\n`);
                 processedCount++;
 
             } catch (error) {

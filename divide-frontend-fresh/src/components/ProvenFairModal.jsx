@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 
-export default function ProvenFairModal({ isOpen, onClose, gameData }) {
+export default function ProvenFairModal({ isOpen, onClose, game, gameData }) {
   const [verificationResult, setVerificationResult] = useState(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [tab, setTab] = useState('verify');
 
+  // Support both 'game' and 'gameData' props for compatibility
+  const actualGameData = game || gameData;
+
   const verifyGame = useCallback(async () => {
-    if (!gameData) return;
+    if (!actualGameData) return;
     
     setIsVerifying(true);
     try {
@@ -16,8 +19,8 @@ export default function ProvenFairModal({ isOpen, onClose, gameData }) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            gameType: gameData.game,
-            gameId: gameData.gameId
+            gameType: actualGameData.game,
+            gameId: actualGameData.gameId
           })
         }
       );
@@ -30,19 +33,49 @@ export default function ProvenFairModal({ isOpen, onClose, gameData }) {
     } finally {
       setIsVerifying(false);
     }
-  }, [gameData]);
+  }, [actualGameData]);
 
   useEffect(() => {
-    if (isOpen && gameData) {
+    if (isOpen && actualGameData) {
       verifyGame();
     }
-  }, [isOpen, gameData, verifyGame]);
+  }, [isOpen, actualGameData, verifyGame]);
 
   if (!isOpen) return null;
 
   return (
-    <div className="modal screenOn" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 900, width: '90%', maxHeight: '90vh', overflow: 'auto' }}>
+    <div 
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: '100vw',
+        height: '100vh',
+        background: 'rgba(0, 0, 0, 0.85)',
+        backdropFilter: 'blur(4px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 9999,
+        margin: 0,
+        padding: 0
+      }} 
+      onClick={onClose}
+    >
+      <div 
+        onClick={(e) => e.stopPropagation()} 
+        style={{ 
+          maxWidth: 900, 
+          width: '90%', 
+          maxHeight: '90vh', 
+          overflow: 'auto',
+          background: '#1a1a1a',
+          borderRadius: '12px',
+          border: '1px solid rgba(0, 255, 255, 0.2)'
+        }}
+      >
         <div style={{ padding: 20 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <h3 style={{ marginTop: 0 }}>{gameData?.game} - Provably Fair</h3>
@@ -83,7 +116,7 @@ export default function ProvenFairModal({ isOpen, onClose, gameData }) {
                   }}>
                     <div style={{ fontSize: '14px', color: '#9ca3af', marginBottom: '8px' }}>Game</div>
                     <div style={{ fontSize: '18px', fontWeight: 600, color: '#fff' }}>
-                      {gameData?.game} - {gameData?.username}
+                      {actualGameData?.game} - {actualGameData?.username}
                     </div>
                   </div>
 

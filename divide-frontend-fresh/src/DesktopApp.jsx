@@ -111,9 +111,7 @@ export default function DesktopApp() {
         </main>
 
         {/* Right chat sidebar */}
-        {isChatOpen && (
-          <ChatSidebar onClose={() => setIsChatOpen(false)} />
-        )}
+        <ChatSidebar isOpen={isChatOpen} setIsOpen={setIsChatOpen} />
       </div>
 
       {/* Auth Modal */}
@@ -129,15 +127,6 @@ export default function DesktopApp() {
       {showAdminModal && user?.role === 'admin' && (
         <Admin onClose={() => setShowAdminModal(false)} />
       )}
-
-      {/* Chat toggle button */}
-      <button
-        onClick={() => setIsChatOpen(!isChatOpen)}
-        className="fixed bottom-4 right-4 bg-cyan-500 hover:bg-cyan-600 text-white rounded-full p-4 shadow-lg z-50"
-        aria-label="Toggle chat"
-      >
-        💬
-      </button>
     </div>
   );
 }

@@ -1451,6 +1451,148 @@ app.get('/api/my-games', auth, async (req, res) => {
   }
 });
 
+// TOP WINS - Global leaderboard showing top 5 wins by multiplier from all games
+// ──────────────────────────────────────────────────────────────
+app.get('/api/top-wins', async (req, res) => {
+  try {
+    const games = [];
+    const userCache = new Map(); // Cache user lookups
+
+    // Helper to get user with caching
+    const getUserCached = async (userId) => {
+      if (!userId) return null;
+      if (userCache.has(userId.toString())) {
+        return userCache.get(userId.toString());
+      }
+      const user = await User.findById(userId).select('username profileImage').lean();
+      userCache.set(userId.toString(), user);
+      return user;
+    };
+
+    // Fetch top Keno games by multiplier
+    const kenoGames = await KenoRound.find({ win: { $gt: 0 } })
+      .sort({ win: -1 })
+      .limit(20)
+      .select('_id userId betAmount win timestamp')
+      .lean();
+
+    for (const game of kenoGames) {
+      const user = await getUserCached(game.userId);
+      const multiplier = game.win / game.betAmount;
+      games.push({
+        _id: game._id,
+        game: 'Keno',
+        username: user?.username || 'Hidden',
+        profileImage: user?.profileImage || '',
+        wager: game.betAmount,
+        multiplier: multiplier,
+        multiplierDisplay: multiplier.toFixed(2) + 'x',
+        payout: game.win,
+        time: game.timestamp,
+        icon: '🎰'
+      });
+    }
+
+    // Fetch top Plinko games by multiplier
+    const plinkoGames = await PlinkoGame.find({ multiplier: { $gt: 0 } })
+      .sort({ multiplier: -1 })
+      .limit(20)
+      .select('_id userId betAmount multiplier payout createdAt')
+      .lean();
+
+    for (const game of plinkoGames) {
+      const user = await getUserCached(game.userId);
+      games.push({
+        _id: game._id,
+        game: 'Plinko',
+        username: user?.username || 'Hidden',
+        profileImage: user?.profileImage || '',
+        wager: game.betAmount / 100,
+        multiplier: game.multiplier,
+        multiplierDisplay: game.multiplier.toFixed(2) + 'x',
+        payout: game.payout / 100,
+        time: game.createdAt,
+        icon: '⚪'
+      });
+    }
+
+    // Fetch top Blackjack games by payout
+    const blackjackGames = await BlackjackGame.find({ 
+      gamePhase: 'gameOver',
+      mainPayout: { $gt: 0 }
+    })
+      .sort({ mainPayout: -1 })
+      .limit(20)
+      .select('_id userId mainBet perfectPairsBet twentyPlusThreeBet blazingSevensBet mainPayout perfectPairsPayout twentyPlusThreePayout blazingSevensPayout createdAt')
+      .lean();
+
+    for (const game of blackjackGames) {
+      const user = await getUserCached(game.userId);
+      const totalBet = game.mainBet + game.perfectPairsBet + game.twentyPlusThreeBet + game.blazingSevensBet;
+      const totalPayout = game.mainPayout + game.perfectPairsPayout + game.twentyPlusThreePayout + game.blazingSevensPayout;
+      const multiplier = totalPayout / totalBet;
+
+      games.push({
+        _id: game._id,
+        game: 'Blackjack',
+        username: user?.username || 'Hidden',
+        profileImage: user?.profileImage || '',
+        wager: totalBet,
+        multiplier: multiplier,
+        multiplierDisplay: multiplier.toFixed(2) + 'x',
+        payout: totalPayout,
+        time: game.createdAt,
+        icon: '🃏'
+      });
+    }
+
+    // Fetch Case Battles with highest pots
+    const caseBattles = await CaseBattle.find({ status: 'ended', winnerId: { $exists: true } })
+      .sort({ pot: -1 })
+      .limit(10)
+      .select('_id winnerId players pot createdAt')
+      .lean();
+
+    for (const battle of caseBattles) {
+      const winnerPlayer = battle.players?.find(p => p.userId === battle.winnerId);
+      const user = await getUserCached(battle.winnerId);
+      let wagerAmount = 0;
+      if (winnerPlayer?.cases && winnerPlayer.cases.length > 0) {
+        wagerAmount = winnerPlayer.cases.reduce((sum, c) => sum + (c.price || 0), 0);
+      } else if (winnerPlayer?.totalCaseValue) {
+        wagerAmount = winnerPlayer.totalCaseValue;
+      } else {
+        wagerAmount = battle.pot / (battle.players?.length || 2);
+      }
+      const multiplier = battle.pot / wagerAmount;
+      
+      games.push({
+        _id: battle._id,
+        game: 'Case Battle',
+        username: user?.username || 'Hidden',
+        profileImage: user?.profileImage || '',
+        wager: wagerAmount,
+        multiplier: multiplier,
+        multiplierDisplay: multiplier.toFixed(2) + 'x',
+        payout: battle.pot,
+        time: battle.createdAt,
+        icon: '⚔️'
+      });
+    }
+
+    // Sort by multiplier (highest first) and take top 5
+    games.sort((a, b) => b.multiplier - a.multiplier);
+    const topWins = games.slice(0, 5);
+
+    console.log(`[Top Wins] Returning ${topWins.length} top wins by multiplier`);
+    
+    res.json({ topWins });
+  } catch (err) {
+    console.error('Error fetching top wins:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // ──────────────────────────────────────────────────────────────
 // LEADERBOARD – top 3 multipliers (fixed)
 app.get('/keno/leaderboard', async (req, res) => {
@@ -2870,6 +3012,7 @@ app.post("/add-funds", auth, async (req, res) => {
     // Add funds (convert dollars to cents)
     const amountCents = Math.round(amount * 100);
     user.balance += amountCents;
+    user.totalDeposited = (user.totalDeposited || 0) + amountCents;
     await user.save();
 
     console.log(`[ADD FUNDS] User ${user.username} added $${amount}, new balance: $${toDollars(user.balance)}`);
