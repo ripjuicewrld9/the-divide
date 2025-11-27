@@ -188,11 +188,6 @@ export default function registerCaseBattles(app, io, { auth } = {}) {
       io.emit('battle:created', { battle });
 
       user.balance -= totalCostInCents;
-
-      // Update stats
-      user.totalBets = (user.totalBets || 0) + 1;
-      user.totalWagered = (user.totalWagered || 0) + totalCostInCents;
-
       await user.save();
       console.log(`[CaseBattle Create] Balance deducted: User ${user.username} balance after: $${(user.balance / 100).toFixed(2)}`);
 
@@ -274,8 +269,7 @@ export default function registerCaseBattles(app, io, { auth } = {}) {
         }
       }
 
-      const totalCostInCents = Math.round(totalCost * 100);
-      if (user.balance < totalCostInCents) return res.status(402).json({ error: 'Insufficient balance' });
+      if (user.balance < totalCost) return res.status(402).json({ error: 'Insufficient balance' });
 
       // Use the existing battle hybrid seed to generate a deterministic ticket for this joining player
       if (!battle.hybridSeed) {
@@ -355,12 +349,7 @@ export default function registerCaseBattles(app, io, { auth } = {}) {
       // Emit real-time event for battle update
       io.emit('battle:updated', { battle });
 
-      user.balance -= totalCostInCents;
-
-      // Update stats
-      user.totalBets = (user.totalBets || 0) + 1;
-      user.totalWagered = (user.totalWagered || 0) + totalCostInCents;
-
+      user.balance -= totalCost;
       await user.save();
 
       const itemDesc = caseDetails.map(c => c.drawnItem).join(', ');
@@ -699,12 +688,6 @@ export default function registerCaseBattles(app, io, { auth } = {}) {
           const winnerUser = await User.findById(winnerId).catch(() => null);
           if (winnerUser) {
             winnerUser.balance += winningsPerWinner;
-
-            // Update stats
-            winnerUser.totalWon = (winnerUser.totalWon || 0) + winningsPerWinner;
-            winnerUser.totalWinsCount = (winnerUser.totalWinsCount || 0) + 1;
-            winnerUser.totalWinnings = (winnerUser.totalWinnings || 0) + winningsPerWinner;
-
             await winnerUser.save();
             await Ledger.create({
               userId: winnerId,
@@ -715,19 +698,6 @@ export default function registerCaseBattles(app, io, { auth } = {}) {
             });
             console.log(`[CaseBattle Settle] Winner ${winnerUser.username} awarded $${(winningsPerWinner).toFixed(2)}`);
           }
-        }
-      }
-
-      // Update stats for losers
-      const loserIds = battle.players
-        .filter(p => !winners.includes(p.userId) && !p.isBot)
-        .map(p => p.userId);
-
-      for (const loserId of loserIds) {
-        try {
-          await User.findByIdAndUpdate(loserId, { $inc: { totalLossesCount: 1 } });
-        } catch (e) {
-          console.error('Failed to update loser stats', loserId, e);
         }
       }
 

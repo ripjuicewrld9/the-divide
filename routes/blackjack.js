@@ -174,51 +174,46 @@ router.post('/game/save', authMiddleware, async (req, res) => {
 
     await game.save();
 
+    // Update user balance server-side (SECURITY FIX)
+    // Deduct total bet and add total payout
+    let updatedBalance = balance; // Fallback to client-provided balance if update fails
+    try {
+      const user = await User.findById(userId);
+      if (user) {
+        const totalBetCents = Math.round(totalBet * 100);
+        const totalPayoutCents = Math.round(totalPayout * 100);
+
+        // Deduct bet and add payout
+        user.balance = user.balance - totalBetCents + totalPayoutCents;
+
+        // Update user statistics
+        user.totalBets = (user.totalBets || 0) + 1;
+        user.wagered = (user.wagered || 0) + totalBetCents;
+        if (profit > 0) {
+          user.totalWins = (user.totalWins || 0) + 1;
+        } else {
+          user.totalLosses = (user.totalLosses || 0) + 1;
+        }
+
+        await user.save();
+        updatedBalance = user.balance / 100; // Convert cents to dollars
+
+        console.log(`[BlackjackAPI] Balance updated: user=${userId}, bet=$${totalBet}, payout=$${totalPayout}, newBalance=$${updatedBalance.toFixed(2)}`);
+      }
+    } catch (e) {
+      console.error('[BlackjackAPI] Failed to update user balance/statistics', e);
+      // Don't fail the request if balance update fails - game is already saved
+    }
+
     console.log(`[BlackjackAPI] Game saved: ${game._id} - Profit: $${profit.toFixed(2)}`);
 
-    // NOTE: Balance is managed by the frontend and synced via PUT /api/me/balance
-    // Do NOT update user balance here to avoid double-deduction conflicts
-
-    // Update player stats
-    const user = await User.findById(userId);
-    if (user) {
-      user.totalBets = (user.totalBets || 0) + 1;
-      user.totalWagered = (user.totalWagered || 0) + totalBet; // totalBet is in cents? No, looks like dollars in this file based on usage. Wait, let's check.
-      // In Plinko it was cents. Here, let's verify.
-      // Looking at `game/save` body: mainBet, etc. come from req.body.
-      // If they are dollars, we need to convert to cents for storage if User schema expects cents.
-      // User schema expects cents for balance, but what about stats?
-      // Implementation plan said "Number (default 0)".
-      // Keno stores cents. Plinko stores cents.
-      // Blackjack seems to use dollars in this file?
-      // "const profit = totalPayout - totalBet;"
-      // "res.json({ profit })"
-      // If frontend sends dollars, we should convert to cents for consistency with other games.
-
-      // Let's assume input is dollars for now based on Plinko precedent where `betAmount` was dollars.
-      // But wait, Plinko `betAmount` was dollars, converted to `betInCents`.
-      // Here `mainBet` comes directly from body.
-      // I will assume they are dollars and convert to cents for the User stats to match Keno/Plinko.
-
-      const totalBetCents = Math.round(totalBet * 100);
-      const totalPayoutCents = Math.round(totalPayout * 100);
-      const profitCents = totalPayoutCents - totalBetCents;
-
-      user.totalWagered = (user.totalWagered || 0) + totalBetCents;
-
-      if (totalPayoutCents > 0) {
-        user.totalWon = (user.totalWon || 0) + totalPayoutCents;
-        user.totalWinsCount = (user.totalWinsCount || 0) + 1;
-        user.totalWinnings = (user.totalWinnings || 0) + totalPayoutCents;
-      } else {
-        user.totalLossesCount = (user.totalLossesCount || 0) + 1;
-      }
-      await user.save();
-    }
+    // Balance is now managed server-side (deducted above)
+    // Return updated balance to client for display
 
     res.json({
       gameId: game._id,
       profit,
+      balance: updatedBalance, // Return new balance in dollars
       // Still don't reveal seeds - only after explicit verification request
     });
   } catch (error) {

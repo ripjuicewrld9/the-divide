@@ -161,8 +161,10 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
   // Sync game balance with user balance when returning to betting phase
   useEffect(() => {
     if (gameState.gamePhase === 'betting' && userBalance !== undefined && userBalance !== null) {
-      // Update balance if user balance changed (e.g., played other games)
-      if (Math.abs(gameState.balance - userBalance) > 0.01) {
+      // Only update balance if it changed significantly (more than current bet amounts)
+      // This prevents fighting with other games' optimistic balance updates
+      const difference = Math.abs(gameState.balance - userBalance);
+      if (difference > 1) { // Only sync if difference is more than $1
         console.log('[Blackjack] Syncing balance:', gameState.balance, '->', userBalance);
         gameState.setInitialBalance(userBalance);
       }

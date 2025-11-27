@@ -363,10 +363,8 @@ export default function useKeno() {
       if (prevBalance < betAmount) { playGuncock(); setMessage('Insufficient balance'); return; }
       const newBalance = Number((prevBalance - betAmount).toFixed(2));
       setBalance(newBalance);
-      // Immediately update global balance so header shows deduction instantly
-      if (setGlobalBalance) {
-        setGlobalBalance(newBalance);
-      }
+      // Don't update global balance here - it conflicts with other games
+      // Server will send authoritative balance after round completes
     }
     // mark request in-flight synchronously to avoid double submissions
     inFlightRef.current = true;
@@ -395,9 +393,6 @@ export default function useKeno() {
         setMessage(data?.error || 'Play failed');
         // restore optimistic balance
         setBalance(prevBalance);
-        if (setGlobalBalance) {
-          setGlobalBalance(prevBalance);
-        }
         // clear drawing flag since this round did not start properly
         setIsDrawing(false);
         inFlightRef.current = false;
@@ -407,7 +402,12 @@ export default function useKeno() {
       // Prefer authoritative server-provided 'balanceAfterBet' for UI hold state
       try {
         if (typeof data.balanceAfterBet !== 'undefined') {
-          setBalance(Number(data.balanceAfterBet));
+          const serverBalance = Number(data.balanceAfterBet);
+          setBalance(serverBalance);
+          // Update global balance with server's authoritative value
+          if (setGlobalBalance) {
+            setGlobalBalance(serverBalance);
+          }
         }
       } catch { /* ignore */ }
       // store server result but don't apply payout yet — wait for animations to finish
@@ -470,13 +470,10 @@ export default function useKeno() {
       }
       // If retry failed or returned nothing, restore optimistic balance and clear flags
       setBalance(prevBalance);
-      if (setGlobalBalance) {
-        setGlobalBalance(prevBalance);
-      }
       inFlightRef.current = false;
       setIsDrawing(false);
     }
-  }, [playerNumbers, betAmount, risk, pendingResult, balance, setGlobalBalance]);
+  }, [playerNumbers, betAmount, risk, pendingResult, balance]);
 
 
   const onRevealComplete = useCallback(async () => {

@@ -137,15 +137,13 @@ export default function registerPlinko(app, io, { auth } = {}) {
       user.balance = newBalanceInCents;
       user.plinkoNonce = currentNonce + 1;
 
-      // Update player stats
+      // Update user statistics
       user.totalBets = (user.totalBets || 0) + 1;
-      user.totalWagered = (user.totalWagered || 0) + betInCents;
-      if (payoutInCents > 0) {
-        user.totalWon = (user.totalWon || 0) + payoutInCents;
-        user.totalWinsCount = (user.totalWinsCount || 0) + 1;
-        user.totalWinnings = (user.totalWinnings || 0) + payoutInCents; // Keep legacy field updated too
+      user.wagered = (user.wagered || 0) + betInCents;
+      if (payoutInCents > betInCents) {
+        user.totalWins = (user.totalWins || 0) + 1;
       } else {
-        user.totalLossesCount = (user.totalLossesCount || 0) + 1;
+        user.totalLosses = (user.totalLosses || 0) + 1;
       }
 
       await user.save();

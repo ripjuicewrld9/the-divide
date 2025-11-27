@@ -1246,6 +1246,201 @@ payout-table th {
   background: #333;
   padding: 10px;
   margin: 5px 0;
+  font-size: 0.9em;
+  color: #e0e0e0;
+}
+
+.game-log li.won {
+  background: var(--accent-blue);
+  color: #000;
+}
+
+.mult-num {
+  color: #ffd6a6;
+}
+
+.hits-num {
+  color: #ffd966;
+}
+
+.win-card .hits,
+.win-card .multiplier,
+.win-card .amount {
+  border: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.win-card .win-actions .btn-close {
+  background: linear-gradient(180deg, var(--accent-blue), var(--accent-blue));
+  color: #001f25;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-weight: 900;
+}
+
+/* grid-wrapper profit / loss glow like the live chart */
+.grid-wrapper.profit {
+  box-shadow: 0 0 30px rgba(46, 213, 115, 0.08), 0 8px 40px rgba(46, 213, 115, 0.06) inset;
+  border-radius: 10px;
+  outline: 2px solid rgba(46, 213, 115, 0.06);
+}
+
+.grid-wrapper.loss {
+  box-shadow: 0 0 30px rgba(255, 215, 0, 0.08), 0 8px 40px rgba(255, 215, 0, 0.06) inset;
+  border-radius: 10px;
+  outline: 2px solid rgba(255, 215, 0, 0.06);
+}
+
+/* subtle animated pulse on wrapper when profit/loss changes */
+.grid-wrapper.profit,
+.grid-wrapper.loss {
+  transition: box-shadow 300ms ease, transform 200ms ease;
+}
+
+/* subtle decorative top accent */
+.win-card::before {
+  content: '';
+  display: block;
+  height: 6px;
+  width: 72px;
+  margin: 0 auto 12px auto;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--accent-blue), var(--accent-blue));
+  box-shadow: 0 6px 18px rgba(148, 0, 0, 0.08);
+}
+
+@media (max-width: 600px) {
+  .win-card .win-body {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .win-card .hits,
+  .win-card .multiplier,
+  .win-card .amount {
+    width: 100%;
+  }
+
+  .modal {
+    align-items: flex-end;
+    padding-bottom: 20px;
+  }
+}
+
+.win-actions {
+  margin-top: 14px;
+  text-align: center;
+}
+
+
+.modal-content h2 {
+  color: var(--accent-blue);
+  font-size: 1.5em;
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.payout-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #333;
+  font-size: 0.9em;
+}
+
+.payout-table th,
+.payout-table td {
+  border: 1px solid #444;
+  padding: 10px;
+  text-align: center;
+  color: #e0e0e0;
+}
+
+payout-table th {
+  background: var(--accent-blue);
+  color: #000;
+  font-weight: 700;
+}
+
+.payout-table td {
+  background: #444;
+  transition: background 0.3s ease;
+}
+
+.payout-table tr:hover td {
+  background: #555;
+}
+
+#provably-fair-data {
+  margin-top: 20px;
+  padding: 10px;
+  background: #333;
+  border: 1px solid #444;
+  border-radius: 6px;
+  font-size: 0.9em;
+}
+
+#provably-fair-data p {
+  margin: 5px 0;
+  color: #e0e0e0;
+}
+
+#provably-fair-data span {
+  color: var(--accent-blue);
+  font-weight: 700;
+}
+
+.btn-close {
+  background: var(--accent-blue);
+  color: #fff;
+  padding: 10px 20px;
+  margin-top: 15px;
+  width: 100%;
+  max-width: 150px;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.btn-close:hover {
+  background: rgba(148, 0, 0, 0.9);
+}
+
+.win-animation {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--accent-blue);
+  color: #000;
+  padding: 15px 30px;
+  border-radius: 10px;
+  z-index: 1000;
+  font-weight: 700;
+}
+
+.game-log {
+  margin-top: 20px;
+  padding: 15px;
+  background: #2a2a2a;
+  border-radius: 10px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.game-log h3 {
+  color: var(--accent-blue);
+  font-size: 1.2em;
+  margin-bottom: 10px;
+}
+
+.game-log ul {
+  list-style: none;
+  padding: 0;
+}
+
+.game-log li {
+  background: #333;
+  padding: 10px;
+  margin: 5px 0;
   border-radius: 6px;
   font-size: 0.9em;
   color: #e0e0e0;
@@ -1263,4 +1458,87 @@ payout-table th {
   background: linear-gradient(180deg, #00bfbf, #009494) !important;
   color: #fff !important;
   box-shadow: 0 10px 30px rgba(0, 148, 148, 0.14) !important;
+}
+
+/* ========================================
+   KEYFRAME ANIMATIONS (RESTORED)
+   ======================================== */
+
+/* Diamond/match icon pop-in animation */
+@keyframes diamond-pop {
+  0% {
+    transform: scale(0) rotate(0deg);
+    opacity: 0;
+  }
+
+  50% {
+    transform: scale(1.2) rotate(180deg);
+  }
+
+  100% {
+    transform: scale(1) rotate(360deg);
+    opacity: 1;
+  }
+}
+
+/* Diamond/match icon pulse animation (infinite) */
+@keyframes diamond-pulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+
+  50% {
+    transform: scale(1.05);
+    filter: brightness(1.2);
+  }
+}
+
+/* Match SVG pulse animation */
+@keyframes match-pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.8;
+    transform: scale(1.1);
+  }
+}
+
+/* Win card pop-in animation */
+@keyframes win-pop {
+  0% {
+    transform: translateY(-6px) scale(0.8);
+    opacity: 0;
+  }
+
+  50% {
+    transform: translateY(-6px) scale(1.05);
+  }
+
+  100% {
+    transform: translateY(-6px) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Rotating animation for autoplay button */
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.rotating {
+  animation: rotate 2s linear infinite;
 }

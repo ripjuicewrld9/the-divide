@@ -2,23 +2,23 @@ import React, { useState } from 'react';
 import { formatCurrency } from '../utils/format';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { AnimatePresence, motion } from 'framer-motion';
 import AuthModal from './AuthModal.jsx';
-import { motion, AnimatePresence } from 'framer-motion';
 import UserAvatar from './UserAvatar.jsx';
 import UserSettingsModal from './UserSettingsModal.jsx';
+import DepositWithdrawModal from './DepositWithdrawModal.jsx';
 
 export default function Header() {
   const { user, logout, addFunds } = useAuth();
   const isAdmin = user?.role === 'admin';
 
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [isRegister, setIsRegister] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [fundAmount, setFundAmount] = useState('');
   const [promoteError, setPromoteError] = useState('');
   const [promoteSuccess, setPromoteSuccess] = useState('');
-  const [showFundInput, setShowFundInput] = useState(false);
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showDepositModal, setShowDepositModal] = useState(false);
 
   const handleUserButton = () => {
     if (!user) {
@@ -86,49 +86,22 @@ export default function Header() {
             <>
               {/* Balance & Add Funds */}
               <div className="flex items-center gap-2 rounded-full border border-white/10 bg-black/40 px-1 py-1 pr-4">
-                <div className="relative">
-                  <button
-                    onClick={() => setShowFundInput(!showFundInput)}
-                    className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-green-500 to-emerald-600 text-black shadow-lg transition-transform hover:scale-105 active:scale-95"
-                  >
-                    <span className="font-bold text-lg leading-none">+</span>
-                  </button>
-
-                  {/* Add Funds Popover */}
-                  <AnimatePresence>
-                    {showFundInput && (
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.9, x: -10 }}
-                        animate={{ opacity: 1, scale: 1, x: 0 }}
-                        exit={{ opacity: 0, scale: 0.9, x: -10 }}
-                        className="absolute left-full ml-2 top-0 flex items-center gap-2 rounded-lg border border-white/10 bg-[#1a1a1a] p-1 shadow-xl"
-                      >
-                        <input
-                          type="number"
-                          min="1"
-                          value={fundAmount}
-                          onChange={(e) => setFundAmount(e.target.value)}
-                          placeholder="$"
-                          className="w-16 rounded bg-black/50 px-2 py-1 text-sm text-white outline-none focus:ring-1 focus:ring-green-500"
-                          autoFocus
-                        />
-                        <button
-                          onClick={() => {
-                            const v = Number(fundAmount || 0);
-                            if (v > 0 && addFunds) {
-                              addFunds(v);
-                              setFundAmount('');
-                              setShowFundInput(false);
-                            }
-                          }}
-                          className="rounded bg-green-500/20 px-2 py-1 text-xs font-bold text-green-400 hover:bg-green-500/30"
-                        >
-                          ADD
-                        </button>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                <div className="flex flex-col items-end leading-none mr-2">
+                  <span className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Balance</span>
+                  <span className="bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-sm font-bold text-transparent">
+                    ${formatCurrency(Number(user.balance || 0), 2)}
+                  </span>
                 </div>
+                <button
+                  onClick={() => setShowDepositModal(true)}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-r from-cyan-400 to-emerald-400 text-black shadow-lg transition-transform hover:scale-105 active:scale-95"
+                  title="Add funds"
+                  style={{ boxShadow: '0 2px 8px rgba(6, 182, 212, 0.3)' }}
+                >
+                  <span className="font-bold text-lg leading-none">+</span>
+                </button>
+                <DepositWithdrawModal isOpen={showDepositModal} onClose={() => setShowDepositModal(false)} />
+                {/* ...existing code... */}
 
                 <div className="flex flex-col items-end leading-none">
                   <span className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Balance</span>
