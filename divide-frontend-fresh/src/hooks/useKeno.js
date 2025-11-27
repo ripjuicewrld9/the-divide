@@ -24,7 +24,7 @@ export default function useKeno() {
   const [drawnNumbers, setDrawnNumbers] = useState([]);
   const [matches, setMatches] = useState([]);
   const [isDrawing, setIsDrawing] = useState(false);
-  const { user, refreshUser, updateUser } = useAuth();
+  const { user, refreshUser, setBalance: setGlobalBalance } = useAuth();
   const [balance, setBalance] = useState(() => (user ? Number(user.balance || 0) : 0));
   const [message, setMessage] = useState('Select numbers and bet');
   const [pendingResult, setPendingResult] = useState(null); // server result held until animations finish
@@ -364,8 +364,8 @@ export default function useKeno() {
       const newBalance = Number((prevBalance - betAmount).toFixed(2));
       setBalance(newBalance);
       // Immediately update global balance so header shows deduction instantly
-      if (updateUser) {
-        updateUser({ balance: newBalance });
+      if (setGlobalBalance) {
+        setGlobalBalance(newBalance);
       }
     }
     // mark request in-flight synchronously to avoid double submissions
@@ -395,8 +395,8 @@ export default function useKeno() {
         setMessage(data?.error || 'Play failed');
         // restore optimistic balance
         setBalance(prevBalance);
-        if (updateUser) {
-          updateUser({ balance: prevBalance });
+        if (setGlobalBalance) {
+          setGlobalBalance(prevBalance);
         }
         // clear drawing flag since this round did not start properly
         setIsDrawing(false);
@@ -470,13 +470,13 @@ export default function useKeno() {
       }
       // If retry failed or returned nothing, restore optimistic balance and clear flags
       setBalance(prevBalance);
-      if (updateUser) {
-        updateUser({ balance: prevBalance });
+      if (setGlobalBalance) {
+        setGlobalBalance(prevBalance);
       }
       inFlightRef.current = false;
       setIsDrawing(false);
     }
-  }, [playerNumbers, betAmount, risk, pendingResult, balance, updateUser]);
+  }, [playerNumbers, betAmount, risk, pendingResult, balance, setGlobalBalance]);
 
 
   const onRevealComplete = useCallback(async () => {
