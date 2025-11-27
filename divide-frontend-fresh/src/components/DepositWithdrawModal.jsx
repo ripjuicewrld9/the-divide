@@ -104,13 +104,24 @@ export default function DepositWithdrawModal({ isOpen, onClose }) {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" onClick={onClose}>
+        <div 
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm p-4 flex items-center justify-center" 
+            onClick={onClose}
+            style={{ 
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: '100vh',
+                minHeight: '100dvh'
+            }}
+        >
             <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
                 onClick={(e) => e.stopPropagation()}
-                className="w-full max-w-md bg-[#0b0b0b] border border-white/10 rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
+                className="w-full max-w-md bg-[#0b0b0b] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col my-auto"
+                style={{ maxHeight: '90vh', maxHeight: '90dvh' }}
             >
                 <div className="flex items-center justify-between p-6 border-b border-white/10 shrink-0">
                     <h2 className="text-xl font-bold bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent">Wallet</h2>
