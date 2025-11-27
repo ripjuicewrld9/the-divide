@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { isMobile } from '../utils/deviceDetect';
 import useSocket from '../hooks/useSocket';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -9,6 +10,7 @@ import Countdown from './Countdown';
 import LiveGamesFeed from './LiveGamesFeed';
 import MobileGameHeader from './MobileGameHeader';
 import RuggedLeaderboard from './RuggedLeaderboard';
+import ProvenFairModal from './ProvenFairModal';
 
 export default function RuggedGame({ onOpenChat }) {
   const socket = useSocket('rugged');
@@ -29,6 +31,8 @@ export default function RuggedGame({ onOpenChat }) {
   const [myMultiplier, setMyMultiplier] = useState(1);
   const [myCashout, setMyCashout] = useState(0);
   const [players, setPlayers] = useState({});
+  const [showProvenFair, setShowProvenFair] = useState(false);
+  const [lastRngData, setLastRngData] = useState(null); // Store RNG rug pull data
 
   const LOCAL_KEY = 'rugged_priceHistory';
   // Display mapping: show a "fake stock price" where price = pool / DISPLAY_DIVISOR.
@@ -185,6 +189,12 @@ export default function RuggedGame({ onOpenChat }) {
     const onRug = (data) => {
       // Build a clearer notification message. If the rug was triggered by the JackpotDC
       // sale include the sale USD amount and a link to the server seed proof.
+      
+      // Store RNG data if this was an RNG-based rug pull (jackpot reason)
+      if (data.reason === 'jackpot' || data.jackpotSupplySold) {
+        setLastRngData(data);
+      }
+      
       try {
         let msg = `Rug pull occurred: ${data.reason || 'unknown'}`;
         if (data.reason === 'jackpot' || data.jackpotSupplySold) {
@@ -414,7 +424,8 @@ export default function RuggedGame({ onOpenChat }) {
     } catch (e) { console.error('sellAllPositions failed', e); alert('Sell failed'); }
   }
   return (
-    isMobile() ? (
+    <>
+      {isMobile() ? (
       <div className="rugged-mobile-layout w-full max-w-md mx-auto px-2 py-2">
         {/* Mobile Header - only shows on mobile */}
         {/* Mobile Header - only shows on mobile */}
@@ -465,6 +476,8 @@ export default function RuggedGame({ onOpenChat }) {
             myCashout={myCashout}
             debugEnabled={debugEnabled}
             debugInfo={debugInfo}
+            onShowFairness={() => setShowProvenFair(true)}
+            hasRngData={!!lastRngData}
           />
         </div>
         <div className="mb-4">
@@ -567,6 +580,8 @@ export default function RuggedGame({ onOpenChat }) {
               myCashout={myCashout}
               debugEnabled={debugEnabled}
               debugInfo={debugInfo}
+              onShowFairness={() => setShowProvenFair(true)}
+              hasRngData={!!lastRngData}
             />
           </div>
 
@@ -595,6 +610,25 @@ export default function RuggedGame({ onOpenChat }) {
           </div>
         </div>
       </div>
-    )
+      )}
+
+      {/* ProvenFair Modal - only show when RNG rug pull data exists */}
+      {showProvenFair && lastRngData && createPortal(
+        <ProvenFairModal 
+          isOpen={showProvenFair} 
+          onClose={() => setShowProvenFair(false)} 
+          gameData={{
+            game: 'Rugged',
+            serverSeedHashed: lastRngData.serverSeedHashed,
+            serverSeed: lastRngData.serverSeed,
+            blockHash: lastRngData.blockHash,
+            reason: lastRngData.reason,
+            jackpotSaleUsd: lastRngData.jackpotSaleUsd,
+            jackpotSupplySold: lastRngData.jackpotSupplySold
+          }} 
+        />,
+        document.body
+      )}
+    </>
   );
 }

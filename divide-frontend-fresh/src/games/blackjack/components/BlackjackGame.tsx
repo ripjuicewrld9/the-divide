@@ -150,6 +150,11 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
   const balanceInitializedRef = useRef(false);
   const gameSavedRef = useRef(false);
 
+  // Handler to show fairness modal
+  const handleShowFairness = () => {
+    setShowVerification(true);
+  };
+
   // Initialize game balance with user balance - only once
   useEffect(() => {
     // Set initial balance only on first mount when user balance loads
@@ -462,14 +467,19 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
                               borderRadius: '0.35rem',
                               border: '1px solid rgba(255, 215, 0, 0.3)',
                               cursor: 'pointer',
-                              fontSize: '0.75rem',
-                              flexShrink: 0,
-                            }}
-                            whileHover={{ scale: 1.05, background: 'rgba(255, 215, 0, 0.3)' }}
-                            whileTap={{ scale: 0.95 }}
-                          >
-                            ℹ️ Info
-                          </motion.button>
+                            fontSize: '0.75rem',
+                            flexShrink: 0,
+                          }}
+                          whileHover={{ scale: 1.05, background: 'rgba(255, 215, 0, 0.3)' }}
+                          whileTap={{ scale: 0.95 }}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'inline-block', marginRight: '4px', verticalAlign: 'middle' }}>
+                            <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
+                            <path d="M12 8h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            <path d="M11.5 12h1v4h-1z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                          Fairness
+                        </motion.button>
                         </div>
                       </motion.div>
                     )}
@@ -633,6 +643,7 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
                       disabled={gameState.gamePhase !== 'betting'}
                       currentMode={gameState.betPlacementMode}
                       onModeChange={(mode) => gameState.setBetMode(mode)}
+                      onShowFairness={handleShowFairness}
                     />
                   </div>
 

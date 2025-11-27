@@ -7,6 +7,7 @@ interface BlackjackBetBarProps {
   disabled?: boolean;
   currentMode: 'main' | 'perfectPairs' | 'twentyPlusThree' | 'blazingSevens' | null;
   onModeChange: (mode: 'main' | 'perfectPairs' | 'twentyPlusThree' | 'blazingSevens') => void;
+  onShowFairness?: () => void;
 }
 
 export const BlackjackBetBar: React.FC<BlackjackBetBarProps> = ({
@@ -16,6 +17,7 @@ export const BlackjackBetBar: React.FC<BlackjackBetBarProps> = ({
   disabled = false,
   currentMode,
   onModeChange,
+  onShowFairness,
 }) => {
   const handleHalf = () => {
     const v = Math.max(0.01, betAmount / 2);
@@ -120,6 +122,23 @@ export const BlackjackBetBar: React.FC<BlackjackBetBarProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Fairness button */}
+      {onShowFairness && (
+        <div className={isMobile ? "flex gap-4 justify-center mt-2 pt-2 border-t border-white/5" : "flex gap-4 justify-center mt-4 pt-3 border-t border-white/5"}>
+          <button
+            onClick={(e) => { e.stopPropagation(); onShowFairness(); }}
+            className="flex items-center gap-2 text-gray-400 hover:text-cyan-400 transition-colors"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
+              <path d="M12 8h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M11.5 12h1v4h-1z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span className="text-xs">Fairness</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 };

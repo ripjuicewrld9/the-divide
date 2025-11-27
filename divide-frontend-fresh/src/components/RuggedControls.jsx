@@ -4,7 +4,7 @@ import Countdown from './Countdown';
 
 // Rugged Controls for PURE RNG crash game.
 // Keeps visual layout but changes semantics: buy USD into pool, sell to cash out your positions.
-export default function RuggedControls({ pool = 0, onBuy, onSellAll, positions = [], onRefresh, balance = 0, rugged = false, myMultiplier = 1, myCashout = 0, debugEnabled = false, debugInfo = null }) {
+export default function RuggedControls({ pool = 0, onBuy, onSellAll, positions = [], onRefresh, balance = 0, rugged = false, myMultiplier = 1, myCashout = 0, debugEnabled = false, debugInfo = null, onShowFairness, hasRngData = false }) {
   const [mode, setMode] = useState('buy'); // 'buy' or 'sell'
   // value: when buy -> USD amount; when sell -> percent (0-100)
   const [value, setValue] = useState(1);
@@ -173,6 +173,24 @@ export default function RuggedControls({ pool = 0, onBuy, onSellAll, positions =
           ) : null}
         </div>
       </div>
+
+      {/* Fairness button - only show when there's RNG rug pull data */}
+      {onShowFairness && hasRngData && (
+        <div style={{ display: 'flex', alignItems: 'center', marginLeft: 12 }}>
+          <button
+            onClick={(e) => { e.stopPropagation(); onShowFairness(); }}
+            className="flex items-center gap-2 text-gray-400 hover:text-cyan-400 transition-colors"
+            style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '8px 12px' }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
+              <path d="M12 8h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M11.5 12h1v4h-1z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span className="text-xs">Fairness</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
