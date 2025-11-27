@@ -95,6 +95,21 @@ export default function useKeno() {
       } catch { guncockAudioRef.current = null; }
     } catch { /* ignore */ }
     return () => {
+      // stop and cleanup all audio on unmount
+      try {
+        if (clickAudioRef.current) {
+          clickAudioRef.current.pause();
+          clickAudioRef.current.currentTime = 0;
+        }
+        if (bellAudioRef.current) {
+          bellAudioRef.current.pause();
+          bellAudioRef.current.currentTime = 0;
+        }
+        if (guncockAudioRef.current) {
+          guncockAudioRef.current.pause();
+          guncockAudioRef.current.currentTime = 0;
+        }
+      } catch { /* ignore cleanup errors */ }
       // allow GC by removing references
       clickAudioRef.current = null;
       bellAudioRef.current = null;

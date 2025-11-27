@@ -27,7 +27,11 @@ export const AuthProvider = ({ children }) => {
                     username: data.username,
                     balance: data.balance,
                     role: data.role || data?.role || 'user',
-                    profileImage: data.profileImage || ''
+                    profileImage: data.profileImage || '',
+                    wagered: data.wagered || 0,
+                    totalWon: data.totalWon || 0,
+                    totalDeposited: data.totalDeposited || 0,
+                    totalWithdrawn: data.totalWithdrawn || 0
                 });
             } catch (err) {
                 console.error('[Auth] loadUser error:', err.message);
