@@ -1178,6 +1178,18 @@ app.post('/keno/play', auth, async (req, res) => {
   }
 });
 
+// Get recent keno rounds for the authenticated user (for provably-fair history)
+app.get('/keno/rounds', auth, async (req, res) => {
+  try {
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit || '20')));
+    const rounds = await KenoRound.find({ userId: req.userId }).sort({ timestamp: -1 }).limit(limit).lean();
+    res.json({ rounds });
+  } catch (e) {
+    console.error('GET /keno/rounds error', e);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // ──────────────────────────────────────────────────────────────
 // RECENT GAMES FEED - All games played across platform (OPTIMIZED)
 // ──────────────────────────────────────────────────────────────
