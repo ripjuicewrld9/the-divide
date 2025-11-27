@@ -19,19 +19,39 @@ export default {
   async get(path) {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
-    const res = await fetch(API + path, { credentials: "include", headers });
-    return parseResponse(res);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    try {
+      const res = await fetch(API + path, { credentials: "include", headers, signal: controller.signal });
+      clearTimeout(timeoutId);
+      return parseResponse(res);
+    } catch (err) {
+      clearTimeout(timeoutId);
+      throw err;
+    }
   },
   async post(path, body) {
+    console.log('[API] POST', API + path, body);
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     const headers = Object.assign({ "Content-Type": "application/json" }, token ? { Authorization: `Bearer ${token}` } : {});
-    const res = await fetch(API + path, {
-      method: "POST",
-      credentials: "include",
-      headers,
-      body: JSON.stringify(body),
-    });
-    return parseResponse(res);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    try {
+      const res = await fetch(API + path, {
+        method: "POST",
+        credentials: "include",
+        headers,
+        body: JSON.stringify(body),
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      console.log('[API] POST response', res.status, res.statusText);
+      return parseResponse(res);
+    } catch (err) {
+      clearTimeout(timeoutId);
+      console.error('[API] POST error', err);
+      throw err;
+    }
   },
   async patch(path, body) {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;

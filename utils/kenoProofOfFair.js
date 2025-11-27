@@ -30,11 +30,17 @@ export async function generateServerSeedFromRandomOrg() {
       id: 1,
     };
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+
     const response = await fetch(RANDOM_ORG_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
+      signal: controller.signal
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       throw new Error(`Random.org returned ${response.status}`);
@@ -58,7 +64,15 @@ export async function generateServerSeedFromRandomOrg() {
  */
 export async function getEOSBlockHash() {
   try {
-    const response = await fetch('https://api.eosflare.io/v1/chain/get_info');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+
+    const response = await fetch('https://api.eosflare.io/v1/chain/get_info', {
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+
     if (!response.ok) {
       throw new Error(`EOS API returned ${response.status}`);
     }

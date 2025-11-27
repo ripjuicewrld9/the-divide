@@ -50,11 +50,12 @@ try {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   });
-} catch (e) {
-  console.error('Startup error:', e);
+  console.log('Connected to MongoDB');
+} catch (err) {
+  console.error('Failed to connect to MongoDB during startup', err && err.message ? err.message : err);
+  // Exit: the app depends on DB; fail fast and let operator fix DB config.
   process.exit(1);
 }
-
 // Auth middleware: verify Bearer JWT and set req.userId. Falls back to no-user when
 // Authorization header missing so public routes still work.
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_change_me';
@@ -66,7 +67,7 @@ function auth(req, res, next) {
     const a = req.headers && (req.headers.authorization || req.headers.Authorization);
     if (!a) { req.userId = null; return next(); }
     const m = String(a).split(' ');
-// Sim (m.length !== 2) { req.userId = null; return next(); }
+    if (m.length !== 2) { req.userId = null; return next(); }
     const scheme = m[0];
     const token = m[1];
     if (!/^Bearer$/i.test(scheme)) { req.userId = null; return next(); }
@@ -82,6 +83,8 @@ function auth(req, res, next) {
     return next();
   }
 }
+
+// Simple adminOnly guard that checks the user's role on the DB when present.
 async function adminOnly(req, res, next) {
   try {
     if (!req.userId) return res.status(401).json({ error: 'Not authenticated' });
@@ -96,7 +99,7 @@ async function adminOnly(req, res, next) {
 // Simple in-memory play rate limiter for Keno to prevent abuse during dev.
 // Keeps recent timestamps per user and allows up to `max` plays per windowMs.
 const _playRateMap = new Map();
-function checkPlayRate(userId, { windowMs = 5000, max = 5 } = {}) {
+function checkPlayRate(userId, { windowMs = 5000, max = 50 } = {}) {
   if (!userId) return false;
   const now = Date.now();
   const arr = _playRateMap.get(userId) || [];
@@ -105,6 +108,7 @@ function checkPlayRate(userId, { windowMs = 5000, max = 5 } = {}) {
     // record the attempt
     recent.push(now);
     _playRateMap.set(userId, recent);
+    console.log('[RATE LIMIT] User', userId, 'exceeded rate limit:', recent.length, 'plays in', windowMs, 'ms');
     return false;
   }
   recent.push(now);
@@ -929,1785 +933,2084 @@ app.post('/Divides/:id/recreate', auth, adminOnly, async (req, res) => {
 // KENO PLAY ROUTE – add multiplier to the response
 // ──────────────────────────────────────────────────────────────
 app.post('/keno/play', auth, async (req, res) => {
+  console.log('[KENO] /keno/play HIT - request received', { userId: req.userId, body: req.body });
   try {
     const { betAmount, playerNumbers, clientSeed = '', nonce, risk = 'classic' } = req.body;
-    // ...existing code...
-    // ...existing payout and response logic...
+
+    // validation
+    if (typeof betAmount !== 'number' || isNaN(betAmount) || betAmount < 0.01)
+      return res.status(400).json({ error: 'Invalid bet amount' });
+    if (!Array.isArray(playerNumbers) || playerNumbers.length < 1 || playerNumbers.length > 10)
+      return res.status(400).json({ error: 'Select 1–10 numbers' });
+    if (!paytables[risk]) return res.status(400).json({ error: 'Invalid risk type' });
+    for (const n of playerNumbers) {
+      if (!Number.isInteger(n) || n < 1 || n > 40)
+        return res.status(400).json({ error: 'Invalid number pick' });
+    }
+
+    // simple per-user rate limiting
+    if (!checkPlayRate(req.userId)) return res.status(429).json({ error: 'Too many plays, slow down' });
+
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    // idempotency: if the client retried with same nonce+clientSeed, return stored round
+    if (typeof nonce !== 'undefined') {
+      const existing = await KenoRound.findOne({ userId: req.userId, nonce, clientSeed });
+      if (existing) {
+        const freshUser = await User.findById(req.userId);
+        // Validate stored round against current paytable to catch historical bad rounds
+        try {
+          const storedPicks = Array.isArray(existing.picks) ? existing.picks.map(Number) : [];
+          const dedup = [];
+          const seenLocal = new Set();
+          for (const p of storedPicks) {
+            if (!seenLocal.has(p)) { seenLocal.add(p); dedup.push(Number(p)); }
+          }
+          const storedDrawn = Array.isArray(existing.drawnNumbers) ? existing.drawnNumbers.map(Number) : [];
+          const spotsStored = dedup.length;
+          const hitsStored = (Array.isArray(existing.matches) ? existing.matches.map(Number) : []).length;
+          const baseExpected = paytables[risk]?.[spotsStored]?.[hitsStored] ?? 0;
+          const expectedMultiplier = (typeof baseExpected === 'number') ? Number(baseExpected) : Number(baseExpected) || 0;
+          const totalCentsStored = Math.round((Number(existing.betAmount) || 0) * 100);
+          const expectedWinCents = Math.round(totalCentsStored * expectedMultiplier);
+          const expectedWin = Number((expectedWinCents / 100).toFixed(2));
+          // If the stored multiplier/win differs from expected, return a corrected view
+          if (Number(existing.multiplier) !== expectedMultiplier || Number(existing.win) !== expectedWin) {
+            // On idempotent request, increment nonce server-side so next play uses a new nonce
+            let authorNonce = nonce;
+            try {
+              const updated = await User.findOneAndUpdate(
+                { _id: req.userId },
+                { $inc: { kenoNonce: 1 } },
+                { new: true }
+              );
+              if (updated) authorNonce = updated.kenoNonce;
+            } catch (e) { /* use original nonce if update fails */ }
+            console.warn('[KENO] idempotent stored round mismatch — returning corrected view (DB not modified)', { userId: req.userId, nonce, storedMultiplier: existing.multiplier, expectedMultiplier, storedWin: existing.win, expectedWin });
+            return res.json({
+              drawnNumbers: storedDrawn,
+              matches: existing.matches,
+              win: expectedWin,
+              multiplier: expectedMultiplier,
+              houseCut: existing.houseCut,
+              jackpotCut: existing.jackpotCut,
+              balance: freshUser ? toDollars(freshUser.balance) : undefined,
+              serverSeed: existing.serverSeed,
+              serverSeedHashed: existing.serverSeedHashed,
+              clientSeed: existing.clientSeed,
+              nonce: existing.nonce,
+              kenoNonce: authorNonce,
+              corrected: true,
+              stored: { multiplier: existing.multiplier, win: existing.win }
+            });
+          }
+        } catch (e) {
+          console.error('[KENO] error validating stored round', e);
+        }
+        // Normal idempotent response (no mismatch)
+        let authorNonce = nonce;
+        try {
+          const updated = await User.findOneAndUpdate(
+            { _id: req.userId },
+            { $inc: { kenoNonce: 1 } },
+            { new: true }
+          );
+          if (updated) authorNonce = updated.kenoNonce;
+        } catch (e) { /* use original nonce if update fails */ }
+        return res.json({
+          drawnNumbers: existing.drawnNumbers,
+          matches: existing.matches,
+          win: existing.win,
+          multiplier: existing.multiplier,
+          houseCut: existing.houseCut,
+          jackpotCut: existing.jackpotCut,
+          balance: freshUser ? toDollars(freshUser.balance) : undefined,
+          serverSeed: existing.serverSeed,
+          serverSeedHashed: existing.serverSeedHashed,
+          clientSeed: existing.clientSeed,
+          nonce: existing.nonce,
+          kenoNonce: authorNonce
+        });
+      }
+    }
+
+    // provably-fair seeds using Random.org + EOS blockchain
+    let serverSeed = user.kenoServerSeed;
+    if (!serverSeed) {
+      serverSeed = await generateServerSeedFromRandomOrg();
+    }
+    const nextServerSeed = await generateServerSeedFromRandomOrg();
+    const serverSeedHashed = hashServerSeed(serverSeed);
+
+    // Get EOS block hash for external entropy
+    const blockHash = await getEOSBlockHash();
+
+    // Create deterministic game seed
+    const gameSeed = createGameSeed(serverSeed, blockHash);
+
+    // Generate 10 drawn numbers from 1-40 deterministically
+    let drawnNumbers = generateDrawnNumbers(gameSeed);
+    // Ensure they are valid numbers between 1-40
+    drawnNumbers = drawnNumbers.filter(n => n >= 1 && n <= 40).slice(0, 10);
+
+    // normalize and dedupe player picks (preserve first-occurrence order from client)
+    const seenP = new Set();
+    const normalizedPicks = [];
+    for (const pn of playerNumbers) {
+      const n = Number(pn);
+      if (!Number.isFinite(n)) continue;
+      if (!seenP.has(n)) { seenP.add(n); normalizedPicks.push(n); }
+    }
+
+    // payout calculation (use integer cents for internal math)
+    const matches = normalizedPicks.filter(n => drawnNumbers.includes(n));
+    const spots = normalizedPicks.length;
+    const hits = matches.length;
+
+    // Base multiplier from authoritative paytables (paytables are already scaled by paytable-data.js)
+    let baseMultiplier = paytables[risk]?.[spots]?.[hits] ?? 0;
+    if (typeof baseMultiplier !== 'number') baseMultiplier = Number(baseMultiplier) || 0;
+    let multiplier = Number((baseMultiplier).toFixed(6));
+    // Sanity: ensure multiplier strictly matches the configured paytable entry to avoid unexpected payouts
+    try {
+      const tableRow = paytables[risk] && paytables[risk][spots] ? paytables[risk][spots] : null;
+      const expected = tableRow && typeof tableRow[hits] !== 'undefined' ? Number(tableRow[hits]) : 0;
+      if (multiplier !== expected) {
+        console.warn('[KENO] multiplier mismatch computed vs table — enforcing table value', { risk, spots, hits, computed: multiplier, expected });
+        multiplier = expected;
+      }
+    } catch (e) {
+      console.error('[KENO] multiplier validation error', e);
+    }
+
+    // Calculate payout in cents
+    const betCents = toCents(betAmount);
+    const winCents = Math.round(betCents * multiplier);
+    const win = Number((winCents / 100).toFixed(2));
+
+    // House cut and jackpot cut (5% house, 2% jackpot from bet)
+    const houseCut = Number((betAmount * 0.05).toFixed(2));
+    const jackpotCut = Number((betAmount * 0.02).toFixed(2));
+
+    // Update user balance
+    const newBalanceCents = user.balance - betCents + winCents;
+    user.balance = newBalanceCents;
+
+    // Update user statistics
+    user.totalBets = (user.totalBets || 0) + 1;
+    user.wagered = (user.wagered || 0) + betCents;
+    if (win > 0) {
+      user.totalWins = (user.totalWins || 0) + 1;
+    } else {
+      user.totalLosses = (user.totalLosses || 0) + 1;
+    }
+
+    // Rotate to next server seed and increment nonce
+    user.kenoServerSeed = nextServerSeed;
+    user.kenoServerSeedHashed = hashServerSeed(nextServerSeed);
+    user.kenoNonce = (typeof nonce === 'number' ? nonce : user.kenoNonce || 0) + 1;
+
+    await user.save();
+
+    // Save round to database
+    const round = new KenoRound({
+      userId: req.userId,
+      betAmount,
+      picks: normalizedPicks,
+      drawnNumbers,
+      matches,
+      win,
+      balanceAfter: toDollars(newBalanceCents),
+      serverSeed,
+      serverSeedHashed,
+      clientSeed,
+      nonce: typeof nonce === 'number' ? nonce : user.kenoNonce - 1,
+      blockHash,
+      gameSeed,
+      risk,
+      multiplier,
+      houseCut,
+      jackpotCut,
+      reserveChange: 0,
+      timestamp: new Date(),
+      verified: false
+    });
+
+    await round.save();
+
+    // Create ledger entry
+    try {
+      await Ledger.create({
+        type: 'keno_play',
+        amount: win - betAmount,
+        userId: req.userId,
+        meta: { roundId: round._id, risk, spots, hits, multiplier }
+      });
+    } catch (e) {
+      console.error('[KENO] Failed to create ledger entry', e);
+    }
+
+    console.log(`[KENO] Round complete: user=${req.userId}, bet=${betAmount}, win=${win}, mult=${multiplier}, balance=${toDollars(newBalanceCents)}`);
+
+    // Return response
+    console.log(`[KENO] Response: drawnNumbers=${JSON.stringify(drawnNumbers)}, matches=${JSON.stringify(matches)}, win=${win}, mult=${multiplier}`);
+    res.json({
+      drawnNumbers,
+      matches,
+      win,
+      multiplier,
+      houseCut,
+      jackpotCut,
+      balance: toDollars(newBalanceCents),
+      balanceAfterBet: toDollars(user.balance - betCents),
+      serverSeed,
+      serverSeedHashed,
+      clientSeed,
+      nonce: typeof nonce === 'number' ? nonce : user.kenoNonce - 1,
+      kenoNonce: user.kenoNonce,
+      blockHash,
+      gameSeed
+    });
   } catch (err) {
-    console.error('POST /keno/play error', err);
+    console.error('[KENO] /keno/play error', err);
+    res.status(500).json({ error: 'Server error', details: err.message });
+  }
+});
+
+// ──────────────────────────────────────────────────────────────
+// RECENT GAMES FEED - All games played across platform (OPTIMIZED)
+// ──────────────────────────────────────────────────────────────
+app.get('/api/recent-games', async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 50, 100); // Cap at 100
+    const games = [];
+    const userCache = new Map(); // Cache user lookups
+
+    // Helper to get user with caching
+    const getUserCached = async (userId) => {
+      if (!userId) return null;
+      if (userCache.has(userId.toString())) {
+        return userCache.get(userId.toString());
+      }
+      const user = await User.findById(userId).select('username profileImage').lean();
+      userCache.set(userId.toString(), user);
+      return user;
+    };
+
+    // Fetch Keno games with indexed query
+    const kenoGames = await KenoRound.find({ win: { $exists: true } })
+      .sort({ timestamp: -1 })
+      .limit(limit)
+      .select('_id userId betAmount win timestamp')
+      .lean();
+
+    for (const game of kenoGames) {
+      const user = await getUserCached(game.userId);
+      games.push({
+        _id: game._id,
+        game: 'Keno',
+        username: user?.username || 'Hidden',
+        profileImage: user?.profileImage || '',
+        wager: game.betAmount,
+        multiplier: game.win > 0 ? (game.win / game.betAmount).toFixed(2) + 'x' : '0.00x',
+        payout: game.win,
+        time: game.timestamp,
+        icon: '🎰'
+      });
+    }
+
+    // Fetch Plinko games with indexed query
+    const plinkoGames = await PlinkoGame.find()
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .select('_id userId betAmount multiplier payout createdAt')
+      .lean();
+
+    for (const game of plinkoGames) {
+      const user = await getUserCached(game.userId);
+      games.push({
+        _id: game._id,
+        game: 'Plinko',
+        username: user?.username || 'Hidden',
+        profileImage: user?.profileImage || '',
+        wager: game.betAmount / 100,
+        multiplier: game.multiplier.toFixed(2) + 'x',
+        payout: game.payout / 100,
+        time: game.createdAt,
+        icon: '⚪'
+      });
+    }
+
+    // Fetch Blackjack games with indexed query
+    const blackjackGames = await BlackjackGame.find({ gamePhase: 'gameOver' })
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .select('_id userId mainBet perfectPairsBet twentyPlusThreeBet blazingSevensBet mainPayout perfectPairsPayout twentyPlusThreePayout blazingSevensPayout mainResult createdAt')
+      .lean();
+
+    for (const game of blackjackGames) {
+      const user = await getUserCached(game.userId);
+      const totalBet = game.mainBet + game.perfectPairsBet + game.twentyPlusThreeBet + game.blazingSevensBet;
+      const totalPayout = game.mainPayout + game.perfectPairsPayout + game.twentyPlusThreePayout + game.blazingSevensPayout;
+      const mult = totalPayout > 0 ? (totalPayout / totalBet).toFixed(2) + 'x' : '0.00x';
+
+      games.push({
+        _id: game._id,
+        game: 'Blackjack',
+        username: user?.username || 'Hidden',
+        profileImage: user?.profileImage || '',
+        wager: totalBet,
+        multiplier: mult,
+        payout: totalPayout,
+        time: game.createdAt,
+        icon: '🃏'
+      });
+    }
+
+    // Fetch Case Battles with indexed query
+    const caseBattles = await CaseBattle.find({ status: 'ended' })
+      .sort({ createdAt: -1 })
+      .limit(Math.floor(limit / 2))
+      .select('_id winnerId players pot createdAt')
+      .lean();
+
+    for (const battle of caseBattles) {
+      const winnerPlayer = battle.players?.find(p => p.userId === battle.winnerId);
+      const user = await getUserCached(battle.winnerId);
+      // Calculate wager from winner's cases or fallback to entry cost
+      let wagerAmount = 0;
+      if (winnerPlayer?.cases && winnerPlayer.cases.length > 0) {
+        wagerAmount = winnerPlayer.cases.reduce((sum, c) => sum + (c.price || 0), 0);
+      } else if (winnerPlayer?.totalCaseValue) {
+        wagerAmount = winnerPlayer.totalCaseValue;
+      } else {
+        // Fallback: divide pot by number of players
+        wagerAmount = battle.pot / (battle.players?.length || 2);
+      }
+      games.push({
+        _id: battle._id,
+        game: 'Case Battle',
+        username: user?.username || 'Hidden',
+        profileImage: user?.profileImage || '',
+        wager: wagerAmount,
+        multiplier: battle.players?.length ? `${battle.players.length}.00x` : '2.00x',
+        payout: battle.pot,
+        time: battle.createdAt,
+        icon: '⚔️'
+      });
+    }
+
+    // Sort all games by time and limit
+    games.sort((a, b) => new Date(b.time) - new Date(a.time));
+    const recentGames = games.slice(0, limit);
+
+    console.log(`[Recent Games] Returning ${recentGames.length} games, sorted by time (newest first)`);
+    if (recentGames.length > 0) {
+      console.log(`[Recent Games] Newest: ${recentGames[0].game} at ${recentGames[0].time}`);
+      console.log(`[Recent Games] Oldest: ${recentGames[recentGames.length - 1].game} at ${recentGames[recentGames.length - 1].time}`);
+    }
+
+    res.json({ games: recentGames });
+  } catch (err) {
+    console.error('Error fetching recent games:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
-      // ──────────────────────────────────────────────────────────────
-      // RECENT GAMES FEED - All games played across platform (OPTIMIZED)
-      // ──────────────────────────────────────────────────────────────
-      app.get('/api/recent-games', async (req, res) => {
-        try {
-          const limit = Math.min(parseInt(req.query.limit) || 50, 100); // Cap at 100
-          const games = [];
-          const userCache = new Map(); // Cache user lookups
 
-          // Helper to get user with caching
-          const getUserCached = async (userId) => {
-            if (!userId) return null;
-            if (userCache.has(userId.toString())) {
-              return userCache.get(userId.toString());
-            }
-            const user = await User.findById(userId).select('username profileImage').lean();
-            userCache.set(userId.toString(), user);
-            return user;
-          };
-
-          // Fetch Keno games with indexed query
-          const kenoGames = await KenoRound.find({ win: { $exists: true } })
-            .sort({ timestamp: -1 })
-            .limit(limit)
-            .select('_id userId betAmount win timestamp')
-            .lean();
-
-          for (const game of kenoGames) {
-            const user = await getUserCached(game.userId);
-            games.push({
-              _id: game._id,
-              game: 'Keno',
-              username: user?.username || 'Hidden',
-              profileImage: user?.profileImage || '',
-              wager: game.betAmount,
-              multiplier: game.win > 0 ? (game.win / game.betAmount).toFixed(2) + 'x' : '0.00x',
-              payout: game.win,
-              time: game.timestamp,
-              icon: '🎰'
-            });
-          }
-
-          // Fetch Plinko games with indexed query
-          const plinkoGames = await PlinkoGame.find()
-            .sort({ createdAt: -1 })
-            .limit(limit)
-            .select('_id userId betAmount multiplier payout createdAt')
-            .lean();
-
-          for (const game of plinkoGames) {
-            const user = await getUserCached(game.userId);
-            games.push({
-              _id: game._id,
-              game: 'Plinko',
-              username: user?.username || 'Hidden',
-              profileImage: user?.profileImage || '',
-              wager: game.betAmount / 100,
-              multiplier: game.multiplier.toFixed(2) + 'x',
-              payout: game.payout / 100,
-              time: game.createdAt,
-              icon: '⚪'
-            });
-          }
-
-          // Fetch Blackjack games with indexed query
-          const blackjackGames = await BlackjackGame.find({ gamePhase: 'gameOver' })
-            .sort({ createdAt: -1 })
-            .limit(limit)
-            .select('_id userId mainBet perfectPairsBet twentyPlusThreeBet blazingSevensBet mainPayout perfectPairsPayout twentyPlusThreePayout blazingSevensPayout mainResult createdAt')
-            .lean();
-
-          for (const game of blackjackGames) {
-            const user = await getUserCached(game.userId);
-            const totalBet = game.mainBet + game.perfectPairsBet + game.twentyPlusThreeBet + game.blazingSevensBet;
-            const totalPayout = game.mainPayout + game.perfectPairsPayout + game.twentyPlusThreePayout + game.blazingSevensPayout;
-            const mult = totalPayout > 0 ? (totalPayout / totalBet).toFixed(2) + 'x' : '0.00x';
-
-            games.push({
-              _id: game._id,
-              game: 'Blackjack',
-              username: user?.username || 'Hidden',
-              profileImage: user?.profileImage || '',
-              wager: totalBet,
-              multiplier: mult,
-              payout: totalPayout,
-              time: game.createdAt,
-              icon: '🃏'
-            });
-          }
-
-          // Fetch Case Battles with indexed query
-          const caseBattles = await CaseBattle.find({ status: 'ended' })
-            .sort({ createdAt: -1 })
-            .limit(Math.floor(limit / 2))
-            .select('_id winnerId players pot createdAt')
-            .lean();
-
-          for (const battle of caseBattles) {
-            const winnerPlayer = battle.players?.find(p => p.userId === battle.winnerId);
-            const user = await getUserCached(battle.winnerId);
-            // Calculate wager from winner's cases or fallback to entry cost
-            let wagerAmount = 0;
-            if (winnerPlayer?.cases && winnerPlayer.cases.length > 0) {
-              wagerAmount = winnerPlayer.cases.reduce((sum, c) => sum + (c.price || 0), 0);
-            } else if (winnerPlayer?.totalCaseValue) {
-              wagerAmount = winnerPlayer.totalCaseValue;
-            } else {
-              // Fallback: divide pot by number of players
-              wagerAmount = battle.pot / (battle.players?.length || 2);
-            }
-            games.push({
-              _id: battle._id,
-              game: 'Case Battle',
-              username: user?.username || 'Hidden',
-              profileImage: user?.profileImage || '',
-              wager: wagerAmount,
-              multiplier: battle.players?.length ? `${battle.players.length}.00x` : '2.00x',
-              payout: battle.pot,
-              time: battle.createdAt,
-              icon: '⚔️'
-            });
-          }
-
-          // Sort all games by time and limit
-          games.sort((a, b) => new Date(b.time) - new Date(a.time));
-          const recentGames = games.slice(0, limit);
-
-          console.log(`[Recent Games] Returning ${recentGames.length} games, sorted by time (newest first)`);
-          if (recentGames.length > 0) {
-            console.log(`[Recent Games] Newest: ${recentGames[0].game} at ${recentGames[0].time}`);
-            console.log(`[Recent Games] Oldest: ${recentGames[recentGames.length - 1].game} at ${recentGames[recentGames.length - 1].time}`);
-          }
-
-          res.json({ games: recentGames });
-        } catch (err) {
-          console.error('Error fetching recent games:', err);
-          res.status(500).json({ error: 'Server error' });
-        }
-      });
-
-      // MY GAMES FEED - User-specific games only
-      // ──────────────────────────────────────────────────────────────
-      app.get('/api/my-games', auth, async (req, res) => {
-        try {
-          if (!req.userId) {
-            return res.status(401).json({ error: 'Not authenticated' });
-          }
-
-          const userId = req.userId;
-          const limit = parseInt(req.query.limit) || 50;
-          const games = [];
-
-          // Fetch user's Keno games
-          const kenoGames = await KenoRound.find({ userId, win: { $exists: true } })
-            .sort({ timestamp: -1 })
-            .limit(limit)
-            .lean();
-
-          for (const game of kenoGames) {
-            const user = await User.findById(game.userId).select('username profileImage').lean();
-            games.push({
-              _id: game._id,
-              game: 'Keno',
-              username: user?.username || 'Hidden',
-              profileImage: user?.profileImage || '',
-              wager: game.betAmount,
-              multiplier: game.win > 0 ? (game.win / game.betAmount).toFixed(2) + 'x' : '0.00x',
-              payout: game.win,
-              time: game.timestamp,
-              icon: '🎰'
-            });
-          }
-
-          // Fetch user's Plinko games
-          const plinkoGames = await PlinkoGame.find({ userId })
-            .sort({ createdAt: -1 })
-            .limit(limit)
-            .lean();
-
-          for (const game of plinkoGames) {
-            const user = await User.findById(game.userId).select('username profileImage').lean();
-            games.push({
-              _id: game._id,
-              game: 'Plinko',
-              username: user?.username || 'Hidden',
-              profileImage: user?.profileImage || '',
-              wager: game.betAmount / 100,
-              multiplier: game.multiplier.toFixed(2) + 'x',
-              payout: game.payout / 100,
-              time: game.createdAt,
-              icon: '⚪'
-            });
-          }
-
-          // Fetch user's Blackjack games
-          const blackjackGames = await BlackjackGame.find({ userId, gamePhase: 'gameOver' })
-            .sort({ createdAt: -1 })
-            .limit(limit)
-            .lean();
-
-          for (const game of blackjackGames) {
-            const user = await User.findById(game.userId).select('username profileImage').lean();
-            const totalBet = game.mainBet + game.perfectPairsBet + game.twentyPlusThreeBet + game.blazingSevensBet;
-            const totalPayout = game.mainPayout + game.perfectPairsPayout + game.twentyPlusThreePayout + game.blazingSevensPayout;
-            const mult = totalPayout > 0 ? (totalPayout / totalBet).toFixed(2) + 'x' : '0.00x';
-
-            games.push({
-              _id: game._id,
-              game: 'Blackjack',
-              username: user?.username || 'Hidden',
-              profileImage: user?.profileImage || '',
-              wager: totalBet,
-              multiplier: mult,
-              payout: totalPayout,
-              time: game.createdAt,
-              icon: '🃏'
-            });
-          }
-
-          // Fetch user's Case Battles (where they were the winner)
-          const caseBattles = await CaseBattle.find({ winnerId: userId, status: 'ended' })
-            .sort({ createdAt: -1 })
-            .limit(limit / 2)
-            .lean();
-
-          for (const battle of caseBattles) {
-            const winnerPlayer = battle.players?.find(p => p.userId.toString() === userId.toString());
-            const user = await User.findById(userId).select('username profileImage').lean();
-            let wagerAmount = 0;
-            if (winnerPlayer?.cases && winnerPlayer.cases.length > 0) {
-              wagerAmount = winnerPlayer.cases.reduce((sum, c) => sum + (c.price || 0), 0);
-            } else if (winnerPlayer?.totalCaseValue) {
-              wagerAmount = winnerPlayer.totalCaseValue;
-            } else {
-              wagerAmount = battle.pot / (battle.players?.length || 2);
-            }
-            games.push({
-              _id: battle._id,
-              game: 'Case Battle',
-              username: user?.username || 'Hidden',
-              profileImage: user?.profileImage || '',
-              wager: wagerAmount,
-              multiplier: battle.players?.length ? `${battle.players.length}.00x` : '2.00x',
-              payout: battle.pot,
-              time: battle.createdAt,
-              icon: '⚔️'
-            });
-          }
-
-          // Sort all games by time and limit
-          games.sort((a, b) => new Date(b.time) - new Date(a.time));
-          const myGames = games.slice(0, limit);
-
-          res.json({ games: myGames });
-        } catch (err) {
-          console.error('Error fetching my games:', err);
-          res.status(500).json({ error: 'Server error' });
-        }
-      });
-
-      // ──────────────────────────────────────────────────────────────
-      // LEADERBOARD – top 3 multipliers (fixed)
-      app.get('/keno/leaderboard', async (req, res) => {
-        try {
-          const top = await KenoRound.aggregate([
-            { $match: { win: { $gt: 0 } } },
-            {
-              $addFields: {
-                multiplier: { $divide: ['$win', '$betAmount'] }
-              }
-            },
-            { $sort: { multiplier: -1 } },
-            { $limit: 3 },
-            {
-              $lookup: {
-                from: 'users',
-                let: { uid: { $toObjectId: '$userId' } },
-                pipeline: [
-                  { $match: { $expr: { $eq: ['$_id', '$$uid'] } } },
-                  { $project: { username: 1 } }
-                ],
-                as: 'user'
-              }
-            },
-            { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
-            {
-              $project: {
-                username: { $ifNull: ['$user.username', '???'] },
-                multiplier: 1,
-                win: 1
-              }
-            }
-          ]);
-          res.json(top);
-        } catch (err) {
-          console.error('Leaderboard error', err);
-          res.status(500).json({ error: 'Server error' });
-        }
-      });
-
-      // PLINKO LEADERBOARD – top 3 multipliers
-      app.get('/plinko/leaderboard', async (req, res) => {
-        try {
-          const top = await PlinkoGame.aggregate([
-            {
-              $addFields: {
-                multiplier: { $cond: [{ $eq: ['$betAmount', 0] }, 0, { $divide: ['$payout', '$betAmount'] }] }
-              }
-            },
-            { $sort: { multiplier: -1 } },
-            { $limit: 3 },
-            {
-              $lookup: {
-                from: 'users',
-                let: { uid: { $toObjectId: '$userId' } },
-                pipeline: [
-                  { $match: { $expr: { $eq: ['$_id', '$$uid'] } } },
-                  { $project: { username: 1 } }
-                ],
-                as: 'user'
-              }
-            },
-            { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
-            {
-              $project: {
-                username: { $ifNull: ['$user.username', '???'] },
-                multiplier: 1,
-                win: '$payout'
-              }
-            }
-          ]);
-          res.json(top);
-        } catch (err) {
-          console.error('Plinko leaderboard error', err);
-          res.status(500).json({ error: 'Server error' });
-        }
-      });
-
-      // BLACKJACK LEADERBOARD – top 3 multipliers
-      app.get('/blackjack/leaderboard', async (req, res) => {
-        try {
-          const top = await BlackjackGame.aggregate([
-            { $match: { mainPayout: { $gt: 0 } } },
-            {
-              $addFields: {
-                multiplier: { $cond: [{ $eq: ['$mainBet', 0] }, 0, { $divide: ['$mainPayout', '$mainBet'] }] }
-              }
-            },
-            { $sort: { multiplier: -1 } },
-            { $limit: 3 },
-            {
-              $lookup: {
-                from: 'users',
-                let: { uid: { $toObjectId: '$userId' } },
-                pipeline: [
-                  { $match: { $expr: { $eq: ['$_id', '$$uid'] } } },
-                  { $project: { username: 1 } }
-                ],
-                as: 'user'
-              }
-            },
-            { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
-            {
-              $project: {
-                username: { $ifNull: ['$user.username', '???'] },
-                multiplier: 1,
-                win: '$mainPayout'
-              }
-            }
-          ]);
-          res.json(top);
-        } catch (err) {
-          console.error('Blackjack leaderboard error', err);
-          res.status(500).json({ error: 'Server error' });
-        }
-      });
-
-      // ──────────────────────────────────────────────────────────────
-      // Public route – Get username by ID (used for display)
-      // ──────────────────────────────────────────────────────────────
-      app.get('/user/:id', async (req, res) => {
-        try {
-          const user = await User.findById(req.params.id).select('username');
-          if (!user) return res.status(404).json({ error: 'User not found' });
-          res.json({ username: user.username });
-        } catch (err) {
-          console.error('User lookup error:', err);
-          res.status(500).json({ error: 'Server error' });
-        }
-      });
-
-      // ──────────────────────────────────────────────────────────────
-      // KENO ODDS (server-side) — return expected multiplier for a given risk & spots
-      // This keeps paytable/payout math on the server so the client cannot tamper.
-      // Query params: ?risk=medium&spots=5
-      // ──────────────────────────────────────────────────────────────
-      app.get('/keno/odds', async (req, res) => {
-        try {
-          const { risk = 'medium', spots = '1' } = req.query;
-          const s = Number(spots);
-          if (!paytables[risk]) return res.status(400).json({ error: 'Invalid risk' });
-          // allow 0 (no selection) to be queried by clients; treat as expected multiplier 0
-          if (!Number.isInteger(s) || s < 0 || s > 10) return res.status(400).json({ error: 'Invalid spots' });
-
-          if (s === 0) {
-            return res.json({ risk, spots: 0, expectedMultiplier: 0 });
-          }
-
-          // combinatorics helper (n choose k) using BigInt for safety
-          function C(n, k) {
-            if (k < 0 || k > n) return 0;
-            if (k === 0 || k === n) return 1;
-            k = Math.min(k, n - k);
-            let num = 1n, den = 1n;
-            for (let i = 1; i <= k; i++) {
-              num *= BigInt(n - (k - i));
-              den *= BigInt(i);
-            }
-            return Number(num / den);
-          }
-
-          const total = C(40, 10);
-          let expected = 0;
-          for (let k = 0; k <= s; k++) {
-            const mult = paytables[risk]?.[s]?.[k] || 0;
-            const ways = C(s, k) * C(40 - s, 10 - k);
-            const p = ways / total;
-            expected += p * mult;
-          }
-          res.json({ risk, spots: s, expectedMultiplier: Number(expected.toFixed(6)) });
-        } catch (err) {
-          console.error('GET /keno/odds error', err);
-          res.status(500).json({ error: 'Server error' });
-        }
-      });
-
-      // Public: return the full paytables (server authoritative). Clients may request this
-      // to render a paytable modal. We intentionally serve it from the server to keep
-      // the canonical tables here rather than duplicating in the frontend source.
-      app.get('/keno/paytables', async (req, res) => {
-        try {
-          // clone to avoid accidental mutation
-          const clone = JSON.parse(JSON.stringify(paytables || {}));
-          // clone already contains the scaled paytables from paytable-data.js
-          res.json({ paytables: clone });
-        } catch (err) {
-          console.error('GET /keno/paytables error', err);
-          res.status(500).json({ error: 'Server error' });
-        }
-      });
-
-      // Public: return configured RTP per risk (server-authoritative). Useful for UI
-      // components or external audits that want a single numeric RTP value per risk.
-      app.get('/keno/rtp', async (req, res) => {
-        try {
-          const clone = JSON.parse(JSON.stringify(configured || {}));
-          res.json({ configured: clone });
-        } catch (err) {
-          console.error('GET /keno/rtp error', err);
-          res.status(500).json({ error: 'Server error' });
-        }
-      });
-
-      // ──────────────────────────────────────────────────────────────
-      // START SERVER (CORRECT ORDER)
-      // ──────────────────────────────────────────────────────────────
-      const PORT = process.env.PORT || 3000;
-
-      // 1️⃣ Create HTTP server
-      const server = http.createServer(app);
-      console.log('startup: http server object created');
-
-      // 2️⃣ Attach Socket.IO
-      const io = new Server(server, {
-        cors: {
-          origin: function (origin, callback) {
-            if (!origin) return callback(null, true);
-            if (allowedOrigins.includes(origin)) {
-              return callback(null, true);
-            }
-            return callback(new Error('Not allowed by CORS'));
-          },
-          methods: ["GET", "POST"],
-          credentials: true
-        }
-      });
-
-      // Register authoritative Rugged routes (uses auth/adminOnly defined below)
-      try {
-        console.log('startup: about to register rugged routes');
-        // register the routes, passing the auth and adminOnly middleware declared earlier
-        registerRugged(app, io, { auth, adminOnly });
-        console.log('startup: registerRugged returned');
-      } catch (e) { console.error('Failed to register rugged routes', e); }
-
-      // Register Plinko routes
-      try {
-        console.log('startup: about to register plinko routes');
-        registerPlinko(app, io, { auth });
-        console.log('startup: registerPlinko returned');
-      } catch (e) { console.error('Failed to register plinko routes', e); }
-
-      // Register Blackjack routes
-      try {
-        console.log('startup: about to register blackjack routes');
-        app.use('/api/blackjack', auth, blackjackRoutes);
-        // Also mount without /api prefix for consistency with Plinko/Keno
-        app.use('/blackjack', auth, blackjackRoutes);
-        console.log('startup: Blackjack routes registered');
-      } catch (e) { console.error('Failed to register blackjack routes', e); }
-
-      // Register Case Battles routes
-      try {
-        console.log('startup: about to register case battles routes');
-        registerCaseBattles(app, io, { auth, adminOnly });
-        console.log('startup: registerCaseBattles returned');
-      } catch (e) { console.error('Failed to register case battles routes', e); }
-
-      // Register Cases (case management) routes
-      try {
-        console.log('startup: about to register cases routes');
-        registerCases(app, io, { auth, adminOnly });
-        console.log('startup: registerCases returned');
-      } catch (e) { console.error('Failed to register cases routes', e); }
-
-      // Register Items (item management) routes
-      try {
-        console.log('startup: about to register items routes');
-        setupItemRoutes(app, auth, adminOnly);
-        console.log('startup: setupItemRoutes returned');
-      } catch (e) { console.error('Failed to register items routes', e); }
-
-      // Register Plinko routes
-      async function ensureRuggedInit() {
-        try {
-          const existing = await Rugged.findOne({ id: 'global' });
-          if (existing) {
-            // if no commit present, generate one
-            if (!existing.serverSeedHashed) {
-              const seed = generateSeed(64);
-              const h = await sha256(seed);
-              existing.serverSeedHashed = h;
-              existing.revealedSeeds = existing.revealedSeeds || [];
-              await existing.save();
-              console.log('Initialized Rugged serverSeedHashed');
-            }
-            // Historically there were legacy token wallet records for DC/USDDC,
-            // but the Rugged game now uses the Rugged document (`doc`) and its
-            // persisted `priceHistory`/`lastPrice` as the authoritative source.
-            // We do not create or rely on legacy token wallet records for Rugged.
-            return existing;
-          }
-          // default initialization per user's request
-          const now = new Date();
-          const defaultNoRugSeconds = 300; // 5 minutes staged timer
-          const doc = await Rugged.create({
-            id: 'global',
-            symbol: 'DC',
-            totalSupply: 100000000,
-            jackpotSupply: 25000000,
-            circulatingSupply: 75000000,
-            lastPrice: 0.0001, // initial USD per DC (1 USD per 10,000 DC)
-            noRugSeconds: defaultNoRugSeconds,
-            noRugUntil: new Date(now.getTime() + defaultNoRugSeconds * 1000),
-            priceHistory: [],
-            rugged: false
-          });
-          // commit a seed for future rug reveals
-          const seed = generateSeed(64);
-          const h = await sha256(seed);
-          doc.serverSeedHashed = h;
-          doc.revealedSeeds = [];
-          await doc.save();
-          console.log('Created initial Rugged doc with serverSeedHashed');
-
-          // Historically the Rugged init populated legacy token wallet records,
-          // but the Rugged game no longer depends on those collections. DC is
-          // a UI-only mapping and accounting is done using the Rugged document
-          // and user balances. Legacy token wallet scripts are not instantiated here.
-          return doc;
-        } catch (e) {
-          console.error('ensureRuggedInit error', e);
-          return null;
-        }
-      }
-
-
-      // start initialization
-      ensureRuggedInit().catch(e => console.error(e));
-
-      // ========================================
-      // 💬 LIVE CHAT SYSTEM
-      // ========================================
-      const chatNamespace = io.of('/chat');
-
-      chatNamespace.on('connection', (socket) => {
-        console.log('[Chat] User connected:', socket.id);
-
-        // Send chat history to new user
-        socket.on('chat:requestHistory', async () => {
-          try {
-            const messages = await ChatMessage.find()
-              .sort({ timestamp: -1 })
-              .limit(50)
-              .lean();
-            socket.emit('chat:history', messages.reverse());
-          } catch (err) {
-            console.error('[Chat] Error fetching history:', err);
-            socket.emit('chat:history', []);
-          }
-        });
-
-        // Handle new messages
-        socket.on('chat:sendMessage', async (data) => {
-          try {
-            const { username, message } = data;
-
-            if (!username || !message || message.trim().length === 0) {
-              return;
-            }
-
-            // Limit message length
-            const trimmedMessage = message.trim().slice(0, 500);
-
-            // Save to database
-            const chatMessage = await ChatMessage.create({
-              username,
-              message: trimmedMessage,
-              timestamp: new Date()
-            });
-
-            // Broadcast to all connected clients
-            chatNamespace.emit('chat:message', {
-              username: chatMessage.username,
-              message: chatMessage.message,
-              timestamp: chatMessage.timestamp
-            });
-
-            console.log(`[Chat] ${username}: ${trimmedMessage}`);
-          } catch (err) {
-            console.error('[Chat] Error sending message:', err);
-          }
-        });
-
-        socket.on('disconnect', () => {
-          console.log('[Chat] User disconnected:', socket.id);
-        });
-      });
-
-      // Cleanup old chat messages (keep last 100)
-      setInterval(async () => {
-        try {
-          const count = await ChatMessage.countDocuments();
-          if (count > 100) {
-            const toDelete = count - 100;
-            const oldMessages = await ChatMessage.find()
-              .sort({ timestamp: 1 })
-              .limit(toDelete)
-              .select('_id');
-            const ids = oldMessages.map(m => m._id);
-            await ChatMessage.deleteMany({ _id: { $in: ids } });
-            console.log(`[Chat] Cleaned up ${toDelete} old messages`);
-          }
-        } catch (err) {
-          console.error('[Chat] Error cleaning up messages:', err);
-        }
-      }, 60000); // Run every minute
-
-      // ========================================
-      // END CHAT SYSTEM
-      // ========================================
-
-      // 4️⃣ Divide vote live update
-      app.post("/api/divides/:id/vote", async (req, res) => {
-        try {
-          // Placeholder for divide vote logic
-          // await divide.save();
-          io.emit("voteUpdate", { id: req.params.id, updated: true });
-          res.json({ success: true });
-        } catch (err) {
-          console.error("Error in vote route:", err);
-          res.status(500).json({ error: "Server error" });
-        }
-      });
-
-      // Alias for capitalized path
-      app.post("/api/Divides/:id/vote", async (req, res) => {
-        try {
-          io.emit("voteUpdate", { id: req.params.id, updated: true });
-          res.json({ success: true });
-        } catch (err) {
-          console.error("Error in vote route (capitalized):", err);
-          res.status(500).json({ error: "Server error" });
-        }
-      });
-
-      // API helper: deduct a single free/vote credit from current user (used by client helper)
-      app.post('/api/divides/:id/deduct', auth, async (req, res) => {
-        try {
-          const user = await User.findById(req.userId);
-          if (!user) return res.status(404).json({ error: 'User not found' });
-          if (user.balance < 1) return res.status(400).json({ error: 'Insufficient balance' });
-          const oneC = toCents(1);
-          if (user.balance < oneC) return res.status(400).json({ error: 'Insufficient balance' });
-          user.balance = Math.max(0, user.balance - oneC);
-          await user.save();
-          try { await Ledger.create({ type: 'divides_deduct', amount: Number(1), userId: req.userId, divideId: req.params.id }); } catch (e) { console.error('Failed to write ledger for divides deduct', e); }
-          res.json({ balance: toDollars(user.balance) });
-        } catch (err) {
-          console.error('Deduct error', err);
-          res.status(500).json({ error: 'Server error' });
-        }
-      });
-
-      // 5️⃣ Get current jackpot amount
-      app.get('/jackpot', async (req, res) => {
-        try {
-          const jackpot = await Jackpot.findOne({ id: 'global' }).lean();
-          const house = await House.findOne({ id: 'global' }).lean();
-          const kenoReserveDoc = await KenoReserve.findOne({ id: 'global' }).lean();
-          res.json({ amount: jackpot?.amount || 0, houseTotal: house?.houseTotal || 0, kenoReserve: kenoReserveDoc?.amount || 0 });
-        } catch (err) {
-          console.error('Error fetching jackpot:', err);
-          res.status(500).json({ error: 'Failed to fetch jackpot' });
-        }
-      });
-
-      // ──────────────────────────────────────────────────────────────
-      // RUGGED: Meme-coin live game (basic endpoints + socket updates)
-      // ──────────────────────────────────────────────────────────────
-
-      // Helper to broadcast rugged updates
-      async function broadcastRugged() {
-        try {
-          const doc = await Rugged.findOne({ id: 'global' });
-          if (!doc) return;
-          // Use the persisted Rugged document as the authoritative source for
-          // display price and history. `doc.lastPrice` and `doc.priceHistory`
-          // are already expressed in display units (USD-per-DC UI mapping).
-          try {
-            doc.priceHistory = doc.priceHistory || [];
-            const fakePrice = Number(doc.lastPrice || 0) || 0;
-            const last = doc.priceHistory && doc.priceHistory.length ? doc.priceHistory[doc.priceHistory.length - 1].price : doc.lastPrice || 0;
-            if (Number(last) !== Number(fakePrice)) {
-              doc.priceHistory.push({ ts: new Date(), price: fakePrice });
-              if (doc.priceHistory.length > 500) doc.priceHistory = doc.priceHistory.slice(-500);
-              doc.lastPrice = fakePrice;
-              await doc.save().catch(e => console.error('failed to save Rugged priceHistory', e));
-            }
-          } catch (e) {
-            console.error('failed to persist priceHistory', e);
-          }
-
-          const fakePriceEmit = Number(doc.lastPrice || 0);
-          io.emit('rugged:update', {
-            price: fakePriceEmit,
-            ts: new Date(),
-            totalSupply: doc.totalSupply,
-            jackpotSupply: doc.jackpotSupply,
-            circulatingSupply: doc.circulatingSupply,
-            rugged: !!doc.rugged,
-            ruggedCooldownUntil: doc.ruggedCooldownUntil || null,
-            noRugUntil: doc.noRugUntil || null
-          });
-        } catch (e) { console.error('broadcastRugged error', e); }
-      }
-
-      // Recalculate and persist canonical price on Rugged doc from WalletUSDDC / totalSupply
-      async function recalcAndPersistPrice(doc) {
-        try {
-          if (!doc) return 0;
-          // Derive fake price from doc.lastPrice (persisted display unit). If
-          // doc.lastPrice is missing fall back to computing from the last
-          // entry in priceHistory. We intentionally avoid reading legacy token wallet records.
-          let fakePrice = Number(doc.lastPrice || 0);
-          if (!fakePrice && Array.isArray(doc.priceHistory) && doc.priceHistory.length) {
-            fakePrice = Number(doc.priceHistory[doc.priceHistory.length - 1].price || 0);
-          }
-          doc.lastPrice = fakePrice;
-          try { await doc.save(); } catch (e) { console.error('recalcAndPersistPrice: failed to save Rugged doc', e); }
-          return fakePrice;
-        } catch (e) {
-          console.error('recalcAndPersistPrice error', e);
-          return 0;
-        }
-      }
-
-      // Schedule helpers: when a rug occurs we persist a cooldown timestamp and
-      // schedule an automatic restart after the cooldown (2 minutes by default).
-      const scheduledRugRestarts = new Map(); // docId -> timeoutId
-
-      function scheduleRugRestart(docId, ms = 120000) {
-        try {
-          if (scheduledRugRestarts.has(docId)) {
-            clearTimeout(scheduledRugRestarts.get(docId));
-            scheduledRugRestarts.delete(docId);
-          }
-          const to = setTimeout(async () => {
-            try {
-              const doc = await Rugged.findOne({ id: docId });
-              if (!doc) return;
-              // clear rugged flag, reset price to a sane default, set a staged noRug window
-              doc.rugged = false;
-              doc.lastPrice = doc.lastPrice && doc.lastPrice > 0 ? doc.lastPrice : 0.0001;
-              doc.noRugUntil = new Date(Date.now() + ((doc.noRugSeconds || 300) * 1000));
-              // persist and broadcast
-              await doc.save();
-              setImmediate(() => broadcastRugged());
-              console.log(`Rugged market restarted for ${docId}`);
-            } catch (e) {
-              console.error('Error restarting rugged market', e);
-            } finally {
-              scheduledRugRestarts.delete(docId);
-            }
-          }, ms);
-          scheduledRugRestarts.set(docId, to);
-          return to;
-        } catch (e) {
-          console.error('scheduleRugRestart failed', e);
-        }
-      }
-
-      function cancelScheduledRugRestart(docId) {
-        try {
-          if (!scheduledRugRestarts.has(docId)) return false;
-          clearTimeout(scheduledRugRestarts.get(docId));
-          scheduledRugRestarts.delete(docId);
-          return true;
-        } catch (e) {
-          console.error('cancelScheduledRugRestart failed', e);
-          return false;
-        }
-      }
-
-      // On server startup ensure any pending rugged cooldowns are scheduled
-      async function recoverScheduledRestarts() {
-        try {
-          const doc = await Rugged.findOne({ id: 'global' }).lean();
-          if (!doc) return;
-          if (doc.rugged && doc.ruggedCooldownUntil) {
-            const until = new Date(doc.ruggedCooldownUntil).getTime();
-            const now = Date.now();
-            const remaining = Math.max(0, until - now);
-            if (remaining === 0) {
-              // cooldown passed while offline — clear immediately
-              await Rugged.findOneAndUpdate({ id: 'global' }, { $set: { rugged: false, lastPrice: (doc.lastPrice && doc.lastPrice > 0) ? doc.lastPrice : 0.0001, noRugUntil: new Date(Date.now() + ((doc.noRugSeconds || 300) * 1000)) } });
-              setImmediate(() => broadcastRugged());
-              console.log('Recovered rugged: cooldown expired, market restarted immediately');
-            } else {
-              // schedule remaining time
-              scheduleRugRestart('global', remaining);
-              console.log('Recovered rugged: scheduled restart in', remaining, 'ms');
-            }
-          }
-        } catch (e) {
-          console.error('recoverScheduledRestarts failed', e);
-        }
-      }
-
-      // run recovery after initialization (ensureRuggedInit is called earlier)
-      setTimeout(() => { recoverScheduledRestarts().catch(e => console.error(e)); }, 1500);
-
-      // Safety net: periodic check to ensure cooldowns always end even if setTimeouts fail
-      setInterval(async () => {
-        try {
-          const doc = await Rugged.findOne({ id: 'global' });
-          if (!doc) return;
-          if (doc.rugged && doc.ruggedCooldownUntil) {
-            const until = new Date(doc.ruggedCooldownUntil).getTime();
-            const now = Date.now();
-            if (now >= until) {
-              // cooldown expired but rugged flag still true: restart market now
-              doc.rugged = false;
-              doc.lastPrice = doc.lastPrice && doc.lastPrice > 0 ? doc.lastPrice : 0.0001;
-              doc.noRugUntil = new Date(Date.now() + ((doc.noRugSeconds || 300) * 1000));
-              doc.ruggedCooldownUntil = null;
-              await doc.save();
-              setImmediate(() => broadcastRugged());
-              console.log('Safety-net: cleared ruggedCooldown and restarted market (interval check)');
-            }
-          }
-        } catch (e) {
-          console.error('cooldown safety interval error', e);
-        }
-      }, 5000);
-
-      // Rugged endpoints (buy/sell/status/positions/etc) were moved into
-      // routes/rugged-pure-rng.js and are registered via registerRugged(app, io,...)
-      // to centralize Rugged logic and avoid duplicate/legacy TokenWallet usage.
-      // Keep server.js lightweight here and let the routed implementation be authoritative.
-
-      // Admin-only: reset global jackpot and house totals to zero
-      app.post('/jackpot/reset', auth, adminOnly, async (req, res) => {
-        try {
-          await Jackpot.findOneAndUpdate({ id: 'global' }, { $set: { amount: 0 } }, { upsert: true });
-          await House.findOneAndUpdate({ id: 'global' }, { $set: { houseTotal: 0 } }, { upsert: true });
-          await KenoReserve.findOneAndUpdate({ id: 'global' }, { $set: { amount: 0 } }, { upsert: true });
-          const jackpot = await Jackpot.findOne({ id: 'global' }).lean();
-          const house = await House.findOne({ id: 'global' }).lean();
-          const kenoReserveDoc = await KenoReserve.findOne({ id: 'global' }).lean();
-          res.json({ amount: jackpot?.amount || 0, houseTotal: house?.houseTotal || 0, kenoReserve: kenoReserveDoc?.amount || 0 });
-        } catch (err) {
-          console.error('Error resetting jackpot totals:', err);
-          res.status(500).json({ error: 'Failed to reset jackpot totals' });
-        }
-      });
-
-      // Admin finance summary: aggregates Keno and Divide financials (admins only)
-      app.get('/admin/finance', auth, adminOnly, async (req, res) => {
-        try {
-          // Keno aggregates with P&L lines
-          const kenoAgg = await KenoRound.aggregate([
-            {
-              $group: {
-                _id: null,
-                rounds: { $sum: 1 },
-                totalBets: { $sum: { $ifNull: ['$betAmount', 0] } },
-                totalWins: { $sum: { $ifNull: ['$win', 0] } },
-                totalHouseCuts: { $sum: { $ifNull: ['$houseCut', 0] } },
-                totalJackpotCuts: { $sum: { $ifNull: ['$jackpotCut', 0] } }
-              }
-            },
-            {
-              $project: {
-                _id: 0,
-                rounds: 1,
-                totalBets: 1,
-                totalWins: 1,
-                totalHouseCuts: 1,
-                totalJackpotCuts: 1,
-                GGR: { $subtract: ['$totalBets', '$totalWins'] },
-                prizePoolRemaining: {
-                  $subtract: [
-                    { $subtract: ['$totalBets', { $add: ['$totalHouseCuts', '$totalJackpotCuts'] }] },
-                    '$totalWins'
-                  ]
-                },
-                companyRevenue: {
-                  $add: ['$totalHouseCuts', {
-                    $subtract: [
-                      { $subtract: ['$totalBets', { $add: ['$totalHouseCuts', '$totalJackpotCuts'] }] },
-                      '$totalWins'
-                    ]
-                  }]
-                }
-              }
-            }
-          ]).allowDiskUse(true);
-          const keno = (kenoAgg && kenoAgg[0]) ? kenoAgg[0] : { rounds: 0, totalBets: 0, totalWins: 0, totalHouseCuts: 0, totalJackpotCuts: 0, GGR: 0, prizePoolRemaining: 0, companyRevenue: 0 };
-
-          // Divides aggregates with estimated P&L lines (based on pot distribution rules)
-          // endDivideById uses: houseCut = round(pot * 0.05,2), jackpotAmount = round(pot * 0.05,2), winnerPot = round(pot * 0.90,2)
-          const dividesAgg = await Divide.aggregate([
-            {
-              $group: {
-                _id: null,
-                rounds: { $sum: 1 },
-                totalPot: { $sum: { $ifNull: ['$pot', 0] } },
-                countActive: { $sum: { $cond: [{ $eq: ['$status', 'active'] }, 1, 0] } },
-                countEnded: { $sum: { $cond: [{ $eq: ['$status', 'ended'] }, 1, 0] } },
-                totalPaidOut: { $sum: { $ifNull: ['$paidOut', { $round: [{ $multiply: ['$pot', 0.90] }, 2] }] } },
-                totalHouseCuts: { $sum: { $ifNull: ['$houseCut', { $round: [{ $multiply: ['$pot', 0.05] }, 2] }] } },
-                totalJackpotCuts: { $sum: { $ifNull: ['$jackpotCut', { $round: [{ $multiply: ['$pot', 0.05] }, 2] }] } }
-              }
-            },
-            {
-              $project: {
-                _id: 0,
-                rounds: 1,
-                totalPot: 1,
-                countActive: 1,
-                countEnded: 1,
-                totalHouseCuts: 1,
-                totalJackpotCuts: 1,
-                totalPaidOut: 1,
-                GGR: { $subtract: ['$totalPot', '$totalPaidOut'] },
-                prizePoolRemaining: {
-                  $subtract: [
-                    { $subtract: ['$totalPot', { $add: ['$totalHouseCuts', '$totalJackpotCuts'] }] },
-                    '$totalPaidOut'
-                  ]
-                }
-              }
-            }
-          ]).allowDiskUse(true);
-          const dividesSummary = (dividesAgg && dividesAgg[0]) ? dividesAgg[0] : { rounds: 0, totalPot: 0, countActive: 0, countEnded: 0, totalHouseCuts: 0, totalJackpotCuts: 0, totalPaidOut: 0, GGR: 0, prizePoolRemaining: 0 };
-
-          // Ensure money-in / money-out for Divides is computed from Ledger so totals
-          // remain accurate even if Divide documents are deleted. Ledger is the
-          // authoritative audit trail for money movements.
-          try {
-            const betAgg = await Ledger.aggregate([
-              { $match: { type: 'divides_bet' } },
-              { $group: { _id: null, totalBets: { $sum: '$amount' } } }
-            ]).allowDiskUse(true);
-            const payoutAgg = await Ledger.aggregate([
-              { $match: { type: 'divides_payout' } },
-              { $group: { _id: null, totalPayouts: { $sum: '$amount' } } }
-            ]).allowDiskUse(true);
-            const houseCutsAgg = await Ledger.aggregate([
-              { $match: { type: 'divides_house_cut' } },
-              { $group: { _id: null, totalHouseCuts: { $sum: '$amount' } } }
-            ]).allowDiskUse(true);
-            const jackpotCutsAgg = await Ledger.aggregate([
-              { $match: { type: 'divides_jackpot_in' } },
-              { $group: { _id: null, totalJackpotCuts: { $sum: '$amount' } } }
-            ]).allowDiskUse(true);
-
-            const ledgerBets = (betAgg && betAgg[0] && betAgg[0].totalBets) ? betAgg[0].totalBets : 0;
-            const ledgerPayouts = (payoutAgg && payoutAgg[0] && payoutAgg[0].totalPayouts) ? payoutAgg[0].totalPayouts : 0; // stored as negative values
-            const ledgerHouseCuts = (houseCutsAgg && houseCutsAgg[0] && houseCutsAgg[0].totalHouseCuts) ? houseCutsAgg[0].totalHouseCuts : 0;
-            const ledgerJackpotCuts = (jackpotCutsAgg && jackpotCutsAgg[0] && jackpotCutsAgg[0].totalJackpotCuts) ? jackpotCutsAgg[0].totalJackpotCuts : 0;
-
-            // Replace the divides monetary totals with ledger-backed values
-            dividesSummary.totalPot = Number(ledgerBets || dividesSummary.totalPot);
-            // divides_payout ledger entries are stored as negative amounts; take absolute for totalPaidOut
-            dividesSummary.totalPaidOut = Number(Math.abs(Number(ledgerPayouts)) || dividesSummary.totalPaidOut);
-            dividesSummary.totalHouseCuts = Number(ledgerHouseCuts || dividesSummary.totalHouseCuts);
-            dividesSummary.totalJackpotCuts = Number(ledgerJackpotCuts || dividesSummary.totalJackpotCuts);
-            // recompute derived fields
-            dividesSummary.GGR = Number((dividesSummary.totalPot - dividesSummary.totalPaidOut).toFixed(2));
-            dividesSummary.prizePoolRemaining = Number((dividesSummary.totalPot - (dividesSummary.totalHouseCuts + dividesSummary.totalJackpotCuts) - dividesSummary.totalPaidOut).toFixed(2));
-          } catch (e) {
-            console.error('Failed to compute divides totals from ledger, falling back to document aggregates', e);
-          }
-
-          // current global totals from jackpot/house docs
-          const jackpot = await Jackpot.findOne({ id: 'global' }).lean();
-          const house = await House.findOne({ id: 'global' }).lean();
-          const kenoReserveDoc = await KenoReserve.findOne({ id: 'global' }).lean();
-          // overall summary
-          const overall = {
-            totalHouseAccrued: (keno.totalHouseCuts || 0) + (dividesSummary.totalHouseCuts || 0) || 0,
-            totalJackpotAccrued: (keno.totalJackpotCuts || 0) + (dividesSummary.totalJackpotCuts || 0) || 0,
-            totalPayouts: (keno.totalWins || 0) + (dividesSummary.totalPaidOut || 0) || 0,
-            totalHandle: (keno.totalBets || 0) + (dividesSummary.totalPot || 0) || 0,
-            totalGGR: (keno.GGR || 0) + (dividesSummary.GGR || 0) || 0
-          };
-
-          // TokenWallets removed; rely on Ledger / RuggedState / Jackpot for summaries.
-
-          // Simplified money-in / money-out report. House and jackpot totals are
-          // returned under `global` and should be displayed separately by the UI.
-          res.json({
-            keno: {
-              rounds: keno.rounds || 0,
-              moneyIn: Number((keno.totalBets || 0)),      // total handle
-              moneyOut: Number((keno.totalWins || 0)),     // payouts to players (excludes jackpot fund movements)
-              net: Number(((keno.totalBets || 0) - (keno.totalWins || 0)))
-            },
-            divides: {
-              rounds: dividesSummary.rounds || 0,
-              moneyIn: Number((dividesSummary.totalPot || 0)),
-              moneyOut: Number((dividesSummary.totalPaidOut || 0)),
-              net: Number(((dividesSummary.totalPot || 0) - (dividesSummary.totalPaidOut || 0)))
-            },
-            global: {
-              jackpotAmount: jackpot?.amount || 0,
-              houseTotal: house?.houseTotal || 0,
-              kenoReserve: kenoReserveDoc?.amount || 0
-            },
-            overall: {
-              moneyIn: Number((overall.totalHandle || 0)),
-              moneyOut: Number((overall.totalPayouts || 0)),
-              net: Number(((overall.totalHandle || 0) - (overall.totalPayouts || 0)))
-            }
-            ,
-            wallets: []
-          });
-        } catch (err) {
-          console.error('/admin/finance error', err);
-          res.status(500).json({ error: 'Server error' });
-        }
-      });
-
-      // Admin: force-restart the Rugged market immediately (clears rugged state and cooldown)
-      app.post('/admin/rugged/restart', auth, adminOnly, async (req, res) => {
-        try {
-          const doc = await Rugged.findOne({ id: 'global' });
-          if (!doc) return res.status(404).json({ error: 'Rugged not initialized' });
-          doc.rugged = false;
-          doc.ruggedCooldownUntil = null;
-          doc.noRugUntil = new Date(Date.now() + ((doc.noRugSeconds || 300) * 1000));
-          doc.lastPrice = doc.lastPrice && doc.lastPrice > 0 ? doc.lastPrice : 0.0001;
-          // clear price history and circulating supply so clients start fresh
-          doc.priceHistory = [];
-          doc.circulatingSupply = 0;
-          // persist initial changes
-          await doc.save();
-          // Burn / reset total supply and ensure wallets reflect the post-restart state:
-          // - WalletDC should hold 75,000,000 DC
-          // - Jackpot (Jackpot model) should hold 25,000,000 DC
-          try {
-            // Legacy token wallet records are no longer used. Set canonical
-            // Jackpot and Rugged document fields. Ledger entries are created for audit.
-            const treasury = Math.floor(RUGGED_TOTAL_SUPPLY * 0.75);
-            const jackpotAmount = RUGGED_TOTAL_SUPPLY - treasury; // remainder (25%) to jackpot
-
-            // Ensure Jackpot document reflects remainder allocated to JackpotDC
-            await Jackpot.findOneAndUpdate({ id: 'global' }, { $set: { amount: jackpotAmount } }, { upsert: true });
-            // record admin action
-            try { await Ledger.create({ type: 'rugged_admin_restart', amount: 0, meta: { treasury, jackpotAmount } }); } catch (e) { console.error('ledger rugged_admin_restart failed', e); }
-
-            // Update Rugged doc canonical supply fields to reflect the reset
-            doc.jackpotSupply = jackpotAmount;
-            doc.circulatingSupply = 0;
-            doc.totalSupply = RUGGED_TOTAL_SUPPLY;
-            doc.priceHistory = [];
-            await doc.save();
-          } catch (e) {
-            console.error('admin rugged restart: failed to reset jackpot/supply', e);
-          }
-          // cancel any scheduled restart
-          try { cancelScheduledRugRestart('global'); } catch (e) { /* ignore */ }
-          // notify clients to reset their charts and state
-          try {
-            io.emit('rugged:restart', { price: doc.lastPrice, rugged: doc.rugged, noRugUntil: doc.noRugUntil });
-          } catch (e) { console.error('emit rugged:restart failed', e); }
-          setImmediate(() => broadcastRugged());
-          res.json({ success: true, msg: 'Rugged market restarted' });
-        } catch (e) {
-          console.error('/admin/rugged/restart error', e);
-          res.status(500).json({ error: 'Server error' });
-        }
-      });
-
-      // Admin: consolidate DC balances from non-canonical token wallets into WalletDC
-      // Usage: POST /admin/rugged/consolidate?commit=true  (commit=true to apply, otherwise dry-run)
-      app.post('/admin/rugged/consolidate', auth, adminOnly, async (req, res) => {
-        // Legacy token wallet records have been removed from the system and consolidation
-        // is no longer applicable. Use Ledger / RuggedState / Jackpot for auditing.
-        return res.status(400).json({ error: 'Legacy token wallets removed; /admin/rugged/consolidate is deprecated. Use Ledger/RuggedState/Jackpot for reconciliation.' });
-      });
-
-      // Admin endpoint: compute expected multiplier (and RTP%) per spot using server paytables
-      app.get('/admin/keno-rtp', auth, adminOnly, async (req, res) => {
-        try {
-          // combinatorics helpers for hypergeometric probabilities
-          function C(n, k) {
-            if (k < 0 || k > n) return 0;
-            if (k === 0 || k === n) return 1;
-            k = Math.min(k, n - k);
-            let num = 1n, den = 1n;
-            for (let i = 1; i <= k; i++) {
-              num *= BigInt(n - (k - i));
-              den *= BigInt(i);
-            }
-            return Number(num / den);
-          }
-          function hyperProb(s, k) {
-            const totalCombs = C(40, 10);
-            const ways = C(s, k) * C(40 - s, 10 - k);
-            return ways / totalCombs;
-          }
-
-          const result = {};
-          for (const risk of Object.keys(paytables || {})) {
-            result[risk] = {};
-            for (let s = 1; s <= 10; s++) {
-              let exp = 0;
-              for (let k = 0; k <= s; k++) {
-                const mult = (paytables[risk] && paytables[risk][s] && paytables[risk][s][k]) ? paytables[risk][s][k] : 0;
-                const p = hyperProb(s, k);
-                exp += p * mult;
-              }
-              result[risk][s] = { expectedMultiplier: Number(exp.toFixed(6)), rtp: Number((exp * 100).toFixed(4)) };
-            }
-          }
-          res.json({ rtp: result });
-        } catch (err) {
-          console.error('/admin/keno-rtp error', err);
-          res.status(500).json({ error: 'Server error' });
-        }
-      });
-
-      // Admin ledger viewer endpoint (paged, filterable)
-      app.get('/admin/ledger', auth, adminOnly, async (req, res) => {
-        try {
-          const page = Math.max(1, Number(req.query.page) || 1);
-          const limit = Math.min(500, Math.max(1, Number(req.query.limit) || 50));
-          const type = req.query.type;
-          const userId = req.query.userId;
-          const divideId = req.query.divideId;
-          const roundId = req.query.roundId;
-          const from = req.query.from ? new Date(req.query.from) : null;
-          const to = req.query.to ? new Date(req.query.to) : null;
-
-          const match = {};
-          if (type) match.type = type;
-          if (userId) match.userId = userId;
-          if (divideId) match.divideId = divideId;
-          if (roundId) match.roundId = roundId;
-          if (from || to) match.createdAt = {};
-          if (from) match.createdAt.$gte = from;
-          if (to) match.createdAt.$lte = to;
-
-          const total = await Ledger.countDocuments(match);
-          const items = await Ledger.find(match).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean();
-
-          res.json({ page, limit, total, items });
-        } catch (err) {
-          console.error('/admin/ledger error', err);
-          res.status(500).json({ error: 'Server error' });
-        }
-      });
-
-      // -----------------------------
-      // Shared endDivide helper
-      // -----------------------------
-      async function endDivideById(divideId, invokedByUserId = null) {
-        try {
-          // find by short id or _id
-          let divide = await Divide.findOne({ id: divideId });
-          if (!divide) divide = await Divide.findById(divideId);
-          if (!divide) {
-            console.log('endDivideById: divide not found', { divideId });
-            return null;
-          }
-          if (divide.status !== 'active') {
-            console.log('endDivideById: already ended or settling', { divideId, status: divide.status });
-            return divide;
-          }
-
-          // mark as settling to avoid concurrent payouts
-          divide.status = 'settling';
-          await divide.save();
-
-          const winnerSide = divide.votesA > divide.votesB ? 'A' : 'B';
-          const winnerVotes = winnerSide === 'A' ? divide.votesA : divide.votesB;
-
-          const houseCut = 0; // No per-divide house cuts
-          const jackpotAmount = 0; // No per-divide jackpot cuts
-          const winnerPot = divide.pot; // 100% to winners
-
-
-          let distributed = 0;
-
-          if (divide.isUserCreated) {
-            // For user-created divides: payout based on bet percentage
-            // Winners split the pot proportional to their bet amounts
-
-            const winners = divide.votes.filter(v => v.side === winnerSide && v.voteCount > 0);
-            const totalWinnerVotes = winners.reduce((sum, v) => sum + v.voteCount, 0);
-
-            if (totalWinnerVotes > 0 && winners.length > 0) {
-              const winnerPotCents = Math.round(winnerPot * 100);
-
-              for (const winner of winners) {
-                try {
-                  const voter = await User.findById(winner.userId);
-                  if (!voter) continue;
-                  // Calculate share: (winner's bet / total winner bets) * pot
-                  const shareCents = Math.round((winner.voteCount / totalWinnerVotes) * winnerPotCents);
-                  const share = Number((shareCents / 100).toFixed(2));
-                  voter.balance = Number((voter.balance + share).toFixed(2));
-                  await voter.save();
-                  distributed += share;
-                } catch (e) {
-                  console.error('Failed to credit user-created divide winner', winner.userId, e);
-                }
-              }
-              distributed = Number(distributed.toFixed(2));
-            }
-          } else {
-            // For admin-created divides: legacy equal split among winners
-            // distribute in cents to avoid floating rounding overflow
-            const winnerPotCents = Math.round(winnerPot * 100);
-            let distributedCents = 0;
-
-            if (winnerVotes > 0 && Array.isArray(divide.votes) && divide.votes.length > 0) {
-              // first compute integer shares per winner (floor) in cents
-              const winners = divide.votes.filter(v => v.side === winnerSide && v.voteCount > 0);
-              const shares = [];
-              // Distribute equally between distinct winning entries (one share per user)
-              const perWinner = Math.floor(winnerPotCents / winners.length);
-              for (const v of winners) {
-                shares.push({ userId: v.userId, shareCents: perWinner, voteCount: v.voteCount });
-                distributedCents += perWinner;
-              }
-              // put any leftover cents to the first winner
-              let remainder = winnerPotCents - distributedCents;
-              if (remainder > 0 && shares.length > 0) {
-                shares[0].shareCents += remainder;
-                distributedCents += remainder;
-                remainder = 0;
-              }
-
-              // apply shares to users
-              for (const s of shares) {
-                try {
-                  const voter = await User.findById(s.userId);
-                  if (!voter) continue;
-                  const share = Number((s.shareCents / 100).toFixed(2));
-                  voter.balance = Number((voter.balance + share).toFixed(2));
-                  await voter.save();
-                } catch (e) {
-                  console.error('Failed to credit winner share', s.userId, e);
-                }
-              }
-              distributed = Math.round((distributedCents / 100) * 100) / 100;
-            }
-          }
-
-          // update jackpot and house totals atomically (create global doc if missing)
-          try {
-            await Jackpot.findOneAndUpdate({ id: 'global' }, { $inc: { amount: jackpotAmount } }, { upsert: true, setDefaultsOnInsert: true });
-            await House.findOneAndUpdate({ id: 'global' }, { $inc: { houseTotal: houseCut } }, { upsert: true, setDefaultsOnInsert: true });
-          } catch (e) {
-            console.error('Failed to update Jackpot totals', e);
-          }
-
-          // persist payout and cut details for auditability
-          divide.paidOut = distributed; // actual amount credited to winners
-          divide.houseCut = houseCut;
-          divide.jackpotCut = jackpotAmount;
-
-          // ledger entries for divide payouts and inflows
-          try {
-            // record house + jackpot inflows (system in)
-            if (houseCut && houseCut > 0) await Ledger.create({ type: 'divides_house_cut', amount: Number(houseCut), divideId: divide.id || divide._id });
-            if (jackpotAmount && jackpotAmount > 0) await Ledger.create({ type: 'divides_jackpot_in', amount: Number(jackpotAmount), divideId: divide.id || divide._id });
-            // record payout to winners (system out)
-            if (distributed && distributed > 0) await Ledger.create({ type: 'divides_payout', amount: Number(-distributed), divideId: divide.id || divide._id });
-          } catch (e) {
-            console.error('Failed to write ledger entries for divide end', e);
-          }
-
-          divide.status = 'ended';
-          divide.winnerSide = winnerSide;
-          await divide.save();
-
-          // emit structured ended event
-          io.emit('divideEnded', { id: divide.id, _id: divide._id, winner: winnerSide, pot: divide.pot, houseCut, jackpotAmount, distributed });
-
-          // Automatic restart of a new divide after ending has been disabled.
-          // Previously the server would create a new random 'battle' here; the
-          // application now expects admins to create new Divides manually so we
-          // don't seed default rounds programmatically.
-
-          return divide;
-        } catch (err) {
-          console.error('endDivideById error', err);
-          throw err;
-        }
-      }
-
-      // Scheduler: check active divides and end them when endTime reached
-      setInterval(async () => {
-        try {
-          const now = new Date();
-          const toEnd = await Divide.find({ status: 'active', endTime: { $lte: now } }).lean();
-          if (!toEnd || toEnd.length === 0) return;
-          console.log('Scheduler ending divides:', toEnd.map(d => d.id || d._id));
-          for (const d of toEnd) {
-            try {
-              await endDivideById(d.id || d._id);
-            } catch (e) {
-              console.error('Scheduler failed to end divide', d.id || d._id, e);
-            }
-          }
-        } catch (err) {
-          console.error('Divide scheduler error', err);
-        }
-      }, 5000);
-
-      // GET CURRENT USER (for frontend refresh)
-      app.get("/api/me", auth, async (req, res) => {
-        try {
-          const user = await User.findById(req.userId).select("_id username balance role holdingsDC holdingsInvested profileImage");
-          if (!user) return res.status(404).json({ error: "User not found" });
-          res.json({ id: user._id, username: user.username, balance: toDollars(user.balance), role: user.role, holdingsDC: user.holdingsDC || 0, holdingsInvested: user.holdingsInvested || 0, profileImage: user.profileImage || '' });
-        } catch (err) {
-          res.status(500).json({ error: "Server error" });
-        }
-      });
-
-      // PATCH /api/me - Update user profile (e.g. profileImage)
-      app.patch("/api/me", auth, async (req, res) => {
-        try {
-          const { profileImage } = req.body;
-          const updates = {};
-
-          if (profileImage !== undefined) {
-            if (typeof profileImage !== 'string') return res.status(400).json({ error: "profileImage must be a string" });
-            updates.profileImage = profileImage;
-          }
-
-          if (Object.keys(updates).length === 0) {
-            return res.status(400).json({ error: "No fields to update" });
-          }
-
-          const user = await User.findByIdAndUpdate(
-            req.userId,
-            { $set: updates },
-            { new: true }
-          ).select("_id username balance role holdingsDC holdingsInvested profileImage");
-
-          if (!user) return res.status(404).json({ error: "User not found" });
-
-          res.json({
-            id: user._id,
-            username: user.username,
-            balance: toDollars(user.balance),
-            role: user.role,
-            holdingsDC: user.holdingsDC || 0,
-            holdingsInvested: user.holdingsInvested || 0,
-            profileImage: user.profileImage || ''
-          });
-        } catch (err) {
-          console.error('PATCH /api/me error', err);
-          res.status(500).json({ error: "Server error" });
-        }
-      });
-
-      // POST /api/user/update-profile - Update user profile
-      app.post("/api/user/update-profile", auth, async (req, res) => {
-        try {
-          const { profileImage } = req.body;
-
-          if (profileImage !== undefined && typeof profileImage !== 'string') {
-            return res.status(400).json({ error: "profileImage must be a string" });
-          }
-
-          const user = await User.findByIdAndUpdate(
-            req.userId,
-            { profileImage: profileImage || '' },
-            { new: true }
-          ).select("_id username balance role profileImage");
-
-          if (!user) return res.status(404).json({ error: "User not found" });
-          res.json({
-            success: true,
-            id: user._id,
-            username: user.username,
-            balance: toDollars(user.balance),
-            role: user.role,
-            profileImage: user.profileImage || ''
-          });
-        } catch (err) {
-          res.status(500).json({ error: "Server error" });
-        }
-      });
-
-      // POST /api/user/upload-profile-image - Upload profile image
-      app.post("/api/user/upload-profile-image", auth, (req, res, next) => {
-        upload.single('profileImage')(req, res, async (err) => {
-          if (err) {
-            console.error('Profile image upload error:', err.message);
-            return res.status(400).json({ error: err.message || 'File upload failed' });
-          }
-          try {
-            if (!req.file) {
-              return res.status(400).json({ error: 'No file uploaded' });
-            }
-
-            const imageUrl = `/uploads/${req.file.filename}`;
-            console.log('Profile image uploaded:', req.file.filename);
-
-            // Update user's profile image in database
-            const user = await User.findByIdAndUpdate(
-              req.userId,
-              { profileImage: imageUrl },
-              { new: true }
-            ).select("_id username balance role profileImage");
-
-            if (!user) return res.status(404).json({ error: "User not found" });
-
-            res.json({
-              success: true,
-              id: user._id,
-              username: user.username,
-              balance: toDollars(user.balance),
-              role: user.role,
-              profileImage: user.profileImage
-            });
-          } catch (err) {
-            console.error('Profile update error:', err);
-            res.status(500).json({ error: err.message || 'Upload failed' });
-          }
-        });
-      });
-
-      // POST /api/verify-game - Get provably fair data for a game
-      app.post("/api/verify-game", async (req, res) => {
-        try {
-          const { gameType, gameId } = req.body;
-
-          if (!gameType || !gameId) {
-            return res.status(400).json({ error: "gameType and gameId required" });
-          }
-
-          let gameData = null;
-
-          switch (gameType) {
-            case 'Keno':
-              gameData = await KenoRound.findById(gameId).lean();
-              if (gameData) {
-                res.json({
-                  serverSeed: gameData.serverSeed,
-                  serverSeedHashed: gameData.serverSeedHashed,
-                  blockHash: gameData.blockHash,
-                  gameSeed: gameData.gameSeed,
-                  clientSeed: gameData.clientSeed,
-                  nonce: gameData.nonce,
-                  result: {
-                    drawnNumbers: gameData.drawnNumbers,
-                    selectedNumbers: gameData.picks,
-                    matches: gameData.matches,
-                    win: gameData.win
-                  }
-                });
-              }
-              break;
-
-            case 'Plinko':
-              gameData = await PlinkoGame.findById(gameId).lean();
-              if (gameData) {
-                res.json({
-                  serverSeed: gameData.proofOfFair?.serverSeed,
-                  serverSeedHashed: gameData.proofOfFair?.serverSeedHash,
-                  clientSeed: gameData.proofOfFair?.clientSeed,
-                  nonce: gameData.proofOfFair?.nonce,
-                  result: {
-                    path: gameData.path,
-                    finalSlot: gameData.finalSlot,
-                    multiplier: gameData.multiplier,
-                    payout: gameData.payout / 100
-                  }
-                });
-              }
-              break;
-
-            case 'Blackjack':
-              gameData = await BlackjackGame.findById(gameId).lean();
-              if (gameData) {
-                res.json({
-                  serverSeed: gameData.proofOfFair?.serverSeed,
-                  serverSeedHashed: gameData.proofOfFair?.serverSeedHash,
-                  clientSeed: gameData.proofOfFair?.clientSeed,
-                  nonce: gameData.proofOfFair?.nonce,
-                  result: {
-                    playerHands: gameData.playerHands,
-                    dealerHand: gameData.dealerHand,
-                    mainResult: gameData.mainResult,
-                    totalPayout: gameData.mainPayout + gameData.perfectPairsPayout + gameData.twentyPlusThreePayout + gameData.blazingSevensPayout
-                  }
-                });
-              }
-              break;
-
-            case 'Case Battle':
-              gameData = await CaseBattle.findById(gameId).lean();
-              if (gameData) {
-                const players = gameData.players?.map(p => ({
-                  username: p.username,
-                  seed: p.seed || p.hybridSeed,
-                  randomOrgSeed: p.randomOrgSeed,
-                  eosBlockHash: p.eosBlockHash,
-                  ticket: p.ticket,
-                  totalItemValue: p.totalItemValue
-                })) || [];
-
-                res.json({
-                  serverSeed: players[0]?.seed,
-                  result: {
-                    mode: gameData.mode,
-                    players,
-                    winnerId: gameData.winnerId,
-                    pot: gameData.pot
-                  }
-                });
-              }
-              break;
-
-            default:
-              return res.status(400).json({ error: "Unknown game type" });
-          }
-
-          if (!gameData) {
-            return res.status(404).json({ error: "Game not found" });
-          }
-
-        } catch (err) {
-          console.error('Verify game error:', err);
-          res.status(500).json({ error: "Server error" });
-        }
-      });
-
-      // PUT /api/me/balance - Update user balance
-      app.put("/api/me/balance", auth, async (req, res) => {
-        try {
-          const { balance } = req.body;
-          if (balance === undefined) return res.status(400).json({ error: "balance required" });
-
-          const balanceCents = Math.round(balance * 100);
-          const user = await User.findByIdAndUpdate(
-            req.userId,
-            { balance: balanceCents },
-            { new: true }
-          ).select("_id username balance role");
-
-          if (!user) return res.status(404).json({ error: "User not found" });
-          res.json({ id: user._id, username: user.username, balance: toDollars(user.balance), role: user.role });
-        } catch (err) {
-          res.status(500).json({ error: "Server error" });
-        }
-      });
-
-      // Promote user to admin (requires ADMIN_CODE in request body)
-      app.post("/api/promote-to-admin", auth, async (req, res) => {
-        try {
-          const { adminCode } = req.body || {};
-          const expectedCode = process.env.ADMIN_CODE;
-
-          if (!expectedCode) {
-            return res.status(500).json({ error: "ADMIN_CODE not configured on server" });
-          }
-
-          if (!adminCode || adminCode !== expectedCode) {
-            return res.status(403).json({ error: "Invalid admin code" });
-          }
-
-          const user = await User.findByIdAndUpdate(
-            req.userId,
-            { role: 'admin' },
-            { new: true }
-          ).select("_id username role");
-
-          if (!user) return res.status(404).json({ error: "User not found" });
-          res.json({ success: true, message: "User promoted to admin", role: user.role });
-        } catch (err) {
-          console.error('Promote to admin error:', err);
-          res.status(500).json({ error: "Server error" });
-        }
-      });
-
-      // 6️⃣ Finally start the server
-      try {
-        console.log('startup: about to call server.listen');
-        server.listen(PORT, () => console.log(`✅ Server running at http://localhost:${PORT}`));
-
-        // -----------------------------
-        // Scheduled leaderboard + jackpot snapshot
-        // -----------------------------
-        async function snapshotLeaderboardAndJackpot() {
-          try {
-            console.log('Snapshot job: computing leaderboard snapshot');
-
-            // Keno leaderboard
-            const kenoTop = await KenoRound.aggregate([
-            { $match: { win: { $gt: 0 } } },
-            { $addFields: { multiplier: { $cond: [{ $eq: ['$betAmount', 0] }, 0, { $divide: ['$win', '$betAmount'] }] } } },
-            { $sort: { multiplier: -1 } },
-            { $limit: 10 },
-            {
-              $lookup: {
-                from: 'users',
-                let: { uid: { $toObjectId: '$userId' } },
-                pipeline: [
-                  { $match: { $expr: { $eq: ['$_id', '$$uid'] } } },
-                  { $project: { username: 1 } }
-                ],
-                as: 'user'
-              }
-            },
-            { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
-            { $project: { win: 1, multiplier: 1, username: { $ifNull: ['$user.username', '???'] } } }
-          ]).allowDiskUse(true);
-
-          // Plinko leaderboard
-          const plinkoTop = await PlinkoGame.aggregate([
-            {
-              $addFields: {
-                multiplier: { $cond: [{ $eq: ['$betAmount', 0] }, 0, { $divide: ['$payout', '$betAmount'] }] }
-              }
-            },
-            { $sort: { multiplier: -1 } },
-            { $limit: 10 },
-            {
-              $lookup: {
-                from: 'users',
-                let: { uid: { $toObjectId: '$userId' } },
-                pipeline: [
-                  { $match: { $expr: { $eq: ['$_id', '$$uid'] } } },
-                  { $project: { username: 1 } }
-                ],
-                as: 'user'
-              }
-            },
-            { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
-            { $project: { win: '$payout', multiplier: 1, username: { $ifNull: ['$user.username', '???'] } } }
-          ]).allowDiskUse(true);
-
-          // Blackjack leaderboard
-          const blackjackTop = await BlackjackGame.aggregate([
-            { $match: { mainPayout: { $gt: 0 } } },
-            {
-              $addFields: {
-                multiplier: { $cond: [{ $eq: ['$mainBet', 0] }, 0, { $divide: ['$mainPayout', '$mainBet'] }] }
-              }
-            },
-            { $sort: { multiplier: -1 } },
-            { $limit: 10 },
-            {
-              $lookup: {
-                from: 'users',
-                let: { uid: { $toObjectId: '$userId' } },
-                pipeline: [
-                  { $match: { $expr: { $eq: ['$_id', '$$uid'] } } },
-                  { $project: { username: 1 } }
-                ],
-                as: 'user'
-              }
-            },
-            { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
-            { $project: { win: '$mainPayout', multiplier: 1, username: { $ifNull: ['$user.username', '???'] } } }
-          ]).allowDiskUse(true);
-
-          const jackpot = await Jackpot.findOne({ id: 'global' }).lean();
-
-          const snapshot = {
-            createdAt: new Date(),
-            keno: {
-              count: Array.isArray(kenoTop) ? kenoTop.length : 0,
-              entries: kenoTop || []
-            },
-            plinko: {
-              count: Array.isArray(plinkoTop) ? plinkoTop.length : 0,
-              entries: plinkoTop || []
-            },
-            blackjack: {
-              count: Array.isArray(blackjackTop) ? blackjackTop.length : 0,
-              entries: blackjackTop || []
-            },
-            jackpotAmount: (jackpot && jackpot.amount) ? jackpot.amount : 0,
-            houseTotal: (jackpot && jackpot.houseTotal) ? jackpot.houseTotal : 0
-          };
-
-          const res = await mongoose.connection.db.collection('leaderboard_snapshots').insertOne(snapshot);
-          console.log('Snapshot job: inserted snapshot id', res.insertedId);
-
-        } catch (err) {
-          console.error('Snapshot job error', err);
-        }
-      }
-
-      // schedule snapshot to run at next local midnight, then every 24h
-      function scheduleDailySnapshot() {
-        const now = new Date();
-        const next = new Date(now);
-        next.setHours(24, 0, 0, 0); // next midnight
-        const msUntilNext = next.getTime() - now.getTime();
-        console.log('Scheduling leaderboard snapshot in', msUntilNext, 'ms');
-        setTimeout(() => {
-          // run once at next midnight, then every 24h
-          snapshotLeaderboardAndJackpot();
-          setInterval(snapshotLeaderboardAndJackpot, 24 * 60 * 60 * 1000);
-        }, msUntilNext);
-      }
-
-      // start scheduling after a short delay to ensure DB is connected
-      setTimeout(() => {
-        try {
-          scheduleDailySnapshot();
-        } catch (e) {
-          console.error('Failed to schedule daily snapshot', e);
-        }
-      }, 5000);
-      // End of main startup try block
-    } catch (e) {
-      console.error('Startup error:', e);
-      process.exit(1);
+// MY GAMES FEED - User-specific games only
+// ──────────────────────────────────────────────────────────────
+app.get('/api/my-games', auth, async (req, res) => {
+  try {
+    if (!req.userId) {
+      return res.status(401).json({ error: 'Not authenticated' });
     }
+
+    const userId = req.userId;
+    const limit = parseInt(req.query.limit) || 50;
+    const games = [];
+
+    // Fetch user's Keno games
+    const kenoGames = await KenoRound.find({ userId, win: { $exists: true } })
+      .sort({ timestamp: -1 })
+      .limit(limit)
+      .lean();
+
+    for (const game of kenoGames) {
+      const user = await User.findById(game.userId).select('username profileImage').lean();
+      games.push({
+        _id: game._id,
+        game: 'Keno',
+        username: user?.username || 'Hidden',
+        profileImage: user?.profileImage || '',
+        wager: game.betAmount,
+        multiplier: game.win > 0 ? (game.win / game.betAmount).toFixed(2) + 'x' : '0.00x',
+        payout: game.win,
+        time: game.timestamp,
+        icon: '🎰'
+      });
+    }
+
+    // Fetch user's Plinko games
+    const plinkoGames = await PlinkoGame.find({ userId })
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
+
+    for (const game of plinkoGames) {
+      const user = await User.findById(game.userId).select('username profileImage').lean();
+      games.push({
+        _id: game._id,
+        game: 'Plinko',
+        username: user?.username || 'Hidden',
+        profileImage: user?.profileImage || '',
+        wager: game.betAmount / 100,
+        multiplier: game.multiplier.toFixed(2) + 'x',
+        payout: game.payout / 100,
+        time: game.createdAt,
+        icon: '⚪'
+      });
+    }
+
+    // Fetch user's Blackjack games
+    const blackjackGames = await BlackjackGame.find({ userId, gamePhase: 'gameOver' })
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
+
+    for (const game of blackjackGames) {
+      const user = await User.findById(game.userId).select('username profileImage').lean();
+      const totalBet = game.mainBet + game.perfectPairsBet + game.twentyPlusThreeBet + game.blazingSevensBet;
+      const totalPayout = game.mainPayout + game.perfectPairsPayout + game.twentyPlusThreePayout + game.blazingSevensPayout;
+      const mult = totalPayout > 0 ? (totalPayout / totalBet).toFixed(2) + 'x' : '0.00x';
+
+      games.push({
+        _id: game._id,
+        game: 'Blackjack',
+        username: user?.username || 'Hidden',
+        profileImage: user?.profileImage || '',
+        wager: totalBet,
+        multiplier: mult,
+        payout: totalPayout,
+        time: game.createdAt,
+        icon: '🃏'
+      });
+    }
+
+    // Fetch user's Case Battles (where they were the winner)
+    const caseBattles = await CaseBattle.find({ winnerId: userId, status: 'ended' })
+      .sort({ createdAt: -1 })
+      .limit(limit / 2)
+      .lean();
+
+    for (const battle of caseBattles) {
+      const winnerPlayer = battle.players?.find(p => p.userId.toString() === userId.toString());
+      const user = await User.findById(userId).select('username profileImage').lean();
+      let wagerAmount = 0;
+      if (winnerPlayer?.cases && winnerPlayer.cases.length > 0) {
+        wagerAmount = winnerPlayer.cases.reduce((sum, c) => sum + (c.price || 0), 0);
+      } else if (winnerPlayer?.totalCaseValue) {
+        wagerAmount = winnerPlayer.totalCaseValue;
+      } else {
+        wagerAmount = battle.pot / (battle.players?.length || 2);
+      }
+      games.push({
+        _id: battle._id,
+        game: 'Case Battle',
+        username: user?.username || 'Hidden',
+        profileImage: user?.profileImage || '',
+        wager: wagerAmount,
+        multiplier: battle.players?.length ? `${battle.players.length}.00x` : '2.00x',
+        payout: battle.pot,
+        time: battle.createdAt,
+        icon: '⚔️'
+      });
+    }
+
+    // Sort all games by time and limit
+    games.sort((a, b) => new Date(b.time) - new Date(a.time));
+    const myGames = games.slice(0, limit);
+
+    res.json({ games: myGames });
+  } catch (err) {
+    console.error('Error fetching my games:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ──────────────────────────────────────────────────────────────
+// LEADERBOARD – top 3 multipliers (fixed)
+app.get('/keno/leaderboard', async (req, res) => {
+  try {
+    const top = await KenoRound.aggregate([
+      { $match: { win: { $gt: 0 } } },
+      {
+        $addFields: {
+          multiplier: { $divide: ['$win', '$betAmount'] }
+        }
+      },
+      { $sort: { multiplier: -1 } },
+      { $limit: 3 },
+      {
+        $lookup: {
+          from: 'users',
+          let: { uid: { $toObjectId: '$userId' } },
+          pipeline: [
+            { $match: { $expr: { $eq: ['$_id', '$$uid'] } } },
+            { $project: { username: 1 } }
+          ],
+          as: 'user'
+        }
+      },
+      { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          username: { $ifNull: ['$user.username', '???'] },
+          multiplier: 1,
+          win: 1
+        }
+      }
+    ]);
+    res.json(top);
+  } catch (err) {
+    console.error('Leaderboard error', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// PLINKO LEADERBOARD – top 3 multipliers
+app.get('/plinko/leaderboard', async (req, res) => {
+  try {
+    const top = await PlinkoGame.aggregate([
+      {
+        $addFields: {
+          multiplier: { $cond: [{ $eq: ['$betAmount', 0] }, 0, { $divide: ['$payout', '$betAmount'] }] }
+        }
+      },
+      { $sort: { multiplier: -1 } },
+      { $limit: 3 },
+      {
+        $lookup: {
+          from: 'users',
+          let: { uid: { $toObjectId: '$userId' } },
+          pipeline: [
+            { $match: { $expr: { $eq: ['$_id', '$$uid'] } } },
+            { $project: { username: 1 } }
+          ],
+          as: 'user'
+        }
+      },
+      { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          username: { $ifNull: ['$user.username', '???'] },
+          multiplier: 1,
+          win: '$payout'
+        }
+      }
+    ]);
+    res.json(top);
+  } catch (err) {
+    console.error('Plinko leaderboard error', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// BLACKJACK LEADERBOARD – top 3 multipliers
+app.get('/blackjack/leaderboard', async (req, res) => {
+  try {
+    const top = await BlackjackGame.aggregate([
+      { $match: { mainPayout: { $gt: 0 } } },
+      {
+        $addFields: {
+          multiplier: { $cond: [{ $eq: ['$mainBet', 0] }, 0, { $divide: ['$mainPayout', '$mainBet'] }] }
+        }
+      },
+      { $sort: { multiplier: -1 } },
+      { $limit: 3 },
+      {
+        $lookup: {
+          from: 'users',
+          let: { uid: { $toObjectId: '$userId' } },
+          pipeline: [
+            { $match: { $expr: { $eq: ['$_id', '$$uid'] } } },
+            { $project: { username: 1 } }
+          ],
+          as: 'user'
+        }
+      },
+      { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          username: { $ifNull: ['$user.username', '???'] },
+          multiplier: 1,
+          win: '$mainPayout'
+        }
+      }
+    ]);
+    res.json(top);
+  } catch (err) {
+    console.error('Blackjack leaderboard error', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ──────────────────────────────────────────────────────────────
+// Public route – Get username by ID (used for display)
+// ──────────────────────────────────────────────────────────────
+app.get('/user/:id', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('username');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json({ username: user.username });
+  } catch (err) {
+    console.error('User lookup error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ──────────────────────────────────────────────────────────────
+// KENO ODDS (server-side) — return expected multiplier for a given risk & spots
+// This keeps paytable/payout math on the server so the client cannot tamper.
+// Query params: ?risk=medium&spots=5
+// ──────────────────────────────────────────────────────────────
+app.get('/keno/odds', async (req, res) => {
+  try {
+    const { risk = 'medium', spots = '1' } = req.query;
+    const s = Number(spots);
+    if (!paytables[risk]) return res.status(400).json({ error: 'Invalid risk' });
+    // allow 0 (no selection) to be queried by clients; treat as expected multiplier 0
+    if (!Number.isInteger(s) || s < 0 || s > 10) return res.status(400).json({ error: 'Invalid spots' });
+
+    if (s === 0) {
+      return res.json({ risk, spots: 0, expectedMultiplier: 0 });
+    }
+
+    // combinatorics helper (n choose k) using BigInt for safety
+    function C(n, k) {
+      if (k < 0 || k > n) return 0;
+      if (k === 0 || k === n) return 1;
+      k = Math.min(k, n - k);
+      let num = 1n, den = 1n;
+      for (let i = 1; i <= k; i++) {
+        num *= BigInt(n - (k - i));
+        den *= BigInt(i);
+      }
+      return Number(num / den);
+    }
+
+    const total = C(40, 10);
+    let expected = 0;
+    for (let k = 0; k <= s; k++) {
+      const mult = paytables[risk]?.[s]?.[k] || 0;
+      const ways = C(s, k) * C(40 - s, 10 - k);
+      const p = ways / total;
+      expected += p * mult;
+    }
+    res.json({ risk, spots: s, expectedMultiplier: Number(expected.toFixed(6)) });
+  } catch (err) {
+    console.error('GET /keno/odds error', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Public: return the full paytables (server authoritative). Clients may request this
+// to render a paytable modal. We intentionally serve it from the server to keep
+// the canonical tables here rather than duplicating in the frontend source.
+app.get('/keno/paytables', async (req, res) => {
+  try {
+    // clone to avoid accidental mutation
+    const clone = JSON.parse(JSON.stringify(paytables || {}));
+    // clone already contains the scaled paytables from paytable-data.js
+    res.json({ paytables: clone });
+  } catch (err) {
+    console.error('GET /keno/paytables error', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Public: return configured RTP per risk (server-authoritative). Useful for UI
+// components or external audits that want a single numeric RTP value per risk.
+app.get('/keno/rtp', async (req, res) => {
+  try {
+    const clone = JSON.parse(JSON.stringify(configured || {}));
+    res.json({ configured: clone });
+  } catch (err) {
+    console.error('GET /keno/rtp error', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ──────────────────────────────────────────────────────────────
+// START SERVER (CORRECT ORDER)
+// ──────────────────────────────────────────────────────────────
+const PORT = process.env.PORT || 3000;
+
+// 1️⃣ Create HTTP server
+const server = http.createServer(app);
+console.log('startup: http server object created');
+
+// 2️⃣ Attach Socket.IO
+const io = new Server(server, {
+  cors: {
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error('Not allowed by CORS'));
+    },
+    methods: ["GET", "POST"],
+    credentials: true
+  }
+});
+
+// Register authoritative Rugged routes (uses auth/adminOnly defined below)
+try {
+  console.log('startup: about to register rugged routes');
+  // register the routes, passing the auth and adminOnly middleware declared earlier
+  registerRugged(app, io, { auth, adminOnly });
+  console.log('startup: registerRugged returned');
+} catch (e) { console.error('Failed to register rugged routes', e); }
+
+// Register Plinko routes
+try {
+  console.log('startup: about to register plinko routes');
+  registerPlinko(app, io, { auth });
+  console.log('startup: registerPlinko returned');
+} catch (e) { console.error('Failed to register plinko routes', e); }
+
+// Register Blackjack routes
+try {
+  console.log('startup: about to register blackjack routes');
+  app.use('/api/blackjack', auth, blackjackRoutes);
+  // Also mount without /api prefix for consistency with Plinko/Keno
+  app.use('/blackjack', auth, blackjackRoutes);
+  console.log('startup: Blackjack routes registered');
+} catch (e) { console.error('Failed to register blackjack routes', e); }
+
+// Register Case Battles routes
+try {
+  console.log('startup: about to register case battles routes');
+  registerCaseBattles(app, io, { auth, adminOnly });
+  console.log('startup: registerCaseBattles returned');
+} catch (e) { console.error('Failed to register case battles routes', e); }
+
+// Register Cases (case management) routes
+try {
+  console.log('startup: about to register cases routes');
+  registerCases(app, io, { auth, adminOnly });
+  console.log('startup: registerCases returned');
+} catch (e) { console.error('Failed to register cases routes', e); }
+
+// Register Items (item management) routes
+try {
+  console.log('startup: about to register items routes');
+  setupItemRoutes(app, auth, adminOnly);
+  console.log('startup: setupItemRoutes returned');
+} catch (e) { console.error('Failed to register items routes', e); }
+
+// Register Plinko routes
+async function ensureRuggedInit() {
+  try {
+    const existing = await Rugged.findOne({ id: 'global' });
+    if (existing) {
+      // if no commit present, generate one
+      if (!existing.serverSeedHashed) {
+        const seed = generateSeed(64);
+        const h = await sha256(seed);
+        existing.serverSeedHashed = h;
+        existing.revealedSeeds = existing.revealedSeeds || [];
+        await existing.save();
+        console.log('Initialized Rugged serverSeedHashed');
+      }
+      // Historically there were legacy token wallet records for DC/USDDC,
+      // but the Rugged game now uses the Rugged document (`doc`) and its
+      // persisted `priceHistory`/`lastPrice` as the authoritative source.
+      // We do not create or rely on legacy token wallet records for Rugged.
+      return existing;
+    }
+    // default initialization per user's request
+    const now = new Date();
+    const defaultNoRugSeconds = 300; // 5 minutes staged timer
+    const doc = await Rugged.create({
+      id: 'global',
+      symbol: 'DC',
+      totalSupply: 100000000,
+      jackpotSupply: 25000000,
+      circulatingSupply: 75000000,
+      lastPrice: 0.0001, // initial USD per DC (1 USD per 10,000 DC)
+      noRugSeconds: defaultNoRugSeconds,
+      noRugUntil: new Date(now.getTime() + defaultNoRugSeconds * 1000),
+      priceHistory: [],
+      rugged: false
+    });
+    // commit a seed for future rug reveals
+    const seed = generateSeed(64);
+    const h = await sha256(seed);
+    doc.serverSeedHashed = h;
+    doc.revealedSeeds = [];
+    await doc.save();
+    console.log('Created initial Rugged doc with serverSeedHashed');
+
+    // Historically the Rugged init populated legacy token wallet records,
+    // but the Rugged game no longer depends on those collections. DC is
+    // a UI-only mapping and accounting is done using the Rugged document
+    // and user balances. Legacy token wallet scripts are not instantiated here.
+    return doc;
+  } catch (e) {
+    console.error('ensureRuggedInit error', e);
+    return null;
+  }
+}
+
+
+// start initialization
+ensureRuggedInit().catch(e => console.error(e));
+
+// ========================================
+// 💬 LIVE CHAT SYSTEM
+// ========================================
+const chatNamespace = io.of('/chat');
+
+chatNamespace.on('connection', (socket) => {
+  console.log('[Chat] User connected:', socket.id);
+
+  // Send chat history to new user
+  socket.on('chat:requestHistory', async () => {
+    try {
+      const messages = await ChatMessage.find()
+        .sort({ timestamp: -1 })
+        .limit(50)
+        .lean();
+      socket.emit('chat:history', messages.reverse());
+    } catch (err) {
+      console.error('[Chat] Error fetching history:', err);
+      socket.emit('chat:history', []);
+    }
+  });
+
+  // Handle new messages
+  socket.on('chat:sendMessage', async (data) => {
+    try {
+      const { username, message } = data;
+
+      if (!username || !message || message.trim().length === 0) {
+        return;
+      }
+
+      // Limit message length
+      const trimmedMessage = message.trim().slice(0, 500);
+
+      // Save to database
+      const chatMessage = await ChatMessage.create({
+        username,
+        message: trimmedMessage,
+        timestamp: new Date()
+      });
+
+      // Broadcast to all connected clients
+      chatNamespace.emit('chat:message', {
+        username: chatMessage.username,
+        message: chatMessage.message,
+        timestamp: chatMessage.timestamp
+      });
+
+      console.log(`[Chat] ${username}: ${trimmedMessage}`);
+    } catch (err) {
+      console.error('[Chat] Error sending message:', err);
+    }
+  });
+
+  socket.on('disconnect', () => {
+    console.log('[Chat] User disconnected:', socket.id);
+  });
+});
+
+// Cleanup old chat messages (keep last 100)
+setInterval(async () => {
+  try {
+    const count = await ChatMessage.countDocuments();
+    if (count > 100) {
+      const toDelete = count - 100;
+      const oldMessages = await ChatMessage.find()
+        .sort({ timestamp: 1 })
+        .limit(toDelete)
+        .select('_id');
+      const ids = oldMessages.map(m => m._id);
+      await ChatMessage.deleteMany({ _id: { $in: ids } });
+      console.log(`[Chat] Cleaned up ${toDelete} old messages`);
+    }
+  } catch (err) {
+    console.error('[Chat] Error cleaning up messages:', err);
+  }
+}, 60000); // Run every minute
+
+// ========================================
+// END CHAT SYSTEM
+// ========================================
+
+// 4️⃣ Divide vote live update
+app.post("/api/divides/:id/vote", async (req, res) => {
+  try {
+    // Placeholder for divide vote logic
+    // await divide.save();
+    io.emit("voteUpdate", { id: req.params.id, updated: true });
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Error in vote route:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Alias for capitalized path
+app.post("/api/Divides/:id/vote", async (req, res) => {
+  try {
+    io.emit("voteUpdate", { id: req.params.id, updated: true });
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Error in vote route (capitalized):", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// API helper: deduct a single free/vote credit from current user (used by client helper)
+app.post('/api/divides/:id/deduct', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (user.balance < 1) return res.status(400).json({ error: 'Insufficient balance' });
+    const oneC = toCents(1);
+    if (user.balance < oneC) return res.status(400).json({ error: 'Insufficient balance' });
+    user.balance = Math.max(0, user.balance - oneC);
+    await user.save();
+    try { await Ledger.create({ type: 'divides_deduct', amount: Number(1), userId: req.userId, divideId: req.params.id }); } catch (e) { console.error('Failed to write ledger for divides deduct', e); }
+    res.json({ balance: toDollars(user.balance) });
+  } catch (err) {
+    console.error('Deduct error', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// 5️⃣ Get current jackpot amount
+app.get('/jackpot', async (req, res) => {
+  try {
+    const jackpot = await Jackpot.findOne({ id: 'global' }).lean();
+    const house = await House.findOne({ id: 'global' }).lean();
+    const kenoReserveDoc = await KenoReserve.findOne({ id: 'global' }).lean();
+    res.json({ amount: jackpot?.amount || 0, houseTotal: house?.houseTotal || 0, kenoReserve: kenoReserveDoc?.amount || 0 });
+  } catch (err) {
+    console.error('Error fetching jackpot:', err);
+    res.status(500).json({ error: 'Failed to fetch jackpot' });
+  }
+});
+
+// ──────────────────────────────────────────────────────────────
+// RUGGED: Meme-coin live game (basic endpoints + socket updates)
+// ──────────────────────────────────────────────────────────────
+
+// Helper to broadcast rugged updates
+async function broadcastRugged() {
+  try {
+    const doc = await Rugged.findOne({ id: 'global' });
+    if (!doc) return;
+    // Use the persisted Rugged document as the authoritative source for
+    // display price and history. `doc.lastPrice` and `doc.priceHistory`
+    // are already expressed in display units (USD-per-DC UI mapping).
+    try {
+      doc.priceHistory = doc.priceHistory || [];
+      const fakePrice = Number(doc.lastPrice || 0) || 0;
+      const last = doc.priceHistory && doc.priceHistory.length ? doc.priceHistory[doc.priceHistory.length - 1].price : doc.lastPrice || 0;
+      if (Number(last) !== Number(fakePrice)) {
+        doc.priceHistory.push({ ts: new Date(), price: fakePrice });
+        if (doc.priceHistory.length > 500) doc.priceHistory = doc.priceHistory.slice(-500);
+        doc.lastPrice = fakePrice;
+        await doc.save().catch(e => console.error('failed to save Rugged priceHistory', e));
+      }
+    } catch (e) {
+      console.error('failed to persist priceHistory', e);
+    }
+
+    const fakePriceEmit = Number(doc.lastPrice || 0);
+    io.emit('rugged:update', {
+      price: fakePriceEmit,
+      ts: new Date(),
+      totalSupply: doc.totalSupply,
+      jackpotSupply: doc.jackpotSupply,
+      circulatingSupply: doc.circulatingSupply,
+      rugged: !!doc.rugged,
+      ruggedCooldownUntil: doc.ruggedCooldownUntil || null,
+      noRugUntil: doc.noRugUntil || null
+    });
+  } catch (e) { console.error('broadcastRugged error', e); }
+}
+
+// Recalculate and persist canonical price on Rugged doc from WalletUSDDC / totalSupply
+async function recalcAndPersistPrice(doc) {
+  try {
+    if (!doc) return 0;
+    // Derive fake price from doc.lastPrice (persisted display unit). If
+    // doc.lastPrice is missing fall back to computing from the last
+    // entry in priceHistory. We intentionally avoid reading legacy token wallet records.
+    let fakePrice = Number(doc.lastPrice || 0);
+    if (!fakePrice && Array.isArray(doc.priceHistory) && doc.priceHistory.length) {
+      fakePrice = Number(doc.priceHistory[doc.priceHistory.length - 1].price || 0);
+    }
+    doc.lastPrice = fakePrice;
+    try { await doc.save(); } catch (e) { console.error('recalcAndPersistPrice: failed to save Rugged doc', e); }
+    return fakePrice;
+  } catch (e) {
+    console.error('recalcAndPersistPrice error', e);
+    return 0;
+  }
+}
+
+// Schedule helpers: when a rug occurs we persist a cooldown timestamp and
+// schedule an automatic restart after the cooldown (2 minutes by default).
+const scheduledRugRestarts = new Map(); // docId -> timeoutId
+
+function scheduleRugRestart(docId, ms = 120000) {
+  try {
+    if (scheduledRugRestarts.has(docId)) {
+      clearTimeout(scheduledRugRestarts.get(docId));
+      scheduledRugRestarts.delete(docId);
+    }
+    const to = setTimeout(async () => {
+      try {
+        const doc = await Rugged.findOne({ id: docId });
+        if (!doc) return;
+        // clear rugged flag, reset price to a sane default, set a staged noRug window
+        doc.rugged = false;
+        doc.lastPrice = doc.lastPrice && doc.lastPrice > 0 ? doc.lastPrice : 0.0001;
+        doc.noRugUntil = new Date(Date.now() + ((doc.noRugSeconds || 300) * 1000));
+        // persist and broadcast
+        await doc.save();
+        setImmediate(() => broadcastRugged());
+        console.log(`Rugged market restarted for ${docId}`);
+      } catch (e) {
+        console.error('Error restarting rugged market', e);
+      } finally {
+        scheduledRugRestarts.delete(docId);
+      }
+    }, ms);
+    scheduledRugRestarts.set(docId, to);
+    return to;
+  } catch (e) {
+    console.error('scheduleRugRestart failed', e);
+  }
+}
+
+function cancelScheduledRugRestart(docId) {
+  try {
+    if (!scheduledRugRestarts.has(docId)) return false;
+    clearTimeout(scheduledRugRestarts.get(docId));
+    scheduledRugRestarts.delete(docId);
+    return true;
+  } catch (e) {
+    console.error('cancelScheduledRugRestart failed', e);
+    return false;
+  }
+}
+
+// On server startup ensure any pending rugged cooldowns are scheduled
+async function recoverScheduledRestarts() {
+  try {
+    const doc = await Rugged.findOne({ id: 'global' }).lean();
+    if (!doc) return;
+    if (doc.rugged && doc.ruggedCooldownUntil) {
+      const until = new Date(doc.ruggedCooldownUntil).getTime();
+      const now = Date.now();
+      const remaining = Math.max(0, until - now);
+      if (remaining === 0) {
+        // cooldown passed while offline — clear immediately
+        await Rugged.findOneAndUpdate({ id: 'global' }, { $set: { rugged: false, lastPrice: (doc.lastPrice && doc.lastPrice > 0) ? doc.lastPrice : 0.0001, noRugUntil: new Date(Date.now() + ((doc.noRugSeconds || 300) * 1000)) } });
+        setImmediate(() => broadcastRugged());
+        console.log('Recovered rugged: cooldown expired, market restarted immediately');
+      } else {
+        // schedule remaining time
+        scheduleRugRestart('global', remaining);
+        console.log('Recovered rugged: scheduled restart in', remaining, 'ms');
+      }
+    }
+  } catch (e) {
+    console.error('recoverScheduledRestarts failed', e);
+  }
+}
+
+// run recovery after initialization (ensureRuggedInit is called earlier)
+setTimeout(() => { recoverScheduledRestarts().catch(e => console.error(e)); }, 1500);
+
+// Safety net: periodic check to ensure cooldowns always end even if setTimeouts fail
+setInterval(async () => {
+  try {
+    const doc = await Rugged.findOne({ id: 'global' });
+    if (!doc) return;
+    if (doc.rugged && doc.ruggedCooldownUntil) {
+      const until = new Date(doc.ruggedCooldownUntil).getTime();
+      const now = Date.now();
+      if (now >= until) {
+        // cooldown expired but rugged flag still true: restart market now
+        doc.rugged = false;
+        doc.lastPrice = doc.lastPrice && doc.lastPrice > 0 ? doc.lastPrice : 0.0001;
+        doc.noRugUntil = new Date(Date.now() + ((doc.noRugSeconds || 300) * 1000));
+        doc.ruggedCooldownUntil = null;
+        await doc.save();
+        setImmediate(() => broadcastRugged());
+        console.log('Safety-net: cleared ruggedCooldown and restarted market (interval check)');
+      }
+    }
+  } catch (e) {
+    console.error('cooldown safety interval error', e);
+  }
+}, 5000);
+
+// Rugged endpoints (buy/sell/status/positions/etc) were moved into
+// routes/rugged-pure-rng.js and are registered via registerRugged(app, io,...)
+// to centralize Rugged logic and avoid duplicate/legacy TokenWallet usage.
+// Keep server.js lightweight here and let the routed implementation be authoritative.
+
+// Admin-only: reset global jackpot and house totals to zero
+app.post('/jackpot/reset', auth, adminOnly, async (req, res) => {
+  try {
+    await Jackpot.findOneAndUpdate({ id: 'global' }, { $set: { amount: 0 } }, { upsert: true });
+    await House.findOneAndUpdate({ id: 'global' }, { $set: { houseTotal: 0 } }, { upsert: true });
+    await KenoReserve.findOneAndUpdate({ id: 'global' }, { $set: { amount: 0 } }, { upsert: true });
+    const jackpot = await Jackpot.findOne({ id: 'global' }).lean();
+    const house = await House.findOne({ id: 'global' }).lean();
+    const kenoReserveDoc = await KenoReserve.findOne({ id: 'global' }).lean();
+    res.json({ amount: jackpot?.amount || 0, houseTotal: house?.houseTotal || 0, kenoReserve: kenoReserveDoc?.amount || 0 });
+  } catch (err) {
+    console.error('Error resetting jackpot totals:', err);
+    res.status(500).json({ error: 'Failed to reset jackpot totals' });
+  }
+});
+
+// Admin finance summary: aggregates Keno and Divide financials (admins only)
+app.get('/admin/finance', auth, adminOnly, async (req, res) => {
+  try {
+    // Keno aggregates with P&L lines
+    const kenoAgg = await KenoRound.aggregate([
+      {
+        $group: {
+          _id: null,
+          rounds: { $sum: 1 },
+          totalBets: { $sum: { $ifNull: ['$betAmount', 0] } },
+          totalWins: { $sum: { $ifNull: ['$win', 0] } },
+          totalHouseCuts: { $sum: { $ifNull: ['$houseCut', 0] } },
+          totalJackpotCuts: { $sum: { $ifNull: ['$jackpotCut', 0] } }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          rounds: 1,
+          totalBets: 1,
+          totalWins: 1,
+          totalHouseCuts: 1,
+          totalJackpotCuts: 1,
+          GGR: { $subtract: ['$totalBets', '$totalWins'] },
+          prizePoolRemaining: {
+            $subtract: [
+              { $subtract: ['$totalBets', { $add: ['$totalHouseCuts', '$totalJackpotCuts'] }] },
+              '$totalWins'
+            ]
+          },
+          companyRevenue: {
+            $add: ['$totalHouseCuts', {
+              $subtract: [
+                { $subtract: ['$totalBets', { $add: ['$totalHouseCuts', '$totalJackpotCuts'] }] },
+                '$totalWins'
+              ]
+            }]
+          }
+        }
+      }
+    ]).allowDiskUse(true);
+    const keno = (kenoAgg && kenoAgg[0]) ? kenoAgg[0] : { rounds: 0, totalBets: 0, totalWins: 0, totalHouseCuts: 0, totalJackpotCuts: 0, GGR: 0, prizePoolRemaining: 0, companyRevenue: 0 };
+
+    // Divides aggregates with estimated P&L lines (based on pot distribution rules)
+    // endDivideById uses: houseCut = round(pot * 0.05,2), jackpotAmount = round(pot * 0.05,2), winnerPot = round(pot * 0.90,2)
+    const dividesAgg = await Divide.aggregate([
+      {
+        $group: {
+          _id: null,
+          rounds: { $sum: 1 },
+          totalPot: { $sum: { $ifNull: ['$pot', 0] } },
+          countActive: { $sum: { $cond: [{ $eq: ['$status', 'active'] }, 1, 0] } },
+          countEnded: { $sum: { $cond: [{ $eq: ['$status', 'ended'] }, 1, 0] } },
+          totalPaidOut: { $sum: { $ifNull: ['$paidOut', { $round: [{ $multiply: ['$pot', 0.90] }, 2] }] } },
+          totalHouseCuts: { $sum: { $ifNull: ['$houseCut', { $round: [{ $multiply: ['$pot', 0.05] }, 2] }] } },
+          totalJackpotCuts: { $sum: { $ifNull: ['$jackpotCut', { $round: [{ $multiply: ['$pot', 0.05] }, 2] }] } }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          rounds: 1,
+          totalPot: 1,
+          countActive: 1,
+          countEnded: 1,
+          totalHouseCuts: 1,
+          totalJackpotCuts: 1,
+          totalPaidOut: 1,
+          GGR: { $subtract: ['$totalPot', '$totalPaidOut'] },
+          prizePoolRemaining: {
+            $subtract: [
+              { $subtract: ['$totalPot', { $add: ['$totalHouseCuts', '$totalJackpotCuts'] }] },
+              '$totalPaidOut'
+            ]
+          }
+        }
+      }
+    ]).allowDiskUse(true);
+    const dividesSummary = (dividesAgg && dividesAgg[0]) ? dividesAgg[0] : { rounds: 0, totalPot: 0, countActive: 0, countEnded: 0, totalHouseCuts: 0, totalJackpotCuts: 0, totalPaidOut: 0, GGR: 0, prizePoolRemaining: 0 };
+
+    // Ensure money-in / money-out for Divides is computed from Ledger so totals
+    // remain accurate even if Divide documents are deleted. Ledger is the
+    // authoritative audit trail for money movements.
+    try {
+      const betAgg = await Ledger.aggregate([
+        { $match: { type: 'divides_bet' } },
+        { $group: { _id: null, totalBets: { $sum: '$amount' } } }
+      ]).allowDiskUse(true);
+      const payoutAgg = await Ledger.aggregate([
+        { $match: { type: 'divides_payout' } },
+        { $group: { _id: null, totalPayouts: { $sum: '$amount' } } }
+      ]).allowDiskUse(true);
+      const houseCutsAgg = await Ledger.aggregate([
+        { $match: { type: 'divides_house_cut' } },
+        { $group: { _id: null, totalHouseCuts: { $sum: '$amount' } } }
+      ]).allowDiskUse(true);
+      const jackpotCutsAgg = await Ledger.aggregate([
+        { $match: { type: 'divides_jackpot_in' } },
+        { $group: { _id: null, totalJackpotCuts: { $sum: '$amount' } } }
+      ]).allowDiskUse(true);
+
+      const ledgerBets = (betAgg && betAgg[0] && betAgg[0].totalBets) ? betAgg[0].totalBets : 0;
+      const ledgerPayouts = (payoutAgg && payoutAgg[0] && payoutAgg[0].totalPayouts) ? payoutAgg[0].totalPayouts : 0; // stored as negative values
+      const ledgerHouseCuts = (houseCutsAgg && houseCutsAgg[0] && houseCutsAgg[0].totalHouseCuts) ? houseCutsAgg[0].totalHouseCuts : 0;
+      const ledgerJackpotCuts = (jackpotCutsAgg && jackpotCutsAgg[0] && jackpotCutsAgg[0].totalJackpotCuts) ? jackpotCutsAgg[0].totalJackpotCuts : 0;
+
+      // Replace the divides monetary totals with ledger-backed values
+      dividesSummary.totalPot = Number(ledgerBets || dividesSummary.totalPot);
+      // divides_payout ledger entries are stored as negative amounts; take absolute for totalPaidOut
+      dividesSummary.totalPaidOut = Number(Math.abs(Number(ledgerPayouts)) || dividesSummary.totalPaidOut);
+      dividesSummary.totalHouseCuts = Number(ledgerHouseCuts || dividesSummary.totalHouseCuts);
+      dividesSummary.totalJackpotCuts = Number(ledgerJackpotCuts || dividesSummary.totalJackpotCuts);
+      // recompute derived fields
+      dividesSummary.GGR = Number((dividesSummary.totalPot - dividesSummary.totalPaidOut).toFixed(2));
+      dividesSummary.prizePoolRemaining = Number((dividesSummary.totalPot - (dividesSummary.totalHouseCuts + dividesSummary.totalJackpotCuts) - dividesSummary.totalPaidOut).toFixed(2));
+    } catch (e) {
+      console.error('Failed to compute divides totals from ledger, falling back to document aggregates', e);
+    }
+
+    // current global totals from jackpot/house docs
+    const jackpot = await Jackpot.findOne({ id: 'global' }).lean();
+    const house = await House.findOne({ id: 'global' }).lean();
+    const kenoReserveDoc = await KenoReserve.findOne({ id: 'global' }).lean();
+    // overall summary
+    const overall = {
+      totalHouseAccrued: (keno.totalHouseCuts || 0) + (dividesSummary.totalHouseCuts || 0) || 0,
+      totalJackpotAccrued: (keno.totalJackpotCuts || 0) + (dividesSummary.totalJackpotCuts || 0) || 0,
+      totalPayouts: (keno.totalWins || 0) + (dividesSummary.totalPaidOut || 0) || 0,
+      totalHandle: (keno.totalBets || 0) + (dividesSummary.totalPot || 0) || 0,
+      totalGGR: (keno.GGR || 0) + (dividesSummary.GGR || 0) || 0
+    };
+
+    // TokenWallets removed; rely on Ledger / RuggedState / Jackpot for summaries.
+
+    // Simplified money-in / money-out report. House and jackpot totals are
+    // returned under `global` and should be displayed separately by the UI.
+    res.json({
+      keno: {
+        rounds: keno.rounds || 0,
+        moneyIn: Number((keno.totalBets || 0)),      // total handle
+        moneyOut: Number((keno.totalWins || 0)),     // payouts to players (excludes jackpot fund movements)
+        net: Number(((keno.totalBets || 0) - (keno.totalWins || 0)))
+      },
+      divides: {
+        rounds: dividesSummary.rounds || 0,
+        moneyIn: Number((dividesSummary.totalPot || 0)),
+        moneyOut: Number((dividesSummary.totalPaidOut || 0)),
+        net: Number(((dividesSummary.totalPot || 0) - (dividesSummary.totalPaidOut || 0)))
+      },
+      global: {
+        jackpotAmount: jackpot?.amount || 0,
+        houseTotal: house?.houseTotal || 0,
+        kenoReserve: kenoReserveDoc?.amount || 0
+      },
+      overall: {
+        moneyIn: Number((overall.totalHandle || 0)),
+        moneyOut: Number((overall.totalPayouts || 0)),
+        net: Number(((overall.totalHandle || 0) - (overall.totalPayouts || 0)))
+      }
+      ,
+      wallets: []
+    });
+  } catch (err) {
+    console.error('/admin/finance error', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Admin: force-restart the Rugged market immediately (clears rugged state and cooldown)
+app.post('/admin/rugged/restart', auth, adminOnly, async (req, res) => {
+  try {
+    const doc = await Rugged.findOne({ id: 'global' });
+    if (!doc) return res.status(404).json({ error: 'Rugged not initialized' });
+    doc.rugged = false;
+    doc.ruggedCooldownUntil = null;
+    doc.noRugUntil = new Date(Date.now() + ((doc.noRugSeconds || 300) * 1000));
+    doc.lastPrice = doc.lastPrice && doc.lastPrice > 0 ? doc.lastPrice : 0.0001;
+    // clear price history and circulating supply so clients start fresh
+    doc.priceHistory = [];
+    doc.circulatingSupply = 0;
+    // persist initial changes
+    await doc.save();
+    // Burn / reset total supply and ensure wallets reflect the post-restart state:
+    // - WalletDC should hold 75,000,000 DC
+    // - Jackpot (Jackpot model) should hold 25,000,000 DC
+    try {
+      // Legacy token wallet records are no longer used. Set canonical
+      // Jackpot and Rugged document fields. Ledger entries are created for audit.
+      const treasury = Math.floor(RUGGED_TOTAL_SUPPLY * 0.75);
+      const jackpotAmount = RUGGED_TOTAL_SUPPLY - treasury; // remainder (25%) to jackpot
+
+      // Ensure Jackpot document reflects remainder allocated to JackpotDC
+      await Jackpot.findOneAndUpdate({ id: 'global' }, { $set: { amount: jackpotAmount } }, { upsert: true });
+      // record admin action
+      try { await Ledger.create({ type: 'rugged_admin_restart', amount: 0, meta: { treasury, jackpotAmount } }); } catch (e) { console.error('ledger rugged_admin_restart failed', e); }
+
+      // Update Rugged doc canonical supply fields to reflect the reset
+      doc.jackpotSupply = jackpotAmount;
+      doc.circulatingSupply = 0;
+      doc.totalSupply = RUGGED_TOTAL_SUPPLY;
+      doc.priceHistory = [];
+      await doc.save();
+    } catch (e) {
+      console.error('admin rugged restart: failed to reset jackpot/supply', e);
+    }
+    // cancel any scheduled restart
+    try { cancelScheduledRugRestart('global'); } catch (e) { /* ignore */ }
+    // notify clients to reset their charts and state
+    try {
+      io.emit('rugged:restart', { price: doc.lastPrice, rugged: doc.rugged, noRugUntil: doc.noRugUntil });
+    } catch (e) { console.error('emit rugged:restart failed', e); }
+    setImmediate(() => broadcastRugged());
+    res.json({ success: true, msg: 'Rugged market restarted' });
+  } catch (e) {
+    console.error('/admin/rugged/restart error', e);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Admin: consolidate DC balances from non-canonical token wallets into WalletDC
+// Usage: POST /admin/rugged/consolidate?commit=true  (commit=true to apply, otherwise dry-run)
+app.post('/admin/rugged/consolidate', auth, adminOnly, async (req, res) => {
+  // Legacy token wallet records have been removed from the system and consolidation
+  // is no longer applicable. Use Ledger / RuggedState / Jackpot for auditing.
+  return res.status(400).json({ error: 'Legacy token wallets removed; /admin/rugged/consolidate is deprecated. Use Ledger/RuggedState/Jackpot for reconciliation.' });
+});
+
+// Admin endpoint: compute expected multiplier (and RTP%) per spot using server paytables
+app.get('/admin/keno-rtp', auth, adminOnly, async (req, res) => {
+  try {
+    // combinatorics helpers for hypergeometric probabilities
+    function C(n, k) {
+      if (k < 0 || k > n) return 0;
+      if (k === 0 || k === n) return 1;
+      k = Math.min(k, n - k);
+      let num = 1n, den = 1n;
+      for (let i = 1; i <= k; i++) {
+        num *= BigInt(n - (k - i));
+        den *= BigInt(i);
+      }
+      return Number(num / den);
+    }
+    function hyperProb(s, k) {
+      const totalCombs = C(40, 10);
+      const ways = C(s, k) * C(40 - s, 10 - k);
+      return ways / totalCombs;
+    }
+
+    const result = {};
+    for (const risk of Object.keys(paytables || {})) {
+      result[risk] = {};
+      for (let s = 1; s <= 10; s++) {
+        let exp = 0;
+        for (let k = 0; k <= s; k++) {
+          const mult = (paytables[risk] && paytables[risk][s] && paytables[risk][s][k]) ? paytables[risk][s][k] : 0;
+          const p = hyperProb(s, k);
+          exp += p * mult;
+        }
+        result[risk][s] = { expectedMultiplier: Number(exp.toFixed(6)), rtp: Number((exp * 100).toFixed(4)) };
+      }
+    }
+    res.json({ rtp: result });
+  } catch (err) {
+    console.error('/admin/keno-rtp error', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Admin ledger viewer endpoint (paged, filterable)
+app.get('/admin/ledger', auth, adminOnly, async (req, res) => {
+  try {
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(500, Math.max(1, Number(req.query.limit) || 50));
+    const type = req.query.type;
+    const userId = req.query.userId;
+    const divideId = req.query.divideId;
+    const roundId = req.query.roundId;
+    const from = req.query.from ? new Date(req.query.from) : null;
+    const to = req.query.to ? new Date(req.query.to) : null;
+
+    const match = {};
+    if (type) match.type = type;
+    if (userId) match.userId = userId;
+    if (divideId) match.divideId = divideId;
+    if (roundId) match.roundId = roundId;
+    if (from || to) match.createdAt = {};
+    if (from) match.createdAt.$gte = from;
+    if (to) match.createdAt.$lte = to;
+
+    const total = await Ledger.countDocuments(match);
+    const items = await Ledger.find(match).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean();
+
+    res.json({ page, limit, total, items });
+  } catch (err) {
+    console.error('/admin/ledger error', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// -----------------------------
+// Shared endDivide helper
+// -----------------------------
+async function endDivideById(divideId, invokedByUserId = null) {
+  try {
+    // find by short id or _id
+    let divide = await Divide.findOne({ id: divideId });
+    if (!divide) divide = await Divide.findById(divideId);
+    if (!divide) {
+      console.log('endDivideById: divide not found', { divideId });
+      return null;
+    }
+    if (divide.status !== 'active') {
+      console.log('endDivideById: already ended or settling', { divideId, status: divide.status });
+      return divide;
+    }
+
+    // mark as settling to avoid concurrent payouts
+    divide.status = 'settling';
+    await divide.save();
+
+    const winnerSide = divide.votesA > divide.votesB ? 'A' : 'B';
+    const winnerVotes = winnerSide === 'A' ? divide.votesA : divide.votesB;
+
+    const houseCut = 0; // No per-divide house cuts
+    const jackpotAmount = 0; // No per-divide jackpot cuts
+    const winnerPot = divide.pot; // 100% to winners
+
+
+    let distributed = 0;
+
+    if (divide.isUserCreated) {
+      // For user-created divides: payout based on bet percentage
+      // Winners split the pot proportional to their bet amounts
+      const winners = divide.votes.filter(v => v.side === winnerSide && v.voteCount > 0);
+      const totalWinnerVotes = winners.reduce((sum, v) => sum + v.voteCount, 0);
+
+      if (totalWinnerVotes > 0 && winners.length > 0) {
+        const winnerPotCents = Math.round(winnerPot * 100);
+
+        for (const winner of winners) {
+          try {
+            const voter = await User.findById(winner.userId);
+            if (!voter) continue;
+            const shareCents = Math.round((winner.voteCount / totalWinnerVotes) * winnerPotCents);
+            const share = Number((shareCents / 100).toFixed(2));
+            voter.balance = Number((voter.balance + share).toFixed(2));
+            await voter.save();
+            distributed += share;
+          } catch (e) {
+            console.error('Failed to credit user-created divide winner', winner.userId, e);
+          }
+        }
+        distributed = Number(distributed.toFixed(2));
+      }
+    } else {
+      // For admin-created divides: legacy equal split among winners
+      // distribute in cents to avoid floating rounding overflow
+      const winnerPotCents = Math.round(winnerPot * 100);
+      let distributedCents = 0;
+
+      if (winnerVotes > 0 && Array.isArray(divide.votes) && divide.votes.length > 0) {
+        // first compute integer shares per winner (floor) in cents
+        const winners = divide.votes.filter(v => v.side === winnerSide && v.voteCount > 0);
+        const shares = [];
+        // Distribute equally between distinct winning entries (one share per user)
+        const perWinner = Math.floor(winnerPotCents / winners.length);
+        for (const v of winners) {
+          shares.push({ userId: v.userId, shareCents: perWinner, voteCount: v.voteCount });
+          distributedCents += perWinner;
+        }
+        // put any leftover cents to the first winner
+        let remainder = winnerPotCents - distributedCents;
+        if (remainder > 0 && shares.length > 0) {
+          shares[0].shareCents += remainder;
+          distributedCents += remainder;
+          remainder = 0;
+        }
+
+        // apply shares to users
+        for (const s of shares) {
+          try {
+            const voter = await User.findById(s.userId);
+            if (!voter) continue;
+            const share = Number((s.shareCents / 100).toFixed(2));
+            voter.balance = Number((voter.balance + share).toFixed(2));
+            await voter.save();
+          } catch (e) {
+            console.error('Failed to credit winner share', s.userId, e);
+          }
+        }
+        distributed = Math.round((distributedCents / 100) * 100) / 100;
+      }
+    }
+
+    // update jackpot and house totals atomically (create global doc if missing)
+    try {
+      await Jackpot.findOneAndUpdate({ id: 'global' }, { $inc: { amount: jackpotAmount } }, { upsert: true, setDefaultsOnInsert: true });
+      await House.findOneAndUpdate({ id: 'global' }, { $inc: { houseTotal: houseCut } }, { upsert: true, setDefaultsOnInsert: true });
+    } catch (e) {
+      console.error('Failed to update Jackpot totals', e);
+    }
+
+    // persist payout and cut details for auditability
+    divide.paidOut = distributed; // actual amount credited to winners
+    divide.houseCut = houseCut;
+    divide.jackpotCut = jackpotAmount;
+
+    // ledger entries for divide payouts and inflows
+    try {
+      // record house + jackpot inflows (system in)
+      if (houseCut && houseCut > 0) await Ledger.create({ type: 'divides_house_cut', amount: Number(houseCut), divideId: divide.id || divide._id });
+      if (jackpotAmount && jackpotAmount > 0) await Ledger.create({ type: 'divides_jackpot_in', amount: Number(jackpotAmount), divideId: divide.id || divide._id });
+      // record payout to winners (system out)
+      if (distributed && distributed > 0) await Ledger.create({ type: 'divides_payout', amount: Number(-distributed), divideId: divide.id || divide._id });
+    } catch (e) {
+      console.error('Failed to write ledger entries for divide end', e);
+    }
+
+    divide.status = 'ended';
+    divide.winnerSide = winnerSide;
+    await divide.save();
+
+    // emit structured ended event
+    io.emit('divideEnded', { id: divide.id, _id: divide._id, winner: winnerSide, pot: divide.pot, houseCut, jackpotAmount, distributed });
+
+    // Automatic restart of a new divide after ending has been disabled.
+    // Previously the server would create a new random 'battle' here; the
+    // application now expects admins to create new Divides manually so we
+    // don't seed default rounds programmatically.
+
+    return divide;
+  } catch (err) {
+    console.error('endDivideById error', err);
+    throw err;
+  }
+}
+
+// Scheduler: check active divides and end them when endTime reached
+setInterval(async () => {
+  try {
+    const now = new Date();
+    const toEnd = await Divide.find({ status: 'active', endTime: { $lte: now } }).lean();
+    if (!toEnd || toEnd.length === 0) return;
+    console.log('Scheduler ending divides:', toEnd.map(d => d.id || d._id));
+    for (const d of toEnd) {
+      try {
+        await endDivideById(d.id || d._id);
+      } catch (e) {
+        console.error('Scheduler failed to end divide', d.id || d._id, e);
+      }
+    }
+  } catch (err) {
+    console.error('Divide scheduler error', err);
+  }
+}, 5000);
+
+// GET CURRENT USER (for frontend refresh)
+app.get("/api/me", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select("_id username balance role holdingsDC holdingsInvested profileImage");
+    if (!user) return res.status(404).json({ error: "User not found" });
+    res.json({ id: user._id, username: user.username, balance: toDollars(user.balance), role: user.role, holdingsDC: user.holdingsDC || 0, holdingsInvested: user.holdingsInvested || 0, profileImage: user.profileImage || '' });
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// PATCH /api/me - Update user profile (e.g. profileImage)
+app.patch("/api/me", auth, async (req, res) => {
+  try {
+    const { profileImage } = req.body;
+    const updates = {};
+
+    if (profileImage !== undefined) {
+      if (typeof profileImage !== 'string') return res.status(400).json({ error: "profileImage must be a string" });
+      updates.profileImage = profileImage;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: "No fields to update" });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.userId,
+      { $set: updates },
+      { new: true }
+    ).select("_id username balance role holdingsDC holdingsInvested profileImage");
+
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    res.json({
+      id: user._id,
+      username: user.username,
+      balance: toDollars(user.balance),
+      role: user.role,
+      holdingsDC: user.holdingsDC || 0,
+      holdingsInvested: user.holdingsInvested || 0,
+      profileImage: user.profileImage || ''
+    });
+  } catch (err) {
+    console.error('PATCH /api/me error', err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// POST /api/user/update-profile - Update user profile
+app.post("/api/user/update-profile", auth, async (req, res) => {
+  try {
+    const { profileImage } = req.body;
+
+    if (profileImage !== undefined && typeof profileImage !== 'string') {
+      return res.status(400).json({ error: "profileImage must be a string" });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.userId,
+      { profileImage: profileImage || '' },
+      { new: true }
+    ).select("_id username balance role profileImage");
+
+    if (!user) return res.status(404).json({ error: "User not found" });
+    res.json({
+      success: true,
+      id: user._id,
+      username: user.username,
+      balance: toDollars(user.balance),
+      role: user.role,
+      profileImage: user.profileImage || ''
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// POST /api/user/upload-profile-image - Upload profile image
+app.post("/api/user/upload-profile-image", auth, (req, res, next) => {
+  upload.single('profileImage')(req, res, async (err) => {
+    if (err) {
+      console.error('Profile image upload error:', err.message);
+      return res.status(400).json({ error: err.message || 'File upload failed' });
+    }
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+
+      const imageUrl = `/uploads/${req.file.filename}`;
+      console.log('Profile image uploaded:', req.file.filename);
+
+      // Update user's profile image in database
+      const user = await User.findByIdAndUpdate(
+        req.userId,
+        { profileImage: imageUrl },
+        { new: true }
+      ).select("_id username balance role profileImage");
+
+      if (!user) return res.status(404).json({ error: "User not found" });
+
+      res.json({
+        success: true,
+        id: user._id,
+        username: user.username,
+        balance: toDollars(user.balance),
+        role: user.role,
+        profileImage: user.profileImage
+      });
+    } catch (err) {
+      console.error('Profile update error:', err);
+      res.status(500).json({ error: err.message || 'Upload failed' });
+    }
+  });
+});
+
+// POST /api/verify-game - Get provably fair data for a game
+app.post("/api/verify-game", async (req, res) => {
+  try {
+    const { gameType, gameId } = req.body;
+
+    if (!gameType || !gameId) {
+      return res.status(400).json({ error: "gameType and gameId required" });
+    }
+
+    let gameData = null;
+
+    switch (gameType) {
+      case 'Keno':
+        gameData = await KenoRound.findById(gameId).lean();
+        if (gameData) {
+          res.json({
+            serverSeed: gameData.serverSeed,
+            serverSeedHashed: gameData.serverSeedHashed,
+            blockHash: gameData.blockHash,
+            gameSeed: gameData.gameSeed,
+            clientSeed: gameData.clientSeed,
+            nonce: gameData.nonce,
+            result: {
+              drawnNumbers: gameData.drawnNumbers,
+              selectedNumbers: gameData.picks,
+              matches: gameData.matches,
+              win: gameData.win
+            }
+          });
+        }
+        break;
+
+      case 'Plinko':
+        gameData = await PlinkoGame.findById(gameId).lean();
+        if (gameData) {
+          res.json({
+            serverSeed: gameData.proofOfFair?.serverSeed,
+            serverSeedHashed: gameData.proofOfFair?.serverSeedHash,
+            clientSeed: gameData.proofOfFair?.clientSeed,
+            nonce: gameData.proofOfFair?.nonce,
+            result: {
+              path: gameData.path,
+              finalSlot: gameData.finalSlot,
+              multiplier: gameData.multiplier,
+              payout: gameData.payout / 100
+            }
+          });
+        }
+        break;
+
+      case 'Blackjack':
+        gameData = await BlackjackGame.findById(gameId).lean();
+        if (gameData) {
+          res.json({
+            serverSeed: gameData.proofOfFair?.serverSeed,
+            serverSeedHashed: gameData.proofOfFair?.serverSeedHash,
+            clientSeed: gameData.proofOfFair?.clientSeed,
+            nonce: gameData.proofOfFair?.nonce,
+            result: {
+              playerHands: gameData.playerHands,
+              dealerHand: gameData.dealerHand,
+              mainResult: gameData.mainResult,
+              totalPayout: gameData.mainPayout + gameData.perfectPairsPayout + gameData.twentyPlusThreePayout + gameData.blazingSevensPayout
+            }
+          });
+        }
+        break;
+
+      case 'Case Battle':
+        gameData = await CaseBattle.findById(gameId).lean();
+        if (gameData) {
+          const players = gameData.players?.map(p => ({
+            username: p.username,
+            seed: p.seed || p.hybridSeed,
+            randomOrgSeed: p.randomOrgSeed,
+            eosBlockHash: p.eosBlockHash,
+            ticket: p.ticket,
+            totalItemValue: p.totalItemValue
+          })) || [];
+
+          res.json({
+            serverSeed: players[0]?.seed,
+            result: {
+              mode: gameData.mode,
+              players,
+              winnerId: gameData.winnerId,
+              pot: gameData.pot
+            }
+          });
+        }
+        break;
+
+      default:
+        return res.status(400).json({ error: "Unknown game type" });
+    }
+
+    if (!gameData) {
+      return res.status(404).json({ error: "Game not found" });
+    }
+
+  } catch (err) {
+    console.error('Verify game error:', err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// SECURITY: /api/me/balance endpoint REMOVED
+// Users should NEVER be able to set their own balance from the client
+// Balance is managed server-side in game endpoints (Keno, Plinko, Blackjack)
+
+// PATCH /api/me - Update user profile (balance updates BLOCKED for security)
+app.patch("/api/me", auth, async (req, res) => {
+  try {
+    const patch = req.body || {};
+
+    // SECURITY: Block any attempts to update balance or sensitive fields
+    const blockedFields = ['balance', 'role', 'totalWinnings', 'totalBets', 'totalWins', 'totalLosses', 'wagered'];
+    const attemptedBlocked = blockedFields.filter(field => field in patch);
+
+    if (attemptedBlocked.length > 0) {
+      console.warn(`[SECURITY] User ${req.userId} attempted to update blocked fields: ${attemptedBlocked.join(', ')}`);
+      return res.status(403).json({
+        error: 'Cannot update protected fields',
+        blockedFields: attemptedBlocked
+      });
+    }
+
+    // Allow updating safe fields only (e.g., profileImage, username if needed)
+    const safeFields = {};
+    const allowedFields = ['profileImage']; // Add other safe fields as needed
+
+    for (const field of allowedFields) {
+      if (field in patch) {
+        safeFields[field] = patch[field];
+      }
+    }
+
+    if (Object.keys(safeFields).length === 0) {
+      // No valid fields to update, but don't error - just return current user
+      const user = await User.findById(req.userId).select("_id username balance role profileImage");
+      if (!user) return res.status(404).json({ error: "User not found" });
+      return res.json({
+        id: user._id,
+        username: user.username,
+        balance: toDollars(user.balance),
+        role: user.role,
+        profileImage: user.profileImage
+      });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.userId,
+      { $set: safeFields },
+      { new: true }
+    ).select("_id username balance role profileImage");
+
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    res.json({
+      id: user._id,
+      username: user.username,
+      balance: toDollars(user.balance),
+      role: user.role,
+      profileImage: user.profileImage
+    });
+  } catch (err) {
+    console.error('[PATCH /api/me] error:', err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+
+// POST /add-funds - Add funds to user balance (for purchases/deposits)
+app.post("/add-funds", auth, async (req, res) => {
+  try {
+    const { amount } = req.body;
+
+    if (typeof amount !== 'number' || isNaN(amount)) {
+      return res.status(400).json({ error: "Invalid amount" });
+    }
+
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    // Add funds (convert dollars to cents)
+    const amountCents = Math.round(amount * 100);
+    user.balance += amountCents;
+    await user.save();
+
+    console.log(`[ADD FUNDS] User ${user.username} added $${amount}, new balance: $${toDollars(user.balance)}`);
+
+    res.json({ balance: toDollars(user.balance) });
+  } catch (err) {
+    console.error('[POST /add-funds] error:', err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Promote user to admin (requires ADMIN_CODE in request body)
+app.post("/api/promote-to-admin", auth, async (req, res) => {
+  try {
+    const { adminCode } = req.body || {};
+    const expectedCode = process.env.ADMIN_CODE;
+
+    if (!expectedCode) {
+      return res.status(500).json({ error: "ADMIN_CODE not configured on server" });
+    }
+
+    if (!adminCode || adminCode !== expectedCode) {
+      return res.status(403).json({ error: "Invalid admin code" });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.userId,
+      { role: 'admin' },
+      { new: true }
+    ).select("_id username role");
+
+    if (!user) return res.status(404).json({ error: "User not found" });
+    res.json({ success: true, message: "User promoted to admin", role: user.role });
+  } catch (err) {
+    console.error('Promote to admin error:', err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// 6️⃣ Finally start the server
+console.log('startup: about to call server.listen');
+server.listen(PORT, () => console.log(`✅ Server running at http://localhost:${PORT}`));
+
+// -----------------------------
+// Scheduled leaderboard + jackpot snapshot
+// -----------------------------
+async function snapshotLeaderboardAndJackpot() {
+  try {
+    console.log('Snapshot job: computing leaderboard snapshot');
+
+    // Keno leaderboard
+    const kenoTop = await KenoRound.aggregate([
+      { $match: { win: { $gt: 0 } } },
+      { $addFields: { multiplier: { $cond: [{ $eq: ['$betAmount', 0] }, 0, { $divide: ['$win', '$betAmount'] }] } } },
+      { $sort: { multiplier: -1 } },
+      { $limit: 10 },
+      {
+        $lookup: {
+          from: 'users',
+          let: { uid: { $toObjectId: '$userId' } },
+          pipeline: [
+            { $match: { $expr: { $eq: ['$_id', '$$uid'] } } },
+            { $project: { username: 1 } }
+          ],
+          as: 'user'
+        }
+      },
+      { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
+      { $project: { win: 1, multiplier: 1, username: { $ifNull: ['$user.username', '???'] } } }
+    ]).allowDiskUse(true);
+
+    // Plinko leaderboard
+    const plinkoTop = await PlinkoGame.aggregate([
+      {
+        $addFields: {
+          multiplier: { $cond: [{ $eq: ['$betAmount', 0] }, 0, { $divide: ['$payout', '$betAmount'] }] }
+        }
+      },
+      { $sort: { multiplier: -1 } },
+      { $limit: 10 },
+      {
+        $lookup: {
+          from: 'users',
+          let: { uid: { $toObjectId: '$userId' } },
+          pipeline: [
+            { $match: { $expr: { $eq: ['$_id', '$$uid'] } } },
+            { $project: { username: 1 } }
+          ],
+          as: 'user'
+        }
+      },
+      { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
+      { $project: { win: '$payout', multiplier: 1, username: { $ifNull: ['$user.username', '???'] } } }
+    ]).allowDiskUse(true);
+
+    // Blackjack leaderboard
+    const blackjackTop = await BlackjackGame.aggregate([
+      { $match: { mainPayout: { $gt: 0 } } },
+      {
+        $addFields: {
+          multiplier: { $cond: [{ $eq: ['$mainBet', 0] }, 0, { $divide: ['$mainPayout', '$mainBet'] }] }
+        }
+      },
+      { $sort: { multiplier: -1 } },
+      { $limit: 10 },
+      {
+        $lookup: {
+          from: 'users',
+          let: { uid: { $toObjectId: '$userId' } },
+          pipeline: [
+            { $match: { $expr: { $eq: ['$_id', '$$uid'] } } },
+            { $project: { username: 1 } }
+          ],
+          as: 'user'
+        }
+      },
+      { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
+      { $project: { win: '$mainPayout', multiplier: 1, username: { $ifNull: ['$user.username', '???'] } } }
+    ]).allowDiskUse(true);
+
+    const jackpot = await Jackpot.findOne({ id: 'global' }).lean();
+
+    const snapshot = {
+      createdAt: new Date(),
+      keno: {
+        count: Array.isArray(kenoTop) ? kenoTop.length : 0,
+        entries: kenoTop || []
+      },
+      plinko: {
+        count: Array.isArray(plinkoTop) ? plinkoTop.length : 0,
+        entries: plinkoTop || []
+      },
+      blackjack: {
+        count: Array.isArray(blackjackTop) ? blackjackTop.length : 0,
+        entries: blackjackTop || []
+      },
+      jackpotAmount: (jackpot && jackpot.amount) ? jackpot.amount : 0,
+      houseTotal: (jackpot && jackpot.houseTotal) ? jackpot.houseTotal : 0
+    };
+
+    const res = await mongoose.connection.db.collection('leaderboard_snapshots').insertOne(snapshot);
+    console.log('Snapshot job: inserted snapshot id', res.insertedId);
+  } catch (err) {
+    console.error('Snapshot job error', err);
+  }
+}
+
+// schedule snapshot to run at next local midnight, then every 24h
+function scheduleDailySnapshot() {
+  const now = new Date();
+  const next = new Date(now);
+  next.setHours(24, 0, 0, 0); // next midnight
+  const msUntilNext = next.getTime() - now.getTime();
+  console.log('Scheduling leaderboard snapshot in', msUntilNext, 'ms');
+  setTimeout(() => {
+    // run once at next midnight, then every 24h
+    snapshotLeaderboardAndJackpot();
+    setInterval(snapshotLeaderboardAndJackpot, 24 * 60 * 60 * 1000);
+  }, msUntilNext);
+}
+
+// start scheduling after a short delay to ensure DB is connected
+setTimeout(() => {
+  try {
+    scheduleDailySnapshot();
+  } catch (e) {
+    console.error('Failed to schedule daily snapshot', e);
+  }
+}, 5000);

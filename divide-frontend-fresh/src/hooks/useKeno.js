@@ -78,22 +78,22 @@ export default function useKeno() {
       try {
         const sClick = new Audio('/sounds/click.wav');
         sClick.preload = 'auto';
-  try { sClick.load(); } catch { /* ignore */ }
+        try { sClick.load(); } catch { /* ignore */ }
         clickAudioRef.current = sClick;
-  } catch { clickAudioRef.current = null; }
+      } catch { clickAudioRef.current = null; }
       try {
         const sBell = new Audio('/sounds/bell.wav');
         sBell.preload = 'auto';
-  try { sBell.load(); } catch { /* ignore */ }
+        try { sBell.load(); } catch { /* ignore */ }
         bellAudioRef.current = sBell;
-  } catch { bellAudioRef.current = null; }
+      } catch { bellAudioRef.current = null; }
       try {
         const sGun = new Audio('/sounds/guncock.wav');
         sGun.preload = 'auto';
-  try { sGun.load(); } catch { /* ignore */ }
+        try { sGun.load(); } catch { /* ignore */ }
         guncockAudioRef.current = sGun;
-  } catch { guncockAudioRef.current = null; }
-  } catch { /* ignore */ }
+      } catch { guncockAudioRef.current = null; }
+    } catch { /* ignore */ }
     return () => {
       // allow GC by removing references
       clickAudioRef.current = null;
@@ -112,10 +112,10 @@ export default function useKeno() {
   }
 
   function playGuncock() {
-      try {
-        if (guncockAudioRef.current) {
-          try { guncockAudioRef.current.currentTime = 0; guncockAudioRef.current.play().catch(() => {}); return; } catch { /* ignore audio playback errors */ }
-        }
+    try {
+      if (guncockAudioRef.current) {
+        try { guncockAudioRef.current.currentTime = 0; guncockAudioRef.current.play().catch(() => { }); return; } catch { /* ignore audio playback errors */ }
+      }
       // fallback to trying common extensions
       const candidates = ['/sounds/guncock.wav', '/sounds/guncock.mp3', '/sounds/guncock'];
       for (const url of candidates) {
@@ -124,11 +124,11 @@ export default function useKeno() {
           a.currentTime = 0;
           const p = a.play();
           if (!p) continue;
-          p.then(() => {}).catch(() => {});
+          p.then(() => { }).catch(() => { });
           return;
-  } catch { /* ignore per-candidate audio failures */ }
+        } catch { /* ignore per-candidate audio failures */ }
       }
-  } catch { /* ignore */ }
+    } catch { /* ignore */ }
   }
 
   // cleanup any active pick timer on unmount
@@ -181,8 +181,8 @@ export default function useKeno() {
     }
     const picks = kenoNums.slice().sort(() => Math.random() - 0.5).slice(0, 10);
     // start with empty selection
-  setPlayerNumbers({});
-  setSelectionOrder([]);
+    setPlayerNumbers({});
+    setSelectionOrder([]);
     let idx = 0;
     pickTimerRef.current = setInterval(() => {
       if (idx >= picks.length) {
@@ -194,12 +194,12 @@ export default function useKeno() {
       // play a small pick/draw sound for each auto-picked number
       try {
         if (clickAudioRef.current) {
-          try { clickAudioRef.current.currentTime = 0; clickAudioRef.current.play().catch(() => {}); }
+          try { clickAudioRef.current.currentTime = 0; clickAudioRef.current.play().catch(() => { }); }
           catch { /* fallback below */ }
         } else {
           const s = new Audio('/sounds/click.wav');
           s.currentTime = 0;
-          s.play().catch(() => {});
+          s.play().catch(() => { });
         }
       } catch {
         // ignore any errors during random pick audio playback
@@ -210,7 +210,7 @@ export default function useKeno() {
         setSelectionOrder((s) => [...s, n]);
       } catch { /* ignore state update errors */ }
       idx += 1;
-  }, 140);
+    }, 140);
   }, []);
 
   const [computeOdds, setComputeOdds] = useState({ spots: 0, multiplier: 0 });
@@ -242,19 +242,19 @@ export default function useKeno() {
       setBalance(Number(data.balance));
       try { if (typeof refreshUser === 'function') await refreshUser(); } catch { /* ignore refreshUser errors */ }
     }
-  setMessage(data.win > 0 ? `You won $${formatCurrency(Number(data.win), 2)}!` : 'No win this round');
+    setMessage(data.win > 0 ? `You won $${formatCurrency(Number(data.win), 2)}!` : 'No win this round');
 
     // play bell only when a monetary win occurred
-      try {
-        if (Number(data.win || 0) > 0) {
-          if (bellAudioRef.current) {
-            try { bellAudioRef.current.currentTime = 0; bellAudioRef.current.play().catch(() => {}); }
-            catch { try { const bell = new Audio('/sounds/bell.wav'); bell.currentTime = 0; bell.play().catch(() => {}); } catch { /* ignore */ } }
-          } else {
-            try { const bell = new Audio('/sounds/bell.wav'); bell.currentTime = 0; bell.play().catch(() => {}); } catch { /* ignore */ }
-          }
+    try {
+      if (Number(data.win || 0) > 0) {
+        if (bellAudioRef.current) {
+          try { bellAudioRef.current.currentTime = 0; bellAudioRef.current.play().catch(() => { }); }
+          catch { try { const bell = new Audio('/sounds/bell.wav'); bell.currentTime = 0; bell.play().catch(() => { }); } catch { /* ignore */ } }
+        } else {
+          try { const bell = new Audio('/sounds/bell.wav'); bell.currentTime = 0; bell.play().catch(() => { }); } catch { /* ignore */ }
         }
-  } catch { /* ignore */ }
+      }
+    } catch { /* ignore */ }
 
     const mult = Number(data.multiplier || 0);
     if (mult > 0) {
@@ -282,7 +282,7 @@ export default function useKeno() {
             }
           } catch (e) { console.error('[KENO] error resolving round promise', e); }
           roundCompleteResolveRef.current = null;
-  }, 450);
+        }, 450);
       } else {
         // popup shown and waiting for user; resolve immediately to let caller know server result applied
         try {
@@ -335,7 +335,7 @@ export default function useKeno() {
 
     // standard animated flow continues below
 
-  // ensure animation mode (not instant reveal)
+    // ensure animation mode (not instant reveal)
     // if a previous result is still pending (diamonds shown), clear it and start new round
     if (pendingResult) {
       setPendingResult(null);
@@ -363,10 +363,21 @@ export default function useKeno() {
       if (prevBalance < betAmount) { playGuncock(); setMessage('Insufficient balance'); return; }
       setBalance(Number((prevBalance - betAmount).toFixed(2)));
     }
-  // mark request in-flight synchronously to avoid double submissions
-  inFlightRef.current = true;
+    // mark request in-flight synchronously to avoid double submissions
+    inFlightRef.current = true;
     setIsDrawing(true);
     setMessage('Drawing...');
+
+    // Safety timeout: if reveal doesn't complete within 30 seconds, unlock
+    const safetyTimeout = setTimeout(() => {
+      if (inFlightRef.current) {
+        console.warn('[KENO] Safety timeout: clearing inFlight lock after 30s');
+        inFlightRef.current = false;
+        setIsDrawing(false);
+        setMessage('Round timed out - please try again');
+      }
+    }, 30000);
+
     // prepare idempotency params outside the try so retry can reuse them
     const clientSeedToUse = getClientSeed();
     const currentNonce = nonceRef.current;
@@ -374,12 +385,15 @@ export default function useKeno() {
     try {
       const body = { betAmount: Number(betAmount), playerNumbers: picks, clientSeed: clientSeedToUse, nonce: currentNonce, risk };
       const data = await api.post('/keno/play', body);
+      console.log('[KENO] API response received:', data);
       if (!data || typeof data.drawnNumbers === 'undefined') {
         setMessage(data?.error || 'Play failed');
         // restore optimistic balance
         setBalance(prevBalance);
         // clear drawing flag since this round did not start properly
         setIsDrawing(false);
+        inFlightRef.current = false;
+        clearTimeout(safetyTimeout);
         return;
       }
       // Prefer authoritative server-provided 'balanceAfterBet' for UI hold state
@@ -387,16 +401,16 @@ export default function useKeno() {
         if (typeof data.balanceAfterBet !== 'undefined') {
           setBalance(Number(data.balanceAfterBet));
         }
-  } catch { /* ignore */ }
-  // store server result but don't apply payout yet — wait for animations to finish
-  // Normalize drawnNumbers and matches to numbers to avoid string/number mismatches
-  const normDrawn = Array.isArray(data.drawnNumbers) ? data.drawnNumbers.map(Number) : [];
-  const normMatches = Array.isArray(data.matches) ? data.matches.map(Number) : [];
-  const pending = { ...data, drawnNumbers: normDrawn, matches: normMatches, request: body };
+      } catch { /* ignore */ }
+      // store server result but don't apply payout yet — wait for animations to finish
+      // Normalize drawnNumbers and matches to numbers to avoid string/number mismatches
+      const normDrawn = Array.isArray(data.drawnNumbers) ? data.drawnNumbers.map(Number) : [];
+      const normMatches = Array.isArray(data.matches) ? data.matches.map(Number) : [];
+      const pending = { ...data, drawnNumbers: normDrawn, matches: normMatches, request: body };
       // DEBUG: log server result and client picks to help diagnose mismatch issues
       try {
         console.debug('[KENO] play response', { picks, drawnNumbers: normDrawn, matches: normMatches, nonce: currentNonce });
-  } catch { /* ignore */ }
+      } catch { /* ignore */ }
       setPendingResult(pending);
       setDrawnNumbers(normDrawn);
       setMatches(normMatches);
@@ -414,9 +428,12 @@ export default function useKeno() {
         persistNonceValue(nonceRef.current);
       } catch { /* ignore nonce persistence errors */ }
       // do not update balance or show win now — will apply after reveal completes
+      // Clear safety timeout since we got a valid response
+      clearTimeout(safetyTimeout);
     } catch (err) {
       console.error('keno play error', err);
-      setMessage('Server error — retrying');
+      const errorMsg = err?.error || err?.message || 'Server error';
+      setMessage(errorMsg);
       // Retry once idempotently to see if server processed the request
       try {
         const retryBody = { betAmount: Number(betAmount), playerNumbers: picks, clientSeed: clientSeedToUse, nonce: currentNonce, risk };
@@ -458,7 +475,7 @@ export default function useKeno() {
     // keepDrawn should be true for manual, non-instant plays (so results remain
     // visible on the grid until the player starts a new round). When autoplay or
     // instant (lightning) mode is active, we allow auto-close/clearing as before.
-  const keepDrawn = !shouldAutoClose && !autoPlay;
+    const keepDrawn = !shouldAutoClose && !autoPlay;
     await applyServerResult(pendingResult, { autoClosePopup: shouldAutoClose, keepDrawn });
     // reset the auto-close flag after handling so subsequent manual rounds behave normally
     autoCloseNextRef.current = false;
@@ -523,7 +540,8 @@ export default function useKeno() {
     // If finite rounds, reserve total funds up-front and skip per-round optimistic deductions
     if (!isUnlimited) {
       const totalReserve = Number((betAmount * roundsCount).toFixed(2));
-      if (balance < totalReserve) { setMessage('Insufficient balance for autoplay');
+      if (balance < totalReserve) {
+        setMessage('Insufficient balance for autoplay');
         // revert running flags
         setAutoPlay(false); setAutoRunning(false); setAutoRemaining(0);
         return;
@@ -560,7 +578,7 @@ export default function useKeno() {
         });
 
         // small pause between rounds
-  await new Promise((r) => setTimeout(r, 300));
+        await new Promise((r) => setTimeout(r, 300));
       }
     } else {
       for (let i = 0; i < roundsCount; i++) {
@@ -576,7 +594,7 @@ export default function useKeno() {
           });
         });
         setAutoRemaining((r) => Math.max(0, r - 1));
-  await new Promise((r) => setTimeout(r, 300));
+        await new Promise((r) => setTimeout(r, 300));
       }
     }
 
@@ -622,10 +640,10 @@ export default function useKeno() {
     popupData,
     onRevealComplete,
     closeResultPopup,
-  // expose pending server result for provably-fair UI or debugging
-  pendingResult,
+    // expose pending server result for provably-fair UI or debugging
+    pendingResult,
     // instant/autoplay
-  // instant-play removed
+    // instant-play removed
     startAutoPlay,
     stopAutoPlay,
     autoPlay,
