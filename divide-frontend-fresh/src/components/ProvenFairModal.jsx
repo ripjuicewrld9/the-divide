@@ -4,12 +4,38 @@ export default function ProvenFairModal({ isOpen, onClose, game, gameData }) {
   const [verificationResult, setVerificationResult] = useState(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [tab, setTab] = useState('verify');
+  const [ruggedReveals, setRuggedReveals] = useState(null);
 
   // Support both 'game' and 'gameData' props for compatibility
   const actualGameData = game || gameData;
 
+  // Fetch revealed seeds for Rugged game
+  const fetchRuggedReveals = useCallback(async () => {
+    if (actualGameData?.game !== 'Rugged') return;
+    
+    setIsVerifying(true);
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/rugged/reveal`
+      );
+      const data = await response.json();
+      setRuggedReveals(data);
+    } catch (err) {
+      console.error('Error fetching rugged reveals:', err);
+      setRuggedReveals({ error: 'Failed to fetch provably fair data' });
+    } finally {
+      setIsVerifying(false);
+    }
+  }, [actualGameData]);
+
   const verifyGame = useCallback(async () => {
     if (!actualGameData) return;
+    
+    // Special handling for Rugged game
+    if (actualGameData.game === 'Rugged') {
+      fetchRuggedReveals();
+      return;
+    }
     
     setIsVerifying(true);
     try {
@@ -93,7 +119,105 @@ export default function ProvenFairModal({ isOpen, onClose, game, gameData }) {
             <div>
               {isVerifying ? (
                 <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
-                  Verifying game fairness...
+                  Loading provably fair data...
+                </div>
+              ) : actualGameData?.game === 'Rugged' && ruggedReveals ? (
+                /* Rugged Game Revealed Seeds */
+                <div>
+                  {ruggedReveals.error ? (
+                    <div style={{
+                      padding: '20px',
+                      background: 'rgba(239, 68, 68, 0.1)',
+                      border: '1px solid rgba(239, 68, 68, 0.3)',
+                      borderRadius: '8px',
+                      color: '#ef4444'
+                    }}>
+                      {ruggedReveals.error}
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                      {/* Current Committed Seed */}
+                      {ruggedReveals.serverSeedHashed && (
+                        <div style={{
+                          padding: '16px',
+                          background: 'rgba(0, 255, 255, 0.05)',
+                          borderRadius: '8px',
+                          border: '1px solid rgba(0, 255, 255, 0.1)'
+                        }}>
+                          <div style={{ fontSize: '14px', color: '#9ca3af', marginBottom: '8px', fontWeight: 600 }}>
+                            Current Committed Server Seed Hash (SHA-256)
+                          </div>
+                          <div style={{
+                            padding: '12px',
+                            background: 'rgba(0, 0, 0, 0.3)',
+                            borderRadius: '6px',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            fontSize: '12px',
+                            fontFamily: 'monospace',
+                            color: '#00ffff',
+                            wordBreak: 'break-all'
+                          }}>
+                            {ruggedReveals.serverSeedHashed}
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '8px' }}>
+                            This seed will be revealed after the next rug pull
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Recent Revealed Seeds */}
+                      {ruggedReveals.revealed && ruggedReveals.revealed.length > 0 ? (
+                        <div>
+                          <div style={{ fontSize: '16px', fontWeight: 600, color: '#fff', marginBottom: '12px' }}>
+                            Recent Provably Fair Rug Pulls ({ruggedReveals.revealed.length})
+                          </div>
+                          {ruggedReveals.revealed.slice().reverse().map((reveal, index) => (
+                            <div key={index} style={{
+                              padding: '16px',
+                              background: 'rgba(0, 0, 0, 0.2)',
+                              borderRadius: '8px',
+                              border: '1px solid rgba(255, 255, 255, 0.1)',
+                              marginBottom: '12px'
+                            }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                <div style={{ fontSize: '12px', fontWeight: 600, color: '#ffd700' }}>
+                                  Rug Pull #{ruggedReveals.revealed.length - index}
+                                </div>
+                                <div style={{ fontSize: '11px', color: '#9ca3af' }}>
+                                  {new Date(reveal.revealedAt).toLocaleString()}
+                                </div>
+                              </div>
+                              <div style={{ marginBottom: '8px' }}>
+                                <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '4px' }}>
+                                  Nonce: {reveal.nonce}
+                                </div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '4px' }}>
+                                  Revealed Seed:
+                                </div>
+                                <div style={{
+                                  padding: '8px',
+                                  background: 'rgba(0, 0, 0, 0.3)',
+                                  borderRadius: '4px',
+                                  fontSize: '11px',
+                                  fontFamily: 'monospace',
+                                  color: '#00ffff',
+                                  wordBreak: 'break-all'
+                                }}>
+                                  {reveal.seed}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
+                          No rug pulls have occurred yet
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ) : verificationResult?.error ? (
                 <div style={{

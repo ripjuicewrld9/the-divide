@@ -110,8 +110,39 @@ export const BlackjackVerification: React.FC<BlackjackVerificationProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="modal screenOn" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 900, width: '90%', maxHeight: '90vh', overflow: 'auto' }}>
+    <div 
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: '100vw',
+        height: '100vh',
+        background: 'rgba(0, 0, 0, 0.85)',
+        backdropFilter: 'blur(4px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 9999,
+        margin: 0,
+        padding: 0
+      }}
+      onClick={onClose}
+    >
+      <div 
+        onClick={(e) => e.stopPropagation()} 
+        style={{ 
+          maxWidth: 900, 
+          width: '90%', 
+          maxHeight: '90vh', 
+          overflow: 'auto',
+          background: '#1a1a1a',
+          borderRadius: 12,
+          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.5)',
+          border: '1px solid rgba(0, 255, 255, 0.2)'
+        }}
+      >
         <div style={{ padding: 20 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <h3 style={{ marginTop: 0 }}>Blackjack - Provably Fair</h3>

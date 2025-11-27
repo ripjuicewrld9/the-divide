@@ -9,6 +9,7 @@ import { binPayouts, type RowCount, autoBetIntervalMs } from '../lib/constants';
 import Sidebar from './Sidebar';
 import BinsRow from './BinsRow';
 import LastWins from './LastWins';
+import { PlinkoLiveChart } from './PlinkoLiveChart';
 import LiveGamesFeed from '../../../components/LiveGamesFeed';
 import PlinkoLeaderboard from '../../../components/PlinkoLeaderboard';
 import MobileGameHeader from '../../../components/MobileGameHeader';
@@ -477,40 +478,7 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({ onOpenChat }) => {
 
       {/* Live Chart - rendered via Portal */}
       {showLiveChart && createPortal(
-        <div
-          style={{
-            position: 'fixed',
-            left: '40px',
-            top: '120px',
-            zIndex: 2000,
-            width: '420px',
-            background: 'linear-gradient(135deg, #071021, #0b1420)',
-            border: '1px solid rgba(148, 0, 0, 0.08)',
-            padding: '16px',
-            borderRadius: '8px',
-            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.6)',
-            color: '#9fe'
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <div style={{ fontWeight: 700 }}>Live Chart</div>
-            <button
-              onClick={() => setShowLiveChart(false)}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: '#fff',
-                cursor: 'pointer',
-                fontSize: '1.2em'
-              }}
-            >
-              ×
-            </button>
-          </div>
-          <div style={{ textAlign: 'center', padding: '24px', color: '#999' }}>
-            Live chart coming soon...
-          </div>
-        </div>,
+        <PlinkoLiveChart onClose={() => setShowLiveChart(false)} />,
         document.body
       )}
     </>

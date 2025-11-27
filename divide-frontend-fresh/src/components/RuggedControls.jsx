@@ -4,7 +4,7 @@ import Countdown from './Countdown';
 
 // Rugged Controls for PURE RNG crash game.
 // Keeps visual layout but changes semantics: buy USD into pool, sell to cash out your positions.
-export default function RuggedControls({ pool = 0, onBuy, onSellAll, positions = [], onRefresh, balance = 0, rugged = false, myMultiplier = 1, myCashout = 0, debugEnabled = false, debugInfo = null, onShowFairness, hasRngData = false }) {
+export default function RuggedControls({ pool = 0, onBuy, onSellAll, positions = [], onRefresh, balance = 0, rugged = false, myMultiplier = 1, myCashout = 0, debugEnabled = false, debugInfo = null, onShowFairness }) {
   const [mode, setMode] = useState('buy'); // 'buy' or 'sell'
   // value: when buy -> USD amount; when sell -> percent (0-100)
   const [value, setValue] = useState(1);
@@ -174,8 +174,8 @@ export default function RuggedControls({ pool = 0, onBuy, onSellAll, positions =
         </div>
       </div>
 
-      {/* Fairness button - only show when there's RNG rug pull data */}
-      {onShowFairness && hasRngData && (
+      {/* Fairness button - always visible */}
+      {onShowFairness && (
         <div style={{ display: 'flex', alignItems: 'center', marginLeft: 12 }}>
           <button
             onClick={(e) => { e.stopPropagation(); onShowFairness(); }}

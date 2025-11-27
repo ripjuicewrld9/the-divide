@@ -96,6 +96,42 @@ async function adminOnly(req, res, next) {
   }
 }
 
+// Helper function to update house statistics for a game
+// game: 'plinko', 'blackjack', 'keno', 'rugged', 'mines', 'divides'
+// betAmount: amount wagered in cents
+// payout: amount paid out in cents (0 if player lost)
+async function updateHouseStats(game, betAmount, payout) {
+  try {
+    const jackpotFee = Math.floor(betAmount * 0.01); // 1% to jackpot
+    const houseNet = betAmount - payout - jackpotFee; // Remaining 99% minus payout
+
+    await House.findOneAndUpdate(
+      { id: 'global' },
+      {
+        $inc: {
+          [`${game}.totalBets`]: betAmount,
+          [`${game}.totalPayouts`]: payout,
+          [`${game}.jackpotFees`]: jackpotFee,
+          [`${game}.houseProfit`]: houseNet,
+          houseTotal: houseNet
+        }
+      },
+      { upsert: true }
+    );
+
+    // Add jackpot fee to global jackpot
+    await Jackpot.findOneAndUpdate(
+      { id: 'global' },
+      { $inc: { amount: jackpotFee } },
+      { upsert: true }
+    );
+
+    console.log(`[House Stats] ${game}: bet=${betAmount}, payout=${payout}, jackpotFee=${jackpotFee}, houseNet=${houseNet}`);
+  } catch (err) {
+    console.error(`Failed to update house stats for ${game}:`, err);
+  }
+}
+
 // Simple in-memory play rate limiter for Keno to prevent abuse during dev.
 // Keeps recent timestamps per user and allows up to `max` plays per windowMs.
 const _playRateMap = new Map();
@@ -400,6 +436,10 @@ app.post('/divides/vote', auth, async (req, res) => {
       const boostCents = toCents(boostAmount);
       if (user.balance < boostCents) return res.status(400).json({ error: 'Insufficient balance' });
       user.balance = Math.max(0, user.balance - boostCents);
+      // Reduce wager requirement (1x playthrough)
+      if (user.wagerRequirement > 0) {
+        user.wagerRequirement = Math.max(0, user.wagerRequirement - boostCents);
+      }
       voteCount = boostAmount; // votes are counted in whole-dollar units as before
       isFree = false;
     }
@@ -729,6 +769,10 @@ app.post('/Divides/create-user', auth, async (req, res) => {
 
     // Deduct bet from user balance
     user.balance = user.balance - betCents;
+    // Reduce wager requirement (1x playthrough)
+    if (user.wagerRequirement > 0) {
+      user.wagerRequirement = Math.max(0, user.wagerRequirement - betCents);
+    }
     await user.save();
 
     // compute endTime from durationValue/unit
@@ -1097,6 +1141,11 @@ app.post('/keno/play', auth, async (req, res) => {
     const newBalanceCents = user.balance - betCents + winCents;
     user.balance = newBalanceCents;
 
+    // Reduce wager requirement (1x playthrough)
+    if (user.wagerRequirement > 0) {
+      user.wagerRequirement = Math.max(0, user.wagerRequirement - betCents);
+    }
+
     // Update user statistics
     user.totalBets = (user.totalBets || 0) + 1;
     user.wagered = (user.wagered || 0) + betCents;
@@ -1139,6 +1188,9 @@ app.post('/keno/play', auth, async (req, res) => {
     });
 
     await round.save();
+
+    // Update house stats for finance tracking
+    await updateHouseStats('keno', betCents, winCents);
 
     // Create ledger entry
     try {
@@ -1831,13 +1883,15 @@ try {
 // Register Plinko routes
 try {
   console.log('startup: about to register plinko routes');
-  registerPlinko(app, io, { auth });
+  registerPlinko(app, io, { auth, updateHouseStats });
   console.log('startup: registerPlinko returned');
 } catch (e) { console.error('Failed to register plinko routes', e); }
 
 // Register Blackjack routes
 try {
   console.log('startup: about to register blackjack routes');
+  // Make updateHouseStats available to router via app.locals
+  app.locals.updateHouseStats = updateHouseStats;
   app.use('/api/blackjack', auth, blackjackRoutes);
   // Also mount without /api prefix for consistency with Plinko/Keno
   app.use('/blackjack', auth, blackjackRoutes);
@@ -2243,164 +2297,60 @@ app.post('/jackpot/reset', auth, adminOnly, async (req, res) => {
 // Admin finance summary: aggregates Keno and Divide financials (admins only)
 app.get('/admin/finance', auth, adminOnly, async (req, res) => {
   try {
-    // Keno aggregates with P&L lines
-    const kenoAgg = await KenoRound.aggregate([
-      {
-        $group: {
-          _id: null,
-          rounds: { $sum: 1 },
-          totalBets: { $sum: { $ifNull: ['$betAmount', 0] } },
-          totalWins: { $sum: { $ifNull: ['$win', 0] } },
-          totalHouseCuts: { $sum: { $ifNull: ['$houseCut', 0] } },
-          totalJackpotCuts: { $sum: { $ifNull: ['$jackpotCut', 0] } }
-        }
-      },
-      {
-        $project: {
-          _id: 0,
-          rounds: 1,
-          totalBets: 1,
-          totalWins: 1,
-          totalHouseCuts: 1,
-          totalJackpotCuts: 1,
-          GGR: { $subtract: ['$totalBets', '$totalWins'] },
-          prizePoolRemaining: {
-            $subtract: [
-              { $subtract: ['$totalBets', { $add: ['$totalHouseCuts', '$totalJackpotCuts'] }] },
-              '$totalWins'
-            ]
-          },
-          companyRevenue: {
-            $add: ['$totalHouseCuts', {
-              $subtract: [
-                { $subtract: ['$totalBets', { $add: ['$totalHouseCuts', '$totalJackpotCuts'] }] },
-                '$totalWins'
-              ]
-            }]
-          }
-        }
-      }
-    ]).allowDiskUse(true);
-    const keno = (kenoAgg && kenoAgg[0]) ? kenoAgg[0] : { rounds: 0, totalBets: 0, totalWins: 0, totalHouseCuts: 0, totalJackpotCuts: 0, GGR: 0, prizePoolRemaining: 0, companyRevenue: 0 };
-
-    // Divides aggregates with estimated P&L lines (based on pot distribution rules)
-    // endDivideById uses: houseCut = round(pot * 0.05,2), jackpotAmount = round(pot * 0.05,2), winnerPot = round(pot * 0.90,2)
-    const dividesAgg = await Divide.aggregate([
-      {
-        $group: {
-          _id: null,
-          rounds: { $sum: 1 },
-          totalPot: { $sum: { $ifNull: ['$pot', 0] } },
-          countActive: { $sum: { $cond: [{ $eq: ['$status', 'active'] }, 1, 0] } },
-          countEnded: { $sum: { $cond: [{ $eq: ['$status', 'ended'] }, 1, 0] } },
-          totalPaidOut: { $sum: { $ifNull: ['$paidOut', { $round: [{ $multiply: ['$pot', 0.90] }, 2] }] } },
-          totalHouseCuts: { $sum: { $ifNull: ['$houseCut', { $round: [{ $multiply: ['$pot', 0.05] }, 2] }] } },
-          totalJackpotCuts: { $sum: { $ifNull: ['$jackpotCut', { $round: [{ $multiply: ['$pot', 0.05] }, 2] }] } }
-        }
-      },
-      {
-        $project: {
-          _id: 0,
-          rounds: 1,
-          totalPot: 1,
-          countActive: 1,
-          countEnded: 1,
-          totalHouseCuts: 1,
-          totalJackpotCuts: 1,
-          totalPaidOut: 1,
-          GGR: { $subtract: ['$totalPot', '$totalPaidOut'] },
-          prizePoolRemaining: {
-            $subtract: [
-              { $subtract: ['$totalPot', { $add: ['$totalHouseCuts', '$totalJackpotCuts'] }] },
-              '$totalPaidOut'
-            ]
-          }
-        }
-      }
-    ]).allowDiskUse(true);
-    const dividesSummary = (dividesAgg && dividesAgg[0]) ? dividesAgg[0] : { rounds: 0, totalPot: 0, countActive: 0, countEnded: 0, totalHouseCuts: 0, totalJackpotCuts: 0, totalPaidOut: 0, GGR: 0, prizePoolRemaining: 0 };
-
-    // Ensure money-in / money-out for Divides is computed from Ledger so totals
-    // remain accurate even if Divide documents are deleted. Ledger is the
-    // authoritative audit trail for money movements.
-    try {
-      const betAgg = await Ledger.aggregate([
-        { $match: { type: 'divides_bet' } },
-        { $group: { _id: null, totalBets: { $sum: '$amount' } } }
-      ]).allowDiskUse(true);
-      const payoutAgg = await Ledger.aggregate([
-        { $match: { type: 'divides_payout' } },
-        { $group: { _id: null, totalPayouts: { $sum: '$amount' } } }
-      ]).allowDiskUse(true);
-      const houseCutsAgg = await Ledger.aggregate([
-        { $match: { type: 'divides_house_cut' } },
-        { $group: { _id: null, totalHouseCuts: { $sum: '$amount' } } }
-      ]).allowDiskUse(true);
-      const jackpotCutsAgg = await Ledger.aggregate([
-        { $match: { type: 'divides_jackpot_in' } },
-        { $group: { _id: null, totalJackpotCuts: { $sum: '$amount' } } }
-      ]).allowDiskUse(true);
-
-      const ledgerBets = (betAgg && betAgg[0] && betAgg[0].totalBets) ? betAgg[0].totalBets : 0;
-      const ledgerPayouts = (payoutAgg && payoutAgg[0] && payoutAgg[0].totalPayouts) ? payoutAgg[0].totalPayouts : 0; // stored as negative values
-      const ledgerHouseCuts = (houseCutsAgg && houseCutsAgg[0] && houseCutsAgg[0].totalHouseCuts) ? houseCutsAgg[0].totalHouseCuts : 0;
-      const ledgerJackpotCuts = (jackpotCutsAgg && jackpotCutsAgg[0] && jackpotCutsAgg[0].totalJackpotCuts) ? jackpotCutsAgg[0].totalJackpotCuts : 0;
-
-      // Replace the divides monetary totals with ledger-backed values
-      dividesSummary.totalPot = Number(ledgerBets || dividesSummary.totalPot);
-      // divides_payout ledger entries are stored as negative amounts; take absolute for totalPaidOut
-      dividesSummary.totalPaidOut = Number(Math.abs(Number(ledgerPayouts)) || dividesSummary.totalPaidOut);
-      dividesSummary.totalHouseCuts = Number(ledgerHouseCuts || dividesSummary.totalHouseCuts);
-      dividesSummary.totalJackpotCuts = Number(ledgerJackpotCuts || dividesSummary.totalJackpotCuts);
-      // recompute derived fields
-      dividesSummary.GGR = Number((dividesSummary.totalPot - dividesSummary.totalPaidOut).toFixed(2));
-      dividesSummary.prizePoolRemaining = Number((dividesSummary.totalPot - (dividesSummary.totalHouseCuts + dividesSummary.totalJackpotCuts) - dividesSummary.totalPaidOut).toFixed(2));
-    } catch (e) {
-      console.error('Failed to compute divides totals from ledger, falling back to document aggregates', e);
+    // Get current house and jackpot data
+    const house = await House.findOne({ id: 'global' }).lean();
+    const jackpot = await Jackpot.findOne({ id: 'global' }).lean();
+    
+    if (!house) {
+      return res.status(500).json({ error: 'House document not found' });
     }
 
-    // current global totals from jackpot/house docs
-    const jackpot = await Jackpot.findOne({ id: 'global' }).lean();
-    const house = await House.findOne({ id: 'global' }).lean();
-    const kenoReserveDoc = await KenoReserve.findOne({ id: 'global' }).lean();
-    // overall summary
-    const overall = {
-      totalHouseAccrued: (keno.totalHouseCuts || 0) + (dividesSummary.totalHouseCuts || 0) || 0,
-      totalJackpotAccrued: (keno.totalJackpotCuts || 0) + (dividesSummary.totalJackpotCuts || 0) || 0,
-      totalPayouts: (keno.totalWins || 0) + (dividesSummary.totalPaidOut || 0) || 0,
-      totalHandle: (keno.totalBets || 0) + (dividesSummary.totalPot || 0) || 0,
-      totalGGR: (keno.GGR || 0) + (dividesSummary.GGR || 0) || 0
-    };
-
-    // TokenWallets removed; rely on Ledger / RuggedState / Jackpot for summaries.
-
-    // Simplified money-in / money-out report. House and jackpot totals are
-    // returned under `global` and should be displayed separately by the UI.
-    res.json({
+    // Build per-game stats from house document (amounts in cents, convert to dollars)
+    const games = {
+      plinko: {
+        handle: (house.plinko?.totalBets || 0) / 100,
+        payouts: (house.plinko?.totalPayouts || 0) / 100,
+        jackpotFee: (house.plinko?.jackpotFees || 0) / 100,
+        houseProfit: (house.plinko?.houseProfit || 0) / 100
+      },
+      blackjack: {
+        handle: (house.blackjack?.totalBets || 0) / 100,
+        payouts: (house.blackjack?.totalPayouts || 0) / 100,
+        jackpotFee: (house.blackjack?.jackpotFees || 0) / 100,
+        houseProfit: (house.blackjack?.houseProfit || 0) / 100
+      },
       keno: {
-        rounds: keno.rounds || 0,
-        moneyIn: Number((keno.totalBets || 0)),      // total handle
-        moneyOut: Number((keno.totalWins || 0)),     // payouts to players (excludes jackpot fund movements)
-        net: Number(((keno.totalBets || 0) - (keno.totalWins || 0)))
+        handle: (house.keno?.totalBets || 0) / 100,
+        payouts: (house.keno?.totalPayouts || 0) / 100,
+        jackpotFee: (house.keno?.jackpotFees || 0) / 100,
+        houseProfit: (house.keno?.houseProfit || 0) / 100
+      },
+      rugged: {
+        handle: (house.rugged?.totalBets || 0) / 100,
+        payouts: (house.rugged?.totalPayouts || 0) / 100,
+        jackpotFee: (house.rugged?.jackpotFees || 0) / 100,
+        houseProfit: (house.rugged?.houseProfit || 0) / 100
+      },
+      mines: {
+        handle: (house.mines?.totalBets || 0) / 100,
+        payouts: (house.mines?.totalPayouts || 0) / 100,
+        jackpotFee: (house.mines?.jackpotFees || 0) / 100,
+        houseProfit: (house.mines?.houseProfit || 0) / 100
       },
       divides: {
-        rounds: dividesSummary.rounds || 0,
-        moneyIn: Number((dividesSummary.totalPot || 0)),
-        moneyOut: Number((dividesSummary.totalPaidOut || 0)),
-        net: Number(((dividesSummary.totalPot || 0) - (dividesSummary.totalPaidOut || 0)))
-      },
-      global: {
-        jackpotAmount: jackpot?.amount || 0,
-        houseTotal: house?.houseTotal || 0,
-        kenoReserve: kenoReserveDoc?.amount || 0
-      },
-      overall: {
-        moneyIn: Number((overall.totalHandle || 0)),
-        moneyOut: Number((overall.totalPayouts || 0)),
-        net: Number(((overall.totalHandle || 0) - (overall.totalPayouts || 0)))
+        handle: (house.divides?.totalBets || 0) / 100,
+        payouts: (house.divides?.totalPayouts || 0) / 100,
+        jackpotFee: (house.divides?.jackpotFees || 0) / 100,
+        houseProfit: (house.divides?.houseProfit || 0) / 100
       }
-      ,
-      wallets: []
+    };
+
+    res.json({
+      global: {
+        jackpotAmount: (jackpot?.amount || 0) / 100,
+        houseTotal: (house.houseTotal || 0) / 100
+      },
+      games
     });
   } catch (err) {
     console.error('/admin/finance error', err);
@@ -2408,56 +2358,7 @@ app.get('/admin/finance', auth, adminOnly, async (req, res) => {
   }
 });
 
-// Admin: force-restart the Rugged market immediately (clears rugged state and cooldown)
-app.post('/admin/rugged/restart', auth, adminOnly, async (req, res) => {
-  try {
-    const doc = await Rugged.findOne({ id: 'global' });
-    if (!doc) return res.status(404).json({ error: 'Rugged not initialized' });
-    doc.rugged = false;
-    doc.ruggedCooldownUntil = null;
-    doc.noRugUntil = new Date(Date.now() + ((doc.noRugSeconds || 300) * 1000));
-    doc.lastPrice = doc.lastPrice && doc.lastPrice > 0 ? doc.lastPrice : 0.0001;
-    // clear price history and circulating supply so clients start fresh
-    doc.priceHistory = [];
-    doc.circulatingSupply = 0;
-    // persist initial changes
-    await doc.save();
-    // Burn / reset total supply and ensure wallets reflect the post-restart state:
-    // - WalletDC should hold 75,000,000 DC
-    // - Jackpot (Jackpot model) should hold 25,000,000 DC
-    try {
-      // Legacy token wallet records are no longer used. Set canonical
-      // Jackpot and Rugged document fields. Ledger entries are created for audit.
-      const treasury = Math.floor(RUGGED_TOTAL_SUPPLY * 0.75);
-      const jackpotAmount = RUGGED_TOTAL_SUPPLY - treasury; // remainder (25%) to jackpot
-
-      // Ensure Jackpot document reflects remainder allocated to JackpotDC
-      await Jackpot.findOneAndUpdate({ id: 'global' }, { $set: { amount: jackpotAmount } }, { upsert: true });
-      // record admin action
-      try { await Ledger.create({ type: 'rugged_admin_restart', amount: 0, meta: { treasury, jackpotAmount } }); } catch (e) { console.error('ledger rugged_admin_restart failed', e); }
-
-      // Update Rugged doc canonical supply fields to reflect the reset
-      doc.jackpotSupply = jackpotAmount;
-      doc.circulatingSupply = 0;
-      doc.totalSupply = RUGGED_TOTAL_SUPPLY;
-      doc.priceHistory = [];
-      await doc.save();
-    } catch (e) {
-      console.error('admin rugged restart: failed to reset jackpot/supply', e);
-    }
-    // cancel any scheduled restart
-    try { cancelScheduledRugRestart('global'); } catch (e) { /* ignore */ }
-    // notify clients to reset their charts and state
-    try {
-      io.emit('rugged:restart', { price: doc.lastPrice, rugged: doc.rugged, noRugUntil: doc.noRugUntil });
-    } catch (e) { console.error('emit rugged:restart failed', e); }
-    setImmediate(() => broadcastRugged());
-    res.json({ success: true, msg: 'Rugged market restarted' });
-  } catch (e) {
-    console.error('/admin/rugged/restart error', e);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
+// Admin force restart endpoint removed - incompatible with provably fair system
 
 // Admin: consolidate DC balances from non-canonical token wallets into WalletDC
 // Usage: POST /admin/rugged/consolidate?commit=true  (commit=true to apply, otherwise dry-run)
@@ -2638,6 +2539,11 @@ async function endDivideById(divideId, invokedByUserId = null) {
     try {
       await Jackpot.findOneAndUpdate({ id: 'global' }, { $inc: { amount: jackpotAmount } }, { upsert: true, setDefaultsOnInsert: true });
       await House.findOneAndUpdate({ id: 'global' }, { $inc: { houseTotal: houseCut } }, { upsert: true, setDefaultsOnInsert: true });
+      
+      // Track in finance system: pot is total bet, distributed is payout
+      const potCents = Math.round(divide.pot * 100);
+      const distributedCents = Math.round(distributed * 100);
+      await updateHouseStats('divides', potCents, distributedCents);
     } catch (e) {
       console.error('Failed to update Jackpot totals', e);
     }
@@ -3013,13 +2919,62 @@ app.post("/add-funds", auth, async (req, res) => {
     const amountCents = Math.round(amount * 100);
     user.balance += amountCents;
     user.totalDeposited = (user.totalDeposited || 0) + amountCents;
+    // Add to wager requirement: user must wager this amount 1x before withdrawal
+    user.wagerRequirement = (user.wagerRequirement || 0) + amountCents;
     await user.save();
 
-    console.log(`[ADD FUNDS] User ${user.username} added $${amount}, new balance: $${toDollars(user.balance)}`);
+    console.log(`[ADD FUNDS] User ${user.username} added $${amount}, new balance: $${toDollars(user.balance)}, wagerReq: $${toDollars(user.wagerRequirement)}`);
 
     res.json({ balance: toDollars(user.balance) });
   } catch (err) {
     console.error('[POST /add-funds] error:', err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Withdraw funds (requires 1x playthrough of deposited amount)
+app.post("/api/withdraw", auth, async (req, res) => {
+  try {
+    if (!req.userId) return res.status(401).json({ error: "Not authenticated" });
+
+    const { amount } = req.body;
+    if (typeof amount !== 'number' || amount <= 0) {
+      return res.status(400).json({ error: "Invalid withdrawal amount" });
+    }
+
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const amountCents = Math.round(amount * 100);
+
+    // Check if user has sufficient balance
+    if (user.balance < amountCents) {
+      return res.status(400).json({ error: "Insufficient balance" });
+    }
+
+    // Check wager requirement (1x playthrough)
+    const wagerReq = user.wagerRequirement || 0;
+    if (wagerReq > 0) {
+      return res.status(400).json({ 
+        error: `Must wager $${toDollars(wagerReq)} more before withdrawal`,
+        wagerRequirement: toDollars(wagerReq)
+      });
+    }
+
+    // Process withdrawal
+    user.balance -= amountCents;
+    user.totalWithdrawn = (user.totalWithdrawn || 0) + amountCents;
+    await user.save();
+
+    console.log(`[WITHDRAW] User ${user.username} withdrew $${amount}, new balance: $${toDollars(user.balance)}`);
+
+    res.json({ 
+      success: true, 
+      balance: toDollars(user.balance),
+      withdrawn: amount
+    });
+  } catch (err) {
+    console.error('[POST /api/withdraw] error:', err);
     res.status(500).json({ error: "Server error" });
   }
 });

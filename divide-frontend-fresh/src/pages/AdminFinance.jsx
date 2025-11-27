@@ -38,23 +38,12 @@ export default function AdminFinance() {
 
   if (loading) return <div className="p-8 text-white">Loading...</div>;
   if (error) return <div className="p-8 text-red-400">Error: {error}</div>;
+  if (!data) return <div className="p-8 text-white">No data available</div>;
 
-  // Mock data fallback if backend returns empty/old structure
-  const financeData = data?.games ? data : {
-    global: {
-      jackpotAmount: 12450.50,
-      houseTotal: 54320.00
-    },
-    games: {
-      plinko: { handle: 15000, payouts: 14200, jackpotFee: 150, houseProfit: 650 },
-      blackjack: { handle: 8000, payouts: 7800, jackpotFee: 80, houseProfit: 120 },
-      keno: { handle: 5000, payouts: 4500, jackpotFee: 50, houseProfit: 450 },
-      rugged: { handle: 2000, payouts: 1800, jackpotFee: 20, houseProfit: 180 },
-      mines: { handle: 3500, payouts: 3100, jackpotFee: 35, houseProfit: 365 }
-    }
-  };
-
-  const { global, games } = financeData;
+  const { global, games } = data;
+  
+  // Null safety: ensure games object exists and is not null
+  const safeGames = games && typeof games === 'object' ? games : {};
 
   return (
     <div className="min-h-screen bg-[#0b0b0b] p-8 text-white">
@@ -127,7 +116,7 @@ export default function AdminFinance() {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {Object.entries(games).map(([gameKey, stats]) => (
+              {Object.entries(safeGames).map(([gameKey, stats]) => (
                 <tr key={gameKey} className="hover:bg-white/5 transition-colors">
                   <td className="px-6 py-4 font-bold capitalize">{gameKey}</td>
                   <td className="px-6 py-4 text-right font-mono text-gray-300">
@@ -149,16 +138,16 @@ export default function AdminFinance() {
               <tr>
                 <td className="px-6 py-4">TOTAL</td>
                 <td className="px-6 py-4 text-right text-gray-300">
-                  ${formatCurrency(Object.values(games).reduce((acc, g) => acc + g.handle, 0), 2)}
+                  ${formatCurrency(Object.values(safeGames).reduce((acc, g) => acc + (g?.handle || 0), 0), 2)}
                 </td>
                 <td className="px-6 py-4 text-right text-red-400">
-                  -${formatCurrency(Object.values(games).reduce((acc, g) => acc + g.payouts, 0), 2)}
+                  -${formatCurrency(Object.values(safeGames).reduce((acc, g) => acc + (g?.payouts || 0), 0), 2)}
                 </td>
                 <td className="px-6 py-4 text-right text-yellow-400">
-                  ${formatCurrency(Object.values(games).reduce((acc, g) => acc + g.jackpotFee, 0), 2)}
+                  ${formatCurrency(Object.values(safeGames).reduce((acc, g) => acc + (g?.jackpotFee || 0), 0), 2)}
                 </td>
                 <td className="px-6 py-4 text-right text-emerald-400">
-                  ${formatCurrency(Object.values(games).reduce((acc, g) => acc + g.houseProfit, 0), 2)}
+                  ${formatCurrency(Object.values(safeGames).reduce((acc, g) => acc + (g?.houseProfit || 0), 0), 2)}
                 </td>
               </tr>
             </tfoot>
@@ -167,12 +156,13 @@ export default function AdminFinance() {
       </div>
 
       <div className="mt-8 bg-[#151515] border border-white/10 rounded-xl p-6">
-        <h3 className="font-bold text-gray-300 mb-2">Notes</h3>
+        <h3 className="font-bold text-gray-300 mb-2">How It Works</h3>
         <ul className="list-disc list-inside text-sm text-gray-500 space-y-1">
-          <li><strong>Handle:</strong> Total amount wagered by players.</li>
+          <li><strong>Handle:</strong> Total amount wagered by players on each game.</li>
+          <li><strong>Payouts:</strong> Total winnings paid out to players.</li>
           <li><strong>Jackpot Fee:</strong> 1% of every bet is deducted and added to the Global Jackpot Pool.</li>
-          <li><strong>House Profit:</strong> Calculated as <code>Handle - Payouts - Jackpot Fee</code>.</li>
-          <li>Data shown is currently mocked until backend integration is complete.</li>
+          <li><strong>House Profit:</strong> The remaining 99% minus player payouts. Formula: <code>Handle - Payouts - Jackpot Fee</code>.</li>
+          <li>Run <code>node scripts/initialize-house-stats.js</code> to recalculate statistics from existing game data.</li>
         </ul>
       </div>
     </div>

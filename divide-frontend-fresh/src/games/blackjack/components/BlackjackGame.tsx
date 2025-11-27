@@ -504,8 +504,23 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
                         position: 'relative',
                       }}
                     >
-                      {/* Win Overlay centered on the table */}
-                      <WinOverlay amount={winAmount} visible={showWinAnimation} />
+                      {/* Win Animation Overlay */}
+                      <WinOverlay 
+                        amount={winAmount} 
+                        visible={showWinAnimation}
+                        onDismiss={() => setShowWinAnimation(false)}
+                      />
+                      
+                      {/* Streak Indicator - Bottom Left Corner */}
+                      <div style={{ position: 'absolute', left: '12px', bottom: '12px', zIndex: 10 }}>
+                        <AnimatePresence>
+                          <StreakIndicator
+                            streakCount={gameState.streakCount}
+                            streakType={gameState.streakType}
+                          />
+                        </AnimatePresence>
+                      </div>
+
                       {/* Dealer */}
                       <div className="flex flex-col items-center gap-1">
                         <div className="text-gray-400 text-xs font-semibold uppercase">Dealer</div>
@@ -548,43 +563,74 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
                         </div>
                       </div>
 
-                      {/* Table Center - Insurance Prompt */}
+                      {/* Table Center - Insurance Prompt, Win Animation, and Post-Game Actions */}
                       <div className="flex-1 flex items-center justify-center min-h-0" style={{ position: 'relative' }}>
-                        {gameState.gamePhase === 'insurance' ? (
-                          <motion.div
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="bg-blue-900 border-2 border-blue-400 rounded-lg p-3"
-                          >
-                            <div className="text-white font-bold mb-3 text-sm text-center">Dealer shows Ace - Insurance offered (2:1)</div>
-                            <div className="flex gap-3">
+                        {/* Center Content */}
+                        <div className="flex flex-col items-center justify-center gap-4 w-full">
+                          {gameState.gamePhase === 'insurance' ? (
+                            <motion.div
+                              initial={{ opacity: 0, scale: 0.9 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              className="bg-blue-900 border-2 border-blue-400 rounded-lg p-3"
+                            >
+                              <div className="text-white font-bold mb-3 text-sm text-center">Dealer shows Ace - Insurance offered (2:1)</div>
+                              <div className="flex gap-3">
+                                <motion.button
+                                  onClick={() => gameState.takeInsurance()}
+                                  className="py-2 px-4 bg-green-600 hover:bg-green-500 text-white font-bold text-sm rounded-lg transition-colors"
+                                  whileHover={{ scale: 1.05 }}
+                                  whileTap={{ scale: 0.95 }}
+                                >
+                                  Yes
+                                </motion.button>
+                                <motion.button
+                                  onClick={() => gameState.declineInsurance()}
+                                  className="py-2 px-4 bg-gray-600 hover:bg-gray-500 text-white font-bold text-sm rounded-lg transition-colors"
+                                  whileHover={{ scale: 1.05 }}
+                                  whileTap={{ scale: 0.95 }}
+                                >
+                                  Decline
+                                </motion.button>
+                              </div>
+                            </motion.div>
+                          ) : gameState.gamePhase === 'gameOver' ? (
+                            <div className="flex flex-col items-center gap-3" style={{ width: 'min(400px, 90%)' }}>
+                              {/* Post-Game Action Buttons */}
                               <motion.button
-                                onClick={() => gameState.takeInsurance()}
-                                className="py-2 px-4 bg-green-600 hover:bg-green-500 text-white font-bold text-sm rounded-lg transition-colors"
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
+                                onClick={handleNextRound}
+                                className={isMobile ? "w-full py-2 px-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold text-sm rounded transition-colors" : "w-full py-3 px-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold rounded transition-colors"}
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
                               >
-                                Yes
+                                Next Round
                               </motion.button>
                               <motion.button
-                                onClick={() => gameState.declineInsurance()}
-                                className="py-2 px-4 bg-gray-600 hover:bg-gray-500 text-white font-bold text-sm rounded-lg transition-colors"
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
+                                onClick={() => {
+                                  gameState.resetGame();
+                                  setTimeout(() => {
+                                    gameState.redoBet();
+                                    setTimeout(() => handleDeal(), 100);
+                                  }, 50);
+                                }}
+                                disabled={!(gameState.lastBets && (gameState.lastBets.mainBet > 0 || gameState.lastBets.perfectPairs > 0 || gameState.lastBets.twentyPlusThree > 0 || gameState.lastBets.blazingSevens > 0))}
+                                className={isMobile ? "w-full py-2 px-4 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-sm rounded transition-colors" : "w-full py-3 px-4 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded transition-colors"}
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                title="Place previous round's bets and deal"
                               >
-                                Decline
+                                ↻ Redo Bet + Deal
                               </motion.button>
                             </div>
-                          </motion.div>
-                        ) : (
-                          <div className="text-gray-600 text-center">
-                            <div className="text-2xl opacity-20">♠ ♥ ♣ ♦</div>
-                          </div>
-                        )}
+                          ) : (
+                            <div className="text-gray-600 text-center">
+                              <div className="text-2xl opacity-20">♠ ♥ ♣ ♦</div>
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       {/* Player Hands */}
-                      <div className={isMobile ? "flex flex-col items-center gap-1 min-h-[140px] justify-center mb-4" : "flex flex-col items-center gap-1 min-h-[140px] justify-center mb-16"}>
+                      <div className={isMobile ? "flex flex-col items-center gap-1 min-h-[140px] justify-center mb-4" : "flex flex-col items-center gap-1 min-h-[140px] justify-center mb-16"} style={{ marginTop: '-20px' }}>
                         <div className="text-gray-400 text-xs font-semibold uppercase">Your Hands</div>
                         {gameState.playerHands.length === 0 ? (
                           <div className="text-center text-gray-500 text-xs flex items-center justify-center h-24"><p>Place a bet and click Deal</p></div>
@@ -609,21 +655,39 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
                       </div>
 
                       {/* Game Action Buttons Below Betting Area */}
-                      <div className="px-2 py-2 h-14 flex items-center justify-center">
-                        {gameState.gamePhase === 'playing' && (
-                          <PlayingActionButtons
-                            canHit={canHit}
-                            canStand={true}
-                            canDouble={canDouble}
-                            canSplit={canSplitHand}
-                            onHit={() => gameState.hit()}
-                            onStand={() => gameState.stand()}
-                            onDouble={() => gameState.doubleDown()}
-                            onSplit={() => gameState.split()}
-                          />
+                      <div className="px-2 py-2 h-14 flex items-center justify-center" style={{ marginTop: 'auto' }}>
+                        {gameState.gamePhase === 'betting' && (
+                          <motion.button
+                            onClick={handleDeal}
+                            disabled={!gameState.playerHands[0]?.bet || gameState.playerHands[0]?.bet === 0}
+                            className={isMobile
+                              ? "py-2 px-6 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-sm rounded transition-colors"
+                              : "py-3 px-8 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded transition-colors"}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            style={{ fontSize: isMobile ? '0.875rem' : '1rem' }}
+                          >
+                            🎴 Deal
+                          </motion.button>
                         )}
                       </div>
                     </motion.div>
+
+                    {/* Playing Action Buttons - Below Game Table */}
+                    {gameState.gamePhase === 'playing' && (
+                      <div className="px-2 py-2 flex items-center justify-center">
+                        <PlayingActionButtons
+                          canHit={canHit}
+                          canStand={true}
+                          canDouble={canDouble}
+                          canSplit={canSplitHand}
+                          onHit={() => gameState.hit()}
+                          onStand={() => gameState.stand()}
+                          onDouble={() => gameState.doubleDown()}
+                          onSplit={() => gameState.split()}
+                        />
+                      </div>
+                    )}
                   </div >
                 </div >
 
@@ -698,57 +762,15 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
                             Clear
                           </motion.button>
                         </div>
-                        <motion.button
-                          onClick={handleDeal}
-                          disabled={!gameState.playerHands[0]?.bet || gameState.playerHands[0]?.bet === 0}
-                          className={isMobile
-                            ? "w-full py-2 px-4 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-sm rounded transition-colors"
-                            : "w-full py-3 px-4 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded transition-colors"}
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          Deal
-                        </motion.button>
                       </>
                     ) : gameState.gamePhase === 'gameOver' ? (
                       <>
-                        <motion.button
-                          onClick={handleNextRound}
-                          className="w-full py-3 px-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold rounded transition-colors"
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          Next Round
-                        </motion.button>
-                        <motion.button
-                          onClick={() => {
-                            gameState.resetGame();
-                            setTimeout(() => {
-                              gameState.redoBet();
-                              setTimeout(() => handleDeal(), 100);
-                            }, 50);
-                          }}
-                          disabled={!(gameState.lastBets && (gameState.lastBets.mainBet > 0 || gameState.lastBets.perfectPairs > 0 || gameState.lastBets.twentyPlusThree > 0 || gameState.lastBets.blazingSevens > 0))}
-                          className="w-full py-3 px-4 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded transition-colors"
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                          title="Place previous round's bets and deal"
-                        >
-                          ↻ Redo Bet + Deal
-                        </motion.button>
+                        {/* Post-game buttons moved to table center area */}
                       </>
                     ) : null}
                   </div>
 
-                  {/* Streak Indicator */}
-                  <div className="mt-4 flex justify-center order-5">
-                    <AnimatePresence>
-                      <StreakIndicator
-                        streakCount={gameState.streakCount}
-                        streakType={gameState.streakType}
-                      />
-                    </AnimatePresence>
-                  </div>
+                  {/* Streak Indicator - Moved to game UI area above player hands */}
 
                   {/* Bet History */}
                   <div className="mt-4 order-6">

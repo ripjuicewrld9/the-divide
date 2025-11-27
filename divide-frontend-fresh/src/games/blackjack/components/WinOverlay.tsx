@@ -5,9 +5,10 @@ interface WinOverlayProps {
   amount: number;
   visible: boolean;
   status?: 'win' | 'push';
+  onDismiss?: () => void;
 }
 
-export const WinOverlay: React.FC<WinOverlayProps> = ({ amount, visible, status = 'win' }) => {
+export const WinOverlay: React.FC<WinOverlayProps> = ({ amount, visible, status = 'win', onDismiss }) => {
   const isWin = status === 'win';
   const isPush = status === 'push';
   
@@ -15,25 +16,28 @@ export const WinOverlay: React.FC<WinOverlayProps> = ({ amount, visible, status 
     <AnimatePresence>
       {visible && (
         <motion.div
-          initial={{ opacity: 0, scale: 0.8, y: -20 }}
+          initial={{ opacity: 0, scale: 0.8 }}
           animate={{ 
             opacity: 1, 
-            scale: 1, 
-            y: 0,
+            scale: 1,
           }}
-          exit={{ opacity: 0, scale: 0.8, y: 20 }}
+          exit={{ opacity: 0, scale: 0.8 }}
           transition={{ 
             duration: 0.4,
             ease: [0.34, 1.56, 0.64, 1]
           }}
+          onClick={onDismiss}
           style={{
             position: 'absolute',
-            left: '25%',
             top: '40%',
-            transform: 'translate(-50%, -50%)',
-            pointerEvents: 'none',
+            left: '0',
+            right: '0',
+            marginLeft: 'auto',
+            marginRight: 'auto',
+            pointerEvents: onDismiss ? 'auto' : 'none',
+            cursor: onDismiss ? 'pointer' : 'default',
             zIndex: 999,
-            width: 'min(420px, 90%)',
+            width: 'min(350px, 80%)',
           }}
         >
           <motion.div 

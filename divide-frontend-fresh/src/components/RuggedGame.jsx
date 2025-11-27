@@ -477,7 +477,6 @@ export default function RuggedGame({ onOpenChat }) {
             debugEnabled={debugEnabled}
             debugInfo={debugInfo}
             onShowFairness={() => setShowProvenFair(true)}
-            hasRngData={!!lastRngData}
           />
         </div>
         <div className="mb-4">
@@ -581,7 +580,6 @@ export default function RuggedGame({ onOpenChat }) {
               debugEnabled={debugEnabled}
               debugInfo={debugInfo}
               onShowFairness={() => setShowProvenFair(true)}
-              hasRngData={!!lastRngData}
             />
           </div>
 
@@ -612,19 +610,14 @@ export default function RuggedGame({ onOpenChat }) {
       </div>
       )}
 
-      {/* ProvenFair Modal - only show when RNG rug pull data exists */}
-      {showProvenFair && lastRngData && createPortal(
+      {/* ProvenFair Modal - shows recent provably fair rug pulls */}
+      {showProvenFair && createPortal(
         <ProvenFairModal 
           isOpen={showProvenFair} 
           onClose={() => setShowProvenFair(false)} 
           gameData={{
             game: 'Rugged',
-            serverSeedHashed: lastRngData.serverSeedHashed,
-            serverSeed: lastRngData.serverSeed,
-            blockHash: lastRngData.blockHash,
-            reason: lastRngData.reason,
-            jackpotSaleUsd: lastRngData.jackpotSaleUsd,
-            jackpotSupplySold: lastRngData.jackpotSupplySold
+            isRugged: true, // Flag to fetch reveal data
           }} 
         />,
         document.body

@@ -11,7 +11,7 @@ import {
   verifyPlinkoRound,
 } from '../utils/plinkoProofOfFair.js';
 
-export default function registerPlinko(app, io, { auth } = {}) {
+export default function registerPlinko(app, io, { auth, updateHouseStats } = {}) {
   console.log(`\n[Plinko Router] 🎰 Initialized - Provably Fair (Random.org + EOS Block Hash)\n`);
 
   // Helper: Convert cents to dollars
@@ -137,6 +137,11 @@ export default function registerPlinko(app, io, { auth } = {}) {
       user.balance = newBalanceInCents;
       user.plinkoNonce = currentNonce + 1;
 
+      // Reduce wager requirement (1x playthrough)
+      if (user.wagerRequirement > 0) {
+        user.wagerRequirement = Math.max(0, user.wagerRequirement - betInCents);
+      }
+
       // Update user statistics
       user.totalBets = (user.totalBets || 0) + 1;
       user.wagered = (user.wagered || 0) + betInCents;
@@ -171,6 +176,11 @@ export default function registerPlinko(app, io, { auth } = {}) {
       });
 
       await game.save();
+
+      // Update house stats for finance tracking
+      if (updateHouseStats) {
+        await updateHouseStats('plinko', betInCents, payoutInCents);
+      }
 
       // Create ledger entry
       const ledger = new Ledger({

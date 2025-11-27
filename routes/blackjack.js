@@ -174,6 +174,14 @@ router.post('/game/save', authMiddleware, async (req, res) => {
 
     await game.save();
 
+    // Update house stats for finance tracking
+    const updateHouseStats = req.app?.locals?.updateHouseStats;
+    if (updateHouseStats && typeof updateHouseStats === 'function') {
+      const totalBetCents = Math.round(totalBet * 100);
+      const totalPayoutCents = Math.round(totalPayout * 100);
+      await updateHouseStats('blackjack', totalBetCents, totalPayoutCents);
+    }
+
     // Update user balance server-side (SECURITY FIX)
     // Deduct total bet and add total payout
     let updatedBalance = balance; // Fallback to client-provided balance if update fails
@@ -185,6 +193,11 @@ router.post('/game/save', authMiddleware, async (req, res) => {
 
         // Deduct bet and add payout
         user.balance = user.balance - totalBetCents + totalPayoutCents;
+
+        // Reduce wager requirement (1x playthrough)
+        if (user.wagerRequirement > 0) {
+          user.wagerRequirement = Math.max(0, user.wagerRequirement - totalBetCents);
+        }
 
         // Update user statistics
         user.totalBets = (user.totalBets || 0) + 1;

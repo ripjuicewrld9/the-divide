@@ -33,7 +33,7 @@ const toDollars = (cents) => Number(((Number(cents) || 0) / 100).toFixed(2));
     return arrayLike;
   }
 
-export default function registerRugged(app, io, { auth, adminOnly } = {}) {
+export default function registerRugged(app, io, { auth, adminOnly, updateHouseStats } = {}) {
   // detect whether the connected MongoDB supports transactions (replica set)
   let _supportsTransactions = null;
   async function supportsTransactions() {
@@ -187,6 +187,10 @@ export default function registerRugged(app, io, { auth, adminOnly } = {}) {
 
           const userDoc = await User.findById(req.userId).session(session);
           userDoc.balance = Number(userDoc.balance || 0) - usdAmount;
+          // Reduce wager requirement (1x playthrough)
+          if (userDoc.wagerRequirement > 0) {
+            userDoc.wagerRequirement = Math.max(0, userDoc.wagerRequirement - usdAmount);
+          }
           await userDoc.save({ session });
 
           const created = await RuggedPosition.create([{ userId: req.userId, entryAmount: usdAmount, entryPool: newPool }], { session });
@@ -241,6 +245,11 @@ export default function registerRugged(app, io, { auth, adminOnly } = {}) {
           await Ledger.create([{ type: 'rugged_buy', amount: usdAmount, userId: req.userId }], { session }).catch(() => {});
           await session.commitTransaction();
           session.endSession();
+          
+          // Track buy as bet in finance system
+          if (updateHouseStats) {
+            await updateHouseStats('rugged', usdAmount, 0); // buy = bet, no payout yet
+          }
 
             // Mirror this trade into the authoritative Rugged doc so the
             // server-wide priceHistory remains canonical for all clients.
@@ -285,6 +294,10 @@ export default function registerRugged(app, io, { auth, adminOnly } = {}) {
         const roll = (rInt % 1000) + 1;
 
         user.balance = Number(user.balance || 0) - usdAmount;
+        // Reduce wager requirement (1x playthrough)
+        if (user.wagerRequirement > 0) {
+          user.wagerRequirement = Math.max(0, user.wagerRequirement - usdAmount);
+        }
         await user.save();
 
         const createdPos = await RuggedPosition.create({ userId: req.userId, entryAmount: usdAmount, entryPool: newPool });
@@ -321,6 +334,12 @@ export default function registerRugged(app, io, { auth, adminOnly } = {}) {
         } catch (e) { console.error('Failed to append priceHistory to RuggedState (fallback)', e); }
         await stateDoc.save();
         try { await Ledger.create({ type: 'rugged_buy', amount: usdAmount, userId: req.userId }); } catch (e) {}
+        
+        // Track buy as bet in finance system
+        if (updateHouseStats) {
+          await updateHouseStats('rugged', usdAmount, 0);
+        }
+        
         // Mirror into Rugged doc so priceHistory is authoritative for clients
           try {
           const raw = stateDoc.pool ? Number((stateDoc.pool / 100) / DISPLAY_DIVISOR) : 0;
@@ -410,6 +429,12 @@ export default function registerRugged(app, io, { auth, adminOnly } = {}) {
           try { await Ledger.create([{ type: 'rugged_sell', amount: totalPayout, userId: req.userId, meta: { percent } }], { session }); } catch (e) {}
           await session.commitTransaction();
           session.endSession();
+          
+          // Track sell as payout in finance system
+          if (updateHouseStats) {
+            await updateHouseStats('rugged', 0, totalPayout); // sell = payout, no new bet
+          }
+          
           // Mirror updated canonical price into Rugged doc for clients
           try {
             const raw = state.pool ? Number((state.pool / 100) / DISPLAY_DIVISOR) : 0;
@@ -482,6 +507,12 @@ export default function registerRugged(app, io, { auth, adminOnly } = {}) {
       }
 
       try { await Ledger.create({ type: 'rugged_sell', amount: totalPayout, userId: req.userId, meta: { percent } }); } catch (e) {}
+      
+      // Track sell as payout in finance system
+      if (updateHouseStats) {
+        await updateHouseStats('rugged', 0, totalPayout);
+      }
+      
       // Mirror into Rugged doc so clients have canonical history
   try {
     const raw = state.pool ? Number((state.pool / 100) / DISPLAY_DIVISOR) : 0;

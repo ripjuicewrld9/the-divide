@@ -28,6 +28,7 @@ const userSchema = new mongoose.Schema({
   totalWon: { type: Number, default: 0 }, // total winnings in cents
   totalDeposited: { type: Number, default: 0 }, // total deposits in cents
   totalWithdrawn: { type: Number, default: 0 }, // total withdrawals in cents
+  wagerRequirement: { type: Number, default: 0 }, // amount that must be wagered before withdrawal (1x playthrough)
   role: { type: String, default: 'user' },
   holdingsDC: { type: Number, default: 0 },
   holdingsInvested: { type: Number, default: 0 },
