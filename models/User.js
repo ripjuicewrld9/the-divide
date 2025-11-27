@@ -20,19 +20,19 @@ const userSchema = new mongoose.Schema({
   lastFreeVoteDate: { type: String, default: '' },
   // totalWinnings stored in cents
   totalWinnings: { type: Number, default: 0 },
+  // User statistics for profile display
+  totalBets: { type: Number, default: 0 },
+  totalWins: { type: Number, default: 0 },
+  totalLosses: { type: Number, default: 0 },
+  wagered: { type: Number, default: 0 }, // total amount wagered in cents
+  totalWon: { type: Number, default: 0 }, // total winnings in cents
+  totalDeposited: { type: Number, default: 0 }, // total deposits in cents
+  totalWithdrawn: { type: Number, default: 0 }, // total withdrawals in cents
   role: { type: String, default: 'user' },
   holdingsDC: { type: Number, default: 0 },
   holdingsInvested: { type: Number, default: 0 },
   profileImage: { type: String, default: '' },
-
-  // Player Stats
-  totalWagered: { type: Number, default: 0 },      // in cents
-  totalBets: { type: Number, default: 0 },         // count
-  totalWinsCount: { type: Number, default: 0 },    // count
-  totalLossesCount: { type: Number, default: 0 },  // count
-  totalWon: { type: Number, default: 0 },          // in cents
-  totalDeposited: { type: Number, default: 0 },    // in cents
-  totalWithdrawn: { type: Number, default: 0 }     // in cents
+  createdAt: { type: Date, default: Date.now }
 });
 
 // Pre-save hook: log balance changes (balance stored in cents)

@@ -1100,6 +1100,7 @@ app.post('/keno/play', auth, async (req, res) => {
     // Update user statistics
     user.totalBets = (user.totalBets || 0) + 1;
     user.wagered = (user.wagered || 0) + betCents;
+    user.totalWon = (user.totalWon || 0) + winCents;
     if (win > 0) {
       user.totalWins = (user.totalWins || 0) + 1;
     } else {
@@ -2556,9 +2557,21 @@ setInterval(async () => {
 // GET CURRENT USER (for frontend refresh)
 app.get("/api/me", auth, async (req, res) => {
   try {
-    const user = await User.findById(req.userId).select("_id username balance role holdingsDC holdingsInvested profileImage");
+    const user = await User.findById(req.userId).select("_id username balance role holdingsDC holdingsInvested profileImage wagered totalWon totalDeposited totalWithdrawn");
     if (!user) return res.status(404).json({ error: "User not found" });
-    res.json({ id: user._id, username: user.username, balance: toDollars(user.balance), role: user.role, holdingsDC: user.holdingsDC || 0, holdingsInvested: user.holdingsInvested || 0, profileImage: user.profileImage || '' });
+    res.json({ 
+      id: user._id, 
+      username: user.username, 
+      balance: toDollars(user.balance), 
+      role: user.role, 
+      holdingsDC: user.holdingsDC || 0, 
+      holdingsInvested: user.holdingsInvested || 0, 
+      profileImage: user.profileImage || '',
+      wagered: toDollars(user.wagered || 0),
+      totalWon: toDollars(user.totalWon || 0),
+      totalDeposited: toDollars(user.totalDeposited || 0),
+      totalWithdrawn: toDollars(user.totalWithdrawn || 0)
+    });
   } catch (err) {
     res.status(500).json({ error: "Server error" });
   }
