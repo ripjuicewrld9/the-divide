@@ -27,7 +27,14 @@ export const AuthProvider = ({ children }) => {
           username: data.username,
           balance: data.balance,
           role: data.role || data?.role || 'user',
-          profileImage: data.profileImage || ''
+          profileImage: data.profileImage || '',
+          totalWagered: data.totalWagered || 0,
+          totalBets: data.totalBets || 0,
+          totalWinsCount: data.totalWinsCount || 0,
+          totalLossesCount: data.totalLossesCount || 0,
+          totalWon: data.totalWon || 0,
+          totalDeposited: data.totalDeposited || 0,
+          totalWithdrawn: data.totalWithdrawn || 0
         });
       } catch (err) {
         console.error('[Auth] loadUser error:', err.message);
@@ -139,7 +146,21 @@ export const AuthProvider = ({ children }) => {
       const res = await fetch(`${API_BASE}/api/me`, { headers: { Authorization: `Bearer ${token}` } });
       if (!res.ok) return null;
       const data = await res.json();
-      setUser((u) => ({ ...(u || {}), id: data.id, username: data.username, balance: data.balance, role: data.role || 'user', profileImage: data.profileImage || '' }));
+      setUser((u) => ({
+        ...(u || {}),
+        id: data.id,
+        username: data.username,
+        balance: data.balance,
+        role: data.role || 'user',
+        profileImage: data.profileImage || '',
+        totalWagered: data.totalWagered || 0,
+        totalBets: data.totalBets || 0,
+        totalWinsCount: data.totalWinsCount || 0,
+        totalLossesCount: data.totalLossesCount || 0,
+        totalWon: data.totalWon || 0,
+        totalDeposited: data.totalDeposited || 0,
+        totalWithdrawn: data.totalWithdrawn || 0
+      }));
       return data;
     } catch (err) {
       console.error('refreshUser error', err);

@@ -28,13 +28,13 @@ export default function registerPlinko(app, io, { auth } = {}) {
   app.get('/api/plinko/recordings/:rowCount', async (req, res) => {
     try {
       const rowCount = parseInt(req.params.rowCount);
-      
+
       if (![8, 9, 10, 11, 12, 13, 14, 15, 16].includes(rowCount)) {
         return res.status(400).json({ error: 'Invalid row count' });
       }
 
       const recording = await PlinkoRecording.findOne({ rowCount });
-      
+
       if (!recording) {
         return res.status(404).json({ error: 'Recordings not found for this row count' });
       }
@@ -136,6 +136,18 @@ export default function registerPlinko(app, io, { auth } = {}) {
       // Store balance in cents in database and increment nonce
       user.balance = newBalanceInCents;
       user.plinkoNonce = currentNonce + 1;
+
+      // Update player stats
+      user.totalBets = (user.totalBets || 0) + 1;
+      user.totalWagered = (user.totalWagered || 0) + betInCents;
+      if (payoutInCents > 0) {
+        user.totalWon = (user.totalWon || 0) + payoutInCents;
+        user.totalWinsCount = (user.totalWinsCount || 0) + 1;
+        user.totalWinnings = (user.totalWinnings || 0) + payoutInCents; // Keep legacy field updated too
+      } else {
+        user.totalLossesCount = (user.totalLossesCount || 0) + 1;
+      }
+
       await user.save();
 
       // Record game in database

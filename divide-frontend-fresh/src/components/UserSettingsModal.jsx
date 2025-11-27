@@ -252,10 +252,10 @@ export default function UserSettingsModal({ isOpen, onClose }) {
                   gap: '16px'
                 }}>
                   {[
-                    { label: 'Total Wagered', value: '$0.00', icon: '💰' },
-                    { label: 'Total Won', value: '$0.00', icon: '🎉' },
-                    { label: 'Total Deposited', value: '$0.00', icon: '📥' },
-                    { label: 'Total Withdrawn', value: '$0.00', icon: '📤' }
+                    { label: 'Total Wagered', value: `$${((user?.totalWagered || 0) / 100).toFixed(2)}`, icon: '💰' },
+                    { label: 'Total Won', value: `$${((user?.totalWon || 0) / 100).toFixed(2)}`, icon: '🎉' },
+                    { label: 'Total Deposited', value: `$${((user?.totalDeposited || 0) / 100).toFixed(2)}`, icon: '📥' },
+                    { label: 'Total Withdrawn', value: `$${((user?.totalWithdrawn || 0) / 100).toFixed(2)}`, icon: '📤' }
                   ].map((stat, idx) => (
                     <div
                       key={idx}
@@ -352,7 +352,7 @@ export default function UserSettingsModal({ isOpen, onClose }) {
                     <div style={{ marginBottom: '16px' }}>
                       <div style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '8px' }}>Or select a preloaded avatar:</div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-                        {svgOptions.map((svg, idx) => (
+                        {presetAvatars.map((svg, idx) => (
                           <button
                             key={svg}
                             onClick={() => handleSelectSvg(svg)}
@@ -372,7 +372,7 @@ export default function UserSettingsModal({ isOpen, onClose }) {
                             }}
                             title={svg}
                           >
-                            <img src={`/profilesvg/${svg}`} alt={svg} style={{ width: 32, height: 32, borderRadius: 6 }} />
+                            <img src={svg} alt="Avatar" style={{ width: 32, height: 32, borderRadius: 6 }} />
                           </button>
                         ))}
                       </div>

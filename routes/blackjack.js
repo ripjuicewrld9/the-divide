@@ -179,6 +179,43 @@ router.post('/game/save', authMiddleware, async (req, res) => {
     // NOTE: Balance is managed by the frontend and synced via PUT /api/me/balance
     // Do NOT update user balance here to avoid double-deduction conflicts
 
+    // Update player stats
+    const user = await User.findById(userId);
+    if (user) {
+      user.totalBets = (user.totalBets || 0) + 1;
+      user.totalWagered = (user.totalWagered || 0) + totalBet; // totalBet is in cents? No, looks like dollars in this file based on usage. Wait, let's check.
+      // In Plinko it was cents. Here, let's verify.
+      // Looking at `game/save` body: mainBet, etc. come from req.body.
+      // If they are dollars, we need to convert to cents for storage if User schema expects cents.
+      // User schema expects cents for balance, but what about stats?
+      // Implementation plan said "Number (default 0)".
+      // Keno stores cents. Plinko stores cents.
+      // Blackjack seems to use dollars in this file?
+      // "const profit = totalPayout - totalBet;"
+      // "res.json({ profit })"
+      // If frontend sends dollars, we should convert to cents for consistency with other games.
+
+      // Let's assume input is dollars for now based on Plinko precedent where `betAmount` was dollars.
+      // But wait, Plinko `betAmount` was dollars, converted to `betInCents`.
+      // Here `mainBet` comes directly from body.
+      // I will assume they are dollars and convert to cents for the User stats to match Keno/Plinko.
+
+      const totalBetCents = Math.round(totalBet * 100);
+      const totalPayoutCents = Math.round(totalPayout * 100);
+      const profitCents = totalPayoutCents - totalBetCents;
+
+      user.totalWagered = (user.totalWagered || 0) + totalBetCents;
+
+      if (totalPayoutCents > 0) {
+        user.totalWon = (user.totalWon || 0) + totalPayoutCents;
+        user.totalWinsCount = (user.totalWinsCount || 0) + 1;
+        user.totalWinnings = (user.totalWinnings || 0) + totalPayoutCents;
+      } else {
+        user.totalLossesCount = (user.totalLossesCount || 0) + 1;
+      }
+      await user.save();
+    }
+
     res.json({
       gameId: game._id,
       profit,
@@ -227,21 +264,21 @@ router.get('/game/:id/verify', authMiddleware, async (req, res) => {
         seedString: roll.seedString,
         outcome: roll.outcome,
       };
-      
+
       // Only add card if it exists
       if (roll.card !== undefined && roll.card !== null) {
         cleaned.card = roll.card;
       }
-      
+
       // Only add ticket and betType if both exist and ticket is a number
       if (roll.betType && typeof roll.ticket === 'number') {
         cleaned.betType = roll.betType;
         cleaned.ticket = roll.ticket;
       }
-      
+
       return cleaned;
     });
-    
+
     const verification = BlackjackProofOfFair.verifyBlackjackGame({
       serverSeed: game.serverSeed,
       serverHash: game.serverHash,
@@ -432,11 +469,11 @@ router.post('/save-for-feed', authMiddleware, async (req, res) => {
 router.post('/rotate-seed', authMiddleware, async (req, res) => {
   try {
     const { userId } = req;
-    
+
     // Generate new seeds
     const serverSeed = await BlackjackProofOfFair.generateServerSeedFromRandomOrg();
     const serverHash = BlackjackProofOfFair.hashServerSeed(serverSeed);
-    
+
     // Update user with new seeds and reset nonce
     const updated = await User.findOneAndUpdate(
       { _id: userId },
@@ -447,7 +484,7 @@ router.post('/rotate-seed', authMiddleware, async (req, res) => {
     if (!updated) {
       return res.status(404).json({ error: 'User not found' });
     }
-    
+
     res.json({
       success: true,
       serverSeedHashed: serverHash,

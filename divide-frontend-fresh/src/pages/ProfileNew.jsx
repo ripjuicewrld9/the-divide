@@ -78,7 +78,7 @@ export default function ProfilePage({ onOpenChat }) {
                                 </div>
                                 <div className="bg-black/30 px-4 py-2 rounded-lg border border-white/10">
                                     <div className="text-xs text-gray-500 uppercase font-bold">Wagered</div>
-                                    <div className="text-xl font-mono text-purple-400">${formatCurrency(user.wagered || 0)}</div>
+                                    <div className="text-xl font-mono text-purple-400">${formatCurrency(user.totalWagered || 0)}</div>
                                 </div>
                             </div>
                         </div>
@@ -117,12 +117,24 @@ export default function ProfilePage({ onOpenChat }) {
                                 <span className="font-mono">{user.totalBets || 0}</span>
                             </div>
                             <div className="flex justify-between items-center border-b border-white/5 pb-2">
-                                <span className="text-gray-400">Total Wins</span>
-                                <span className="font-mono text-green-400">{user.totalWins || 0}</span>
+                                <span className="text-gray-400">Total Wins (Count)</span>
+                                <span className="font-mono text-green-400">{user.totalWinsCount || 0}</span>
                             </div>
                             <div className="flex justify-between items-center border-b border-white/5 pb-2">
-                                <span className="text-gray-400">Total Losses</span>
-                                <span className="font-mono text-red-400">{user.totalLosses || 0}</span>
+                                <span className="text-gray-400">Total Losses (Count)</span>
+                                <span className="font-mono text-red-400">{user.totalLossesCount || 0}</span>
+                            </div>
+                            <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                                <span className="text-gray-400">Total Won ($)</span>
+                                <span className="font-mono text-green-400">${formatCurrency(user.totalWon || 0)}</span>
+                            </div>
+                            <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                                <span className="text-gray-400">Total Deposited</span>
+                                <span className="font-mono text-blue-400">${formatCurrency(user.totalDeposited || 0)}</span>
+                            </div>
+                            <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                                <span className="text-gray-400">Total Withdrawn</span>
+                                <span className="font-mono text-orange-400">${formatCurrency(user.totalWithdrawn || 0)}</span>
                             </div>
                         </div>
                     </div>

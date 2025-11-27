@@ -4,8 +4,8 @@ import Ledger from '../models/Ledger.js';
 import Case from '../models/Case.js';
 import { nanoid } from 'nanoid';
 import crypto from 'crypto';
-import { 
-  generateHybridSeed, 
+import {
+  generateHybridSeed,
   generateTicketFromHybridSeed,
   getItemTicketRanges as getHybridTicketRanges,
   getWinningItem as getHybridWinningItem
@@ -44,9 +44,9 @@ export default function registerCaseBattles(app, io, { auth } = {}) {
     try {
       const userId = req.userId;
       const { caseIds, mode, teamSize } = req.body; // caseIds is now an array
-      
+
       console.log(`[CaseBattle API] POST /case-battles/create from user ${userId}, cases: ${caseIds?.length || 0}`);
-      
+
       if (!caseIds || caseIds.length === 0) {
         return res.status(400).json({ error: 'At least one case required' });
       }
@@ -69,7 +69,7 @@ export default function registerCaseBattles(app, io, { auth } = {}) {
         const caseCost = customCase.calculatedPrice || 0; // in dollars
         totalCost += caseCost;
         const drawn = drawFromCase(customCase);
-        
+
         caseDetails.push({
           caseId: customCase._id,
           caseName: customCase.name,
@@ -88,13 +88,13 @@ export default function registerCaseBattles(app, io, { auth } = {}) {
 
       // Get the first case's full items data for animation
       const firstCaseObj = await Case.findById(caseDetails[0].caseId);
-      
+
       // Build caseItemsData - now fetch images from Item collection if not in case
       const Item = (await import('../models/Item.js')).default;
       const caseItemsData = firstCaseObj ? await Promise.all(firstCaseObj.items.map(async (item, idx) => {
         const stableId = item.id || item._id || `srv_${nanoid(8)}`;
         const isGoldTrigger = item.isGoldTrigger === true || ((item.chance || 0) <= 1);
-        
+
         // If item doesn't have image in case, try to fetch from Item collection by name
         let itemImage = item.image;
         if (!itemImage) {
@@ -107,7 +107,7 @@ export default function registerCaseBattles(app, io, { auth } = {}) {
             // Silently fail, just won't have image
           }
         }
-        
+
         return {
           name: item.name,
           value: item.value,
@@ -133,7 +133,7 @@ export default function registerCaseBattles(app, io, { auth } = {}) {
       // Generate player1 ticket using hybrid seed and nonce
       const ticketRanges = rngTicketRanges(caseItemsData);
       const player1Ticket = generateTicketFromHybridSeed(hybridSeedData.hybridSeed, 0);
-      
+
       console.log(`[CaseBattle Create] Player 1 ticket: ${player1Ticket} (Random.org seed XOR EOS block)`);
 
       // Create player object for the creator
@@ -183,11 +183,16 @@ export default function registerCaseBattles(app, io, { auth } = {}) {
       });
 
       await battle.save();
-      
+
       // Emit real-time event for new battle
       io.emit('battle:created', { battle });
-      
+
       user.balance -= totalCostInCents;
+
+      // Update stats
+      user.totalBets = (user.totalBets || 0) + 1;
+      user.totalWagered = (user.totalWagered || 0) + totalCostInCents;
+
       await user.save();
       console.log(`[CaseBattle Create] Balance deducted: User ${user.username} balance after: $${(user.balance / 100).toFixed(2)}`);
 
@@ -220,7 +225,7 @@ export default function registerCaseBattles(app, io, { auth } = {}) {
       if (!battle) return res.status(404).json({ error: 'Battle not found' });
       if (battle.status !== 'waiting') return res.status(400).json({ error: 'Battle not accepting players' });
       if (battle.player1Id === userId) return res.status(400).json({ error: 'Cannot join own battle' });
-      
+
       // Check if player already in battle
       if (battle.players && battle.players.some(p => p.userId === userId)) {
         return res.status(400).json({ error: 'Already in this battle' });
@@ -234,11 +239,11 @@ export default function registerCaseBattles(app, io, { auth } = {}) {
       if (battle.mode === 'group') {
         assignedTeam = 1; // Group mode: everyone on same team (or individual tracking)
       }
-      
+
       // Count players per team
       const playersOnTeam1 = (battle.players || []).filter(p => p.team === 1).length;
       const playersOnTeam2 = (battle.players || []).filter(p => p.team === 2).length;
-      
+
       // For normal/crazy: balance teams
       if ((battle.mode === 'normal' || battle.mode === 'crazy') && playersOnTeam2 >= playersOnTeam1) {
         assignedTeam = 1; // Put new player on team 1 if unbalanced
@@ -257,7 +262,7 @@ export default function registerCaseBattles(app, io, { auth } = {}) {
             const drawn = drawFromCase(customCase);
             totalCost += caseCost;
             totalItemValue += drawn.value;
-            
+
             caseDetails.push({
               caseId: customCase._id,
               caseName: customCase.name,
@@ -269,7 +274,8 @@ export default function registerCaseBattles(app, io, { auth } = {}) {
         }
       }
 
-      if (user.balance < totalCost) return res.status(402).json({ error: 'Insufficient balance' });
+      const totalCostInCents = Math.round(totalCost * 100);
+      if (user.balance < totalCostInCents) return res.status(402).json({ error: 'Insufficient balance' });
 
       // Use the existing battle hybrid seed to generate a deterministic ticket for this joining player
       if (!battle.hybridSeed) {
@@ -343,13 +349,18 @@ export default function registerCaseBattles(app, io, { auth } = {}) {
       // Calculate pot from all players
       battle.pot = battle.players.reduce((sum, p) => sum + p.totalItemValue, 0);
       battle.updatedAt = new Date();
-      
+
       await battle.save();
-      
+
       // Emit real-time event for battle update
       io.emit('battle:updated', { battle });
 
-      user.balance -= totalCost;
+      user.balance -= totalCostInCents;
+
+      // Update stats
+      user.totalBets = (user.totalBets || 0) + 1;
+      user.totalWagered = (user.totalWagered || 0) + totalCostInCents;
+
       await user.save();
 
       const itemDesc = caseDetails.map(c => c.drawnItem).join(', ');
@@ -379,31 +390,31 @@ export default function registerCaseBattles(app, io, { auth } = {}) {
       const userId = req.userId;
       const { battleId } = req.params;
       console.log(`[Summon Bot] Request received - userId: ${userId}, battleId: ${battleId}`);
-      
+
       const battle = await CaseBattle.findOne({ id: battleId });
       if (!battle) return res.status(404).json({ error: 'Battle not found' });
-      
+
       console.log(`[Summon Bot] Battle found - player1Id: ${battle.player1Id}, firstPlayer: ${battle.players?.[0]?.userId}`);
-      
+
       // Allow summon-bot on 'waiting' or 'active' battles (not 'ended')
       if (battle.status === 'ended') return res.status(400).json({ error: 'Battle already finished' });
-      
+
       // Check if user is the battle creator (new players array system or legacy player1Id)
       const isCreator = battle.player1Id === userId || battle.players?.[0]?.userId === userId;
       console.log(`[Summon Bot] isCreator check: player1Id match: ${battle.player1Id === userId}, firstPlayer match: ${battle.players?.[0]?.userId === userId}, result: ${isCreator}`);
-      
+
       if (!isCreator) return res.status(403).json({ error: 'Only creator can summon bot' });
-      
+
       // Calculate max players based on team size and mode
       console.log(`[Summon Bot] Battle ID: ${battleId}, Mode: ${battle.mode}, TeamSize: ${battle.teamSize}, Current Players: ${battle.players.length}`);
       console.log(`[Summon Bot] Battle object:`, { mode: battle.mode, teamSize: battle.teamSize, status: battle.status });
-      
+
       // Handle missing teamSize (for old battles) - default to 1 (1v1)
       const effectiveTeamSize = battle.teamSize || 1;
       const maxPlayers = (battle.mode === 'group') ? effectiveTeamSize : (effectiveTeamSize * 2);
       const currentPlayerCount = battle.players.length;
       console.log(`[Summon Bot] EffectiveTeamSize: ${effectiveTeamSize}, MaxPlayers calculated: ${maxPlayers}, CurrentPlayerCount: ${currentPlayerCount}`);
-      
+
       if (currentPlayerCount >= maxPlayers) {
         console.log(`[Summon Bot] Battle already full! ${currentPlayerCount} >= ${maxPlayers}`);
         return res.status(400).json({ error: 'Battle is already full' });
@@ -425,8 +436,8 @@ export default function registerCaseBattles(app, io, { auth } = {}) {
         let totalItemValue = 0;
 
         // Use caseIds if available, otherwise fall back to legacy caseId or create dummy cases
-        const casesToUse = battle.caseIds && battle.caseIds.length > 0 
-          ? battle.caseIds 
+        const casesToUse = battle.caseIds && battle.caseIds.length > 0
+          ? battle.caseIds
           : (battle.caseId ? [battle.caseId] : []);
 
         if (casesToUse.length > 0) {
@@ -437,7 +448,7 @@ export default function registerCaseBattles(app, io, { auth } = {}) {
               const drawn = drawFromCase(customCase);
               totalCost += caseCost;
               totalItemValue += drawn.value;
-              
+
               caseDetails.push({
                 caseId: customCase._id,
                 caseName: customCase.name,
@@ -467,9 +478,9 @@ export default function registerCaseBattles(app, io, { auth } = {}) {
         // Generate bot ticket using existing battle's hybrid seed
         const botNonce = battle.players.length; // Use number of existing players as nonce
         const botTicket = generateTicketFromHybridSeed(battle.hybridSeed, botNonce);
-        
+
         console.log(`[CaseBattle Summon Bot] Generated ticket ${botTicket} using hybrid seed (bot nonce: ${botNonce})`);
-        
+
         // Determine bot's team based on mode
         let botTeam;
         if (battle.mode === 'group') {
@@ -529,7 +540,7 @@ export default function registerCaseBattles(app, io, { auth } = {}) {
       battle.status = 'active';
       battle.updatedAt = new Date();
       await battle.save();
-      
+
       // Emit real-time event for battle update
       io.emit('battle:updated', { battle });
 
@@ -582,11 +593,11 @@ export default function registerCaseBattles(app, io, { auth } = {}) {
       }
 
       await battle.save();
-      
+
       // Emit real-time event for battle opened/updated
       io.emit('battle:updated', { battle });
       io.emit('caseBattleOpened', { battle });
-      
+
       res.json({ success: true, battle });
     } catch (err) {
       console.error('Error opening case battle:', err);
@@ -616,7 +627,7 @@ export default function registerCaseBattles(app, io, { auth } = {}) {
 
       const ticketRanges = rngTicketRanges(battle.caseItemsData);
       console.log(`[CaseBattle Settle] Ticket ranges:`, ticketRanges);
-      
+
       // Calculate results for all players
       const playerResults = battle.players.map(player => {
         if (!player.ticket) {
@@ -651,13 +662,13 @@ export default function registerCaseBattles(app, io, { auth } = {}) {
 
       // Winners are the team with highest total, OR use tiebreaker if provided
       let winnerTeam = teamATotal > teamBTotal ? 1 : (teamBTotal > teamATotal ? 2 : null);
-      
+
       // If there's a tie and tiebreaker was provided, use it
       if (winnerTeam === null && tiebreakWinner) {
         console.log(`[CaseBattle Settle] Tie detected, using tiebreaker winner: Team ${tiebreakWinner}`);
         winnerTeam = tiebreakWinner;
       }
-      
+
       const winners = winnerTeam ? playerResults.filter(p => p.team === winnerTeam).map(p => p.playerId) : [];
 
       console.log(`[CaseBattle Settle] Winners (${winners.length}):`, winners);
@@ -677,17 +688,23 @@ export default function registerCaseBattles(app, io, { auth } = {}) {
         // Use precise division, don't truncate
         const winningsPerWinner = actualPot / winners.length;
         console.log(`[CaseBattle Settle] Distributing pot of $${(actualPot).toFixed(2)} to ${winners.length} winner(s), each gets $${(winningsPerWinner).toFixed(2)}`);
-        
+
         for (const winnerId of winners) {
           // Skip bots - only award real players
           if (winnerId.startsWith('bot_')) {
             console.log(`[CaseBattle Settle] Bot ${winnerId} won but winnings are visual only`);
             continue;
           }
-          
+
           const winnerUser = await User.findById(winnerId).catch(() => null);
           if (winnerUser) {
             winnerUser.balance += winningsPerWinner;
+
+            // Update stats
+            winnerUser.totalWon = (winnerUser.totalWon || 0) + winningsPerWinner;
+            winnerUser.totalWinsCount = (winnerUser.totalWinsCount || 0) + 1;
+            winnerUser.totalWinnings = (winnerUser.totalWinnings || 0) + winningsPerWinner;
+
             await winnerUser.save();
             await Ledger.create({
               userId: winnerId,
@@ -701,13 +718,26 @@ export default function registerCaseBattles(app, io, { auth } = {}) {
         }
       }
 
+      // Update stats for losers
+      const loserIds = battle.players
+        .filter(p => !winners.includes(p.userId) && !p.isBot)
+        .map(p => p.userId);
+
+      for (const loserId of loserIds) {
+        try {
+          await User.findByIdAndUpdate(loserId, { $inc: { totalLossesCount: 1 } });
+        } catch (e) {
+          console.error('Failed to update loser stats', loserId, e);
+        }
+      }
+
       console.log(`[CaseBattle Settle] Battle settled successfully, status: ended`);
       await battle.save();
-      
+
       // Emit real-time events for battle end
       io.emit('battle:ended', { battle });
       io.emit('caseBattleEnded', { battle });
-      
+
       res.json({ success: true, battle });
     } catch (err) {
       console.error('Error settling case battle:', err);
@@ -719,7 +749,7 @@ export default function registerCaseBattles(app, io, { auth } = {}) {
     try {
       // Show only waiting/active battles that were created in the last 30 minutes
       const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
-      const battles = await CaseBattle.find({ 
+      const battles = await CaseBattle.find({
         status: { $in: ['waiting', 'active'] },
         createdAt: { $gte: thirtyMinutesAgo }
       }).sort({ createdAt: -1 });
@@ -735,12 +765,12 @@ export default function registerCaseBattles(app, io, { auth } = {}) {
       const { battleId } = req.params;
       const battle = await CaseBattle.findOne({ id: battleId });
       if (!battle) return res.status(404).json({ error: 'Battle not found' });
-      
+
       // Debug: log if caseItemsData has images
       if (battle.caseItemsData && battle.caseItemsData.length > 0) {
         console.log(`[Battle ${battleId}] First item has image: ${!!battle.caseItemsData[0].image}, length: ${battle.caseItemsData[0].image?.length || 0}`);
       }
-      
+
       res.json({ battle });
     } catch (err) {
       console.error('Error fetching battle:', err);
