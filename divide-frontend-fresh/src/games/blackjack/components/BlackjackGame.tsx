@@ -18,6 +18,7 @@ import BlackjackLeaderboard from '../../../components/BlackjackLeaderboard';
 import BlackjackVerification from './BlackjackVerification';
 import MobileGameHeader from '../../../components/MobileGameHeader';
 import { BetHistory } from './BetHistory';
+import { ActiveBetsDisplay } from './ActiveBetsDisplay';
 
 interface BlackjackGameProps {
   onOpenChat?: () => void;
@@ -635,8 +636,19 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
                     />
                   </div>
 
+                  {/* Active Bets Display */}
+                  <div className="mt-3 order-1 md:order-2">
+                    <ActiveBetsDisplay
+                      mainBet={gameState.playerHands[0]?.bet || 0}
+                      perfectPairsBet={gameState.playerHands[0]?.sideBets.perfectPairs || 0}
+                      twentyPlusThreeBet={gameState.playerHands[0]?.sideBets.twentyPlusThree || 0}
+                      blazingSevensBet={gameState.playerHands[0]?.sideBets.blazingSevens || 0}
+                      isMobile={isMobile}
+                    />
+                  </div>
+
                   {/* Action Buttons */}
-                  <div className="flex flex-col gap-2 mt-4 order-1 md:order-last md:mt-4 mb-4 md:mb-0">
+                  <div className="flex flex-col gap-2 mt-4 order-3 md:order-last md:mt-4 mb-4 md:mb-0">
                     {gameState.gamePhase === 'betting' ? (
                       <>
                         <motion.button
@@ -718,7 +730,7 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
                   </div>
 
                   {/* Streak Indicator */}
-                  <div className="mt-4 flex justify-center order-3">
+                  <div className="mt-4 flex justify-center order-5">
                     <AnimatePresence>
                       <StreakIndicator
                         streakCount={gameState.streakCount}
@@ -728,7 +740,7 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
                   </div>
 
                   {/* Bet History */}
-                  <div className="mt-4 order-4">
+                  <div className="mt-4 order-6">
                     <BetHistory history={gameState.roundResults} isMobile={isMobile} />
                   </div>
                 </aside >
