@@ -334,3 +334,5 @@ export default function registerPlinko(app, io, { auth, updateHouseStats } = {})
 
   console.log('[Plinko Router] ✅ Routes registered: POST /api/plinko/play, GET /api/plinko/games, POST /api/plinko/verify, POST /plinko/rotate-seed, GET /plinko/rounds');
 }
+
+

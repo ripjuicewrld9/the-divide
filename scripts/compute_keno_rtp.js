@@ -1,4 +1,4 @@
-const { paytables } = require('../paytable-data.js');
+import { paytables } from '../paytable-data.js';
 
 // hypergeometric probability C(s,k)*C(40-s,10-k)/C(40,10)
 function C(n, k) {

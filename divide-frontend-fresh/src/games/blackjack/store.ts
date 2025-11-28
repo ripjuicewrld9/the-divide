@@ -476,7 +476,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     const hand = state.playerHands[state.currentHandIndex];
 
-    if (!canSplit(hand.cards) || state.balance < hand.bet) {
+    if (!canSplit(hand.cards) || state.balance < hand.bet || state.playerHands.length >= 2) {
       set({ message: 'Cannot split' });
       return;
     }

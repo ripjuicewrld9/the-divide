@@ -221,20 +221,20 @@ app.post('/upload', auth, (req, res, next) => {
       if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
       }
-      
+
       // Convert image to base64 and save directly to database
       const imageBuffer = fs.readFileSync(req.file.path);
       const base64Image = `data:${req.file.mimetype};base64,${imageBuffer.toString('base64')}`;
-      
+
       // Delete the temporary file from disk
       fs.unlinkSync(req.file.path);
-      
+
       // Save base64 image to user profile
       if (req.userId) {
         await User.findByIdAndUpdate(req.userId, { profileImage: base64Image });
         console.log('Profile image saved to database for user:', req.userId);
       }
-      
+
       res.json({ url: base64Image, profileImage: base64Image });
     } catch (err) {
       console.error('Upload error:', err);
@@ -249,7 +249,7 @@ app.post('/api/profile-image', auth, async (req, res) => {
     if (!req.userId) return res.status(401).json({ error: 'Not authenticated' });
     const { imagePath } = req.body || {};
     if (!imagePath || typeof imagePath !== 'string') return res.status(400).json({ error: 'Missing imagePath' });
-    
+
     // If it's a local file path (preset SVG), convert to base64
     if (imagePath.startsWith('/profilesvg/') || imagePath.startsWith('/uploads/')) {
       try {
@@ -257,10 +257,10 @@ app.post('/api/profile-image', auth, async (req, res) => {
         if (fs.existsSync(filePath)) {
           const fileBuffer = fs.readFileSync(filePath);
           const ext = path.extname(filePath).toLowerCase();
-          const mimeType = ext === '.svg' ? 'image/svg+xml' : 
-                          ext === '.png' ? 'image/png' : 
-                          ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : 
-                          ext === '.webp' ? 'image/webp' : 'image/svg+xml';
+          const mimeType = ext === '.svg' ? 'image/svg+xml' :
+            ext === '.png' ? 'image/png' :
+              ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' :
+                ext === '.webp' ? 'image/webp' : 'image/svg+xml';
           const base64Image = `data:${mimeType};base64,${fileBuffer.toString('base64')}`;
           await User.findByIdAndUpdate(req.userId, { profileImage: base64Image });
           console.log('Preset avatar converted to base64 and saved for user:', req.userId);
@@ -271,7 +271,7 @@ app.post('/api/profile-image', auth, async (req, res) => {
         // Fall through to save the path as-is if conversion fails
       }
     }
-    
+
     // For external URLs or if file not found, save as-is
     await User.findByIdAndUpdate(req.userId, { profileImage: imagePath });
     res.json({ success: true, imagePath });
@@ -1030,6 +1030,8 @@ app.post('/keno/play', auth, async (req, res) => {
     // validation
     if (typeof betAmount !== 'number' || isNaN(betAmount) || betAmount < 0.01)
       return res.status(400).json({ error: 'Invalid bet amount' });
+    if (betAmount > 200)
+      return res.status(400).json({ error: 'Maximum bet is \$200' });
     if (!Array.isArray(playerNumbers) || playerNumbers.length < 1 || playerNumbers.length > 10)
       return res.status(400).json({ error: 'Select 1–10 numbers' });
     if (!paytables[risk]) return res.status(400).json({ error: 'Invalid risk type' });
@@ -1176,7 +1178,15 @@ app.post('/keno/play', auth, async (req, res) => {
 
     // Calculate payout in cents
     const betCents = toCents(betAmount);
-    const winCents = Math.round(betCents * multiplier);
+    let winCents = Math.round(betCents * multiplier);
+
+    // Cap maximum win at $500,000
+    const MAX_WIN_CENTS = 500000 * 100; // $500k in cents
+    if (winCents > MAX_WIN_CENTS) {
+      console.log(`[KENO] Win capped from $${winCents / 100} to \$200,000`);
+      winCents = MAX_WIN_CENTS;
+    }
+
     const win = Number((winCents / 100).toFixed(2));
 
     // Update user balance
@@ -1696,7 +1706,7 @@ app.get('/api/top-wins', async (req, res) => {
     }
 
     // Fetch top Blackjack games by payout
-    const blackjackGames = await BlackjackGame.find({ 
+    const blackjackGames = await BlackjackGame.find({
       gamePhase: 'gameOver',
       mainPayout: { $gt: 0 }
     })
@@ -1744,7 +1754,7 @@ app.get('/api/top-wins', async (req, res) => {
         wagerAmount = battle.pot / (battle.players?.length || 2);
       }
       const multiplier = battle.pot / wagerAmount;
-      
+
       games.push({
         _id: battle._id,
         game: 'Case Battle',
@@ -1764,7 +1774,7 @@ app.get('/api/top-wins', async (req, res) => {
     const topWins = games.slice(0, 5);
 
     console.log(`[Top Wins] Returning ${topWins.length} top wins by multiplier`);
-    
+
     res.json({ topWins });
   } catch (err) {
     console.error('Error fetching top wins:', err);
@@ -2427,7 +2437,7 @@ app.get('/admin/finance', auth, adminOnly, async (req, res) => {
     // Get current house and jackpot data
     const house = await House.findOne({ id: 'global' }).lean();
     const jackpot = await Jackpot.findOne({ id: 'global' }).lean();
-    
+
     if (!house) {
       return res.status(500).json({ error: 'House document not found' });
     }
@@ -2628,7 +2638,7 @@ async function endDivideById(divideId, invokedByUserId = null) {
             console.error('Failed to credit user-created divide winner', winner.userId, e);
           }
         }
-        
+
         // Track losses for voters on losing side
         const losers = divide.votes.filter(v => v.side !== winnerSide && !v.isFree && v.voteCount > 0);
         for (const loser of losers) {
@@ -2641,7 +2651,7 @@ async function endDivideById(divideId, invokedByUserId = null) {
             console.error('Failed to update loser stats', loser.userId, e);
           }
         }
-        
+
         distributed = Number(distributed.toFixed(2));
       }
     } else {
@@ -2689,7 +2699,7 @@ async function endDivideById(divideId, invokedByUserId = null) {
             console.error('Failed to credit winner share', s.userId, e);
           }
         }
-        
+
         // Track losses for voters on losing side
         const losers = divide.votes.filter(v => v.side !== winnerSide && !v.isFree && v.voteCount > 0);
         for (const loser of losers) {
@@ -2702,7 +2712,7 @@ async function endDivideById(divideId, invokedByUserId = null) {
             console.error('Failed to update loser stats', loser.userId, e);
           }
         }
-        
+
         distributed = Math.round((distributedCents / 100) * 100) / 100;
       }
     }
@@ -2711,7 +2721,7 @@ async function endDivideById(divideId, invokedByUserId = null) {
     try {
       await Jackpot.findOneAndUpdate({ id: 'global' }, { $inc: { amount: jackpotAmount } }, { upsert: true, setDefaultsOnInsert: true });
       await House.findOneAndUpdate({ id: 'global' }, { $inc: { houseTotal: houseCut } }, { upsert: true, setDefaultsOnInsert: true });
-      
+
       // Track in finance system: pot is total bet, distributed is payout
       const potCents = Math.round(divide.pot * 100);
       const distributedCents = Math.round(distributed * 100);
@@ -2779,13 +2789,13 @@ app.get("/api/me", auth, async (req, res) => {
   try {
     const user = await User.findById(req.userId).select("_id username balance role holdingsDC holdingsInvested profileImage wagered totalWon totalDeposited totalWithdrawn totalRedemptions totalBets totalWins totalLosses createdAt");
     if (!user) return res.status(404).json({ error: "User not found" });
-    res.json({ 
-      id: user._id, 
-      username: user.username, 
-      balance: toDollars(user.balance), 
-      role: user.role, 
-      holdingsDC: user.holdingsDC || 0, 
-      holdingsInvested: user.holdingsInvested || 0, 
+    res.json({
+      id: user._id,
+      username: user.username,
+      balance: toDollars(user.balance),
+      role: user.role,
+      holdingsDC: user.holdingsDC || 0,
+      holdingsInvested: user.holdingsInvested || 0,
       profileImage: user.profileImage || '',
       wagered: toDollars(user.wagered || 0),
       totalWon: toDollars(user.totalWon || 0),
@@ -3132,7 +3142,7 @@ app.post("/api/withdraw", auth, async (req, res) => {
     // Check wager requirement (1x playthrough)
     const wagerReq = user.wagerRequirement || 0;
     if (wagerReq > 0) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: `Must wager $${toDollars(wagerReq)} more before withdrawal`,
         wagerRequirement: toDollars(wagerReq)
       });
@@ -3143,13 +3153,13 @@ app.post("/api/withdraw", auth, async (req, res) => {
     user.totalWithdrawn = (user.totalWithdrawn || 0) + amountCents;
     user.totalRedemptions = (user.totalRedemptions || 0) + 1;
     await user.save();
-    
+
     // Track global redemptions in House stats
     try {
       await House.findOneAndUpdate(
         { id: 'global' },
-        { 
-          $inc: { 
+        {
+          $inc: {
             totalRedemptions: 1,
             totalRedemptionAmount: amountCents
           }
@@ -3162,8 +3172,8 @@ app.post("/api/withdraw", auth, async (req, res) => {
 
     console.log(`[WITHDRAW] User ${user.username} withdrew $${amount}, new balance: $${toDollars(user.balance)}`);
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       balance: toDollars(user.balance),
       withdrawn: amount
     });
@@ -3331,4 +3341,5 @@ setTimeout(() => {
     console.error('Failed to schedule daily snapshot', e);
   }
 }, 5000);
+
 

@@ -11,7 +11,7 @@ A full-featured, production-quality Blackjack game built with React, TypeScript,
 - **Player actions**: Hit, Stand, Double Down, Split (unlimited re-splits)
 - **Double Down after split** supported
 - **Insurance** when dealer shows Ace (2:1 payout)
-- **Blackjack payout** at 3:2 odds
+- **Blackjack payout** at 6:5 odds
 - **Push detection** on dealer blackjack tie
 
 ### Side Bets (Optional)

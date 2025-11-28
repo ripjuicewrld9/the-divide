@@ -106,7 +106,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
                     <div className="space-y-2 text-gray-300">
                       <div className="flex justify-between">
                         <span>Blackjack (3:2):</span>
-                        <span className="text-green-400 font-bold">×2.5</span>
+                        <span className="text-green-400 font-bold">×2.2</span>
                       </div>
                       <div className="flex justify-between">
                         <span>Regular Win (1:1):</span>

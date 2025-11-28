@@ -79,7 +79,11 @@ export function canSplit(cards: Card[]): boolean {
 }
 
 export function canDoubleDown(cards: Card[]): boolean {
-  return cards.length === 2;
+  if (cards.length !== 2) return false;
+  
+  const handValue = getHandValue(cards);
+  // Restrict doubling to hard 9, 10, 11 only (house-favorable rule)
+  return handValue.value >= 9 && handValue.value <= 11 && !handValue.isSoft;
 }
 
 export function dealerShouldHit(dealerCards: Card[]): boolean {
@@ -129,7 +133,7 @@ export function calculatePayout(
   
   switch (outcome) {
     case 'blackjack':
-      payout = baseBet * 2.5; // 3:2 blackjack
+      payout = baseBet * 2.2; // 6:5 blackjack
       break;
     case 'win':
       payout = baseBet * 2; // 1:1 win
