@@ -7,6 +7,7 @@ import AuthModal from './AuthModal.jsx';
 import UserAvatar from './UserAvatar.jsx';
 import UserSettingsModal from './UserSettingsModal.jsx';
 import DepositWithdrawModal from './DepositWithdrawModal.jsx';
+import SupportTicket from './SupportTicket.jsx';
 
 export default function Header() {
   const { user, logout, addFunds } = useAuth();
@@ -19,6 +20,7 @@ export default function Header() {
   const [promoteError, setPromoteError] = useState('');
   const [promoteSuccess, setPromoteSuccess] = useState('');
   const [showDepositModal, setShowDepositModal] = useState(false);
+  const [showSupportModal, setShowSupportModal] = useState(false);
 
   const handleUserButton = () => {
     if (!user) {
@@ -82,6 +84,18 @@ export default function Header() {
 
         {/* User Area */}
         <div className="flex items-center gap-4">
+          {/* Support Button - Always visible */}
+          <button
+            onClick={() => setShowSupportModal(true)}
+            className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-white/10 hover:border-blue-500/30"
+            title="Contact Support"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+            <span className="hidden sm:inline">Support</span>
+          </button>
+
           {user ? (
             <>
               {/* Balance & Add Funds */}
@@ -184,6 +198,7 @@ export default function Header() {
         )
       }
       <UserSettingsModal isOpen={showSettingsModal} onClose={() => setShowSettingsModal(false)} />
+      {showSupportModal && <SupportTicket onClose={() => setShowSupportModal(false)} />}
     </header >
   );
 }

@@ -281,6 +281,121 @@ app.post('/api/profile-image', auth, async (req, res) => {
   }
 });
 
+// Support Ticket System - sends tickets to Discord webhook
+app.post('/api/support/ticket', async (req, res) => {
+  try {
+    const { subject, category, description, email } = req.body;
+
+    // Validate required fields
+    if (!subject || !category || !description) {
+      return res.status(400).json({ error: 'Subject, category, and description are required' });
+    }
+
+    // Get user info if authenticated
+    let username = 'Guest';
+    let userId = 'Not logged in';
+    
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+        const user = await User.findById(decoded.userId);
+        if (user) {
+          username = user.username;
+          userId = user._id.toString();
+        }
+      } catch (err) {
+        // Token invalid, continue as guest
+      }
+    }
+
+    // Discord webhook URL from environment variable
+    const discordWebhookUrl = process.env.DISCORD_SUPPORT_WEBHOOK_URL;
+    
+    if (!discordWebhookUrl) {
+      console.warn('⚠️ DISCORD_SUPPORT_WEBHOOK_URL not set in .env - ticket will not be sent to Discord');
+      // Still return success so the form doesn't break
+      return res.json({ 
+        message: 'Ticket received (Discord webhook not configured)', 
+        ticketId: Date.now().toString(36) 
+      });
+    }
+
+    // Create Discord embed
+    const embed = {
+      title: `🎫 New Support Ticket`,
+      color: category === 'bug' ? 0xff0000 : 
+             category === 'complaint' ? 0xff9900 :
+             category === 'payment' ? 0x00ff00 : 0x3b82f6,
+      fields: [
+        {
+          name: '📋 Category',
+          value: category.charAt(0).toUpperCase() + category.slice(1),
+          inline: true
+        },
+        {
+          name: '👤 User',
+          value: username,
+          inline: true
+        },
+        {
+          name: '🆔 User ID',
+          value: userId,
+          inline: true
+        },
+        {
+          name: '📧 Email',
+          value: email || 'Not provided',
+          inline: true
+        },
+        {
+          name: '📌 Subject',
+          value: subject,
+          inline: false
+        },
+        {
+          name: '📝 Description',
+          value: description.length > 1024 ? description.substring(0, 1021) + '...' : description,
+          inline: false
+        }
+      ],
+      timestamp: new Date().toISOString(),
+      footer: {
+        text: 'Support Ticket System'
+      }
+    };
+
+    // Send to Discord webhook
+    const webhookResponse = await fetch(discordWebhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        username: 'Support Bot',
+        embeds: [embed]
+      })
+    });
+
+    if (!webhookResponse.ok) {
+      console.error('Failed to send to Discord:', await webhookResponse.text());
+      throw new Error('Discord webhook failed');
+    }
+
+    console.log(`✅ Support ticket submitted by ${username} (${userId}) - Category: ${category}`);
+
+    res.json({ 
+      message: 'Ticket submitted successfully! Our team will review it shortly.',
+      ticketId: Date.now().toString(36)
+    });
+
+  } catch (err) {
+    console.error('Support ticket error:', err);
+    res.status(500).json({ error: 'Failed to submit ticket. Please try again.' });
+  }
+});
+
 // Serve static assets from the frontend `public/` folder so backend can
 // directly serve resources like `/keno.png` without duplicating files.
 // This keeps the single backend authoritative for these static endpoints

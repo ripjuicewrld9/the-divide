@@ -7,6 +7,9 @@
  * Run with: node scripts/backfill-user-stats.js
  */
 
+import dotenv from 'dotenv';
+dotenv.config();
+
 import mongoose from 'mongoose';
 import User from '../models/User.js';
 import KenoRound from '../models/KenoRound.js';
@@ -16,7 +19,7 @@ import Divide from '../models/Divide.js';
 import Ledger from '../models/Ledger.js';
 
 // MongoDB connection string - uses environment variable or falls back to server default
-const MONGODB_URI = process.env.MONGODB_URI;
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/rafflehub';
 
 async function backfillUserStats() {
     try {
