@@ -90,7 +90,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           />
           <div className="absolute right-1 top-1 flex gap-1">
             <button
-              onClick={() => onBetAmountChange(Math.max(0.01, betAmount / 2))}
+              onClick={() => onBetAmountChange(Number((Math.max(0.01, betAmount / 2)).toFixed(2)))}
               disabled={disabled}
               className="rounded bg-slate-800 px-2 py-1 text-xs font-medium text-slate-400 hover:bg-slate-700 hover:text-white"
             >
