@@ -335,9 +335,8 @@ export default function registerRugged(app, io, { auth, adminOnly, updateHouseSt
         user.wagered = (user.wagered || 0) + usdAmount;
         await user.save();
 
-        // 1% to global jackpot, 99% to pool (like other games)
-        const jackpotFee = Math.floor(usdAmount * 0.01);
-        const toPool = usdAmount - jackpotFee;
+        // Full bet goes to pool (no deduction)
+        const toPool = usdAmount;
         const newPoolActual = prevPool + toPool;
 
         // Record entryPool as the pool BEFORE this buy (prevents self-pumping)
@@ -346,15 +345,6 @@ export default function registerRugged(app, io, { auth, adminOnly, updateHouseSt
         const createdPos = await RuggedPosition.create({ userId: req.userId, entryAmount: toPool, entryPool: entryPoolForPosition });
 
         stateDoc.pool = newPoolActual;
-        
-        // Add 1% to global jackpot
-        try {
-          await Jackpot.findOneAndUpdate(
-            { id: 'global' },
-            { $inc: { amount: jackpotFee } },
-            { upsert: true }
-          );
-        } catch (e) { console.error('Failed to add jackpot fee', e); }
 
         if (roll === 1 || stateDoc.pool <= 1) {
           const poolValue = Number(stateDoc.pool || 0);

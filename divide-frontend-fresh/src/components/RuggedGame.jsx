@@ -110,12 +110,15 @@ export default function RuggedGame({ onOpenChat }) {
         setMyCashout(0);
         return;
       }
-      // cashout sum follows server's payout logic: entryAmount * (currentPool / entryPool)
+      // cashout sum follows server's payout logic: Math.floor(entryAmount_cents * mult)
+      // Server works in cents and floors each position, so we must match that exactly
       const cashoutSum = ps.reduce((s, it) => {
         const entryAmt = Number(it.entryAmount || 0);
         const entryPool = Number(it.entryPool || p || 1);
         const mult = entryPool > 0 ? (p / entryPool) : 1;
-        return s + entryAmt * mult;
+        // Convert to cents, floor, then back to dollars to match backend
+        const payoutCents = Math.floor((entryAmt * 100) * mult);
+        return s + (payoutCents / 100);
       }, 0);
       let mult = cashoutSum / totalEntry;
       // Guard: if user effectively owns the whole pool (within rounding),
@@ -143,7 +146,9 @@ export default function RuggedGame({ onOpenChat }) {
         const entryAmt = Number(it.entryAmount || 0);
         const entryPool = Number(it.entryPool || p || 1);
         const mult = entryPool > 0 ? (p / entryPool) : 1;
-        return { id: it.id, entryAmt, entryPool, mult, cashout: entryAmt * mult };
+        const payoutCents = Math.floor((entryAmt * 100) * mult);
+        const cashout = payoutCents / 100;
+        return { id: it.id, entryAmt, entryPool, mult, cashout };
       });
       return { pool: p, totalEntry, per };
     } catch { return null; }
@@ -257,7 +262,8 @@ export default function RuggedGame({ onOpenChat }) {
     socket.on('rugged:trade', onTrade);
     const onRestart = () => {
       // admin-forced restart: reset pool and clear positions
-      setStatus(prev => ({ ...prev, pool: 0, priceHistory: [], crashed: false, jackpot: 0 }));
+      // Don't reset priceHistory here - only reset when pool is actually 0
+      setStatus(prev => ({ ...prev, pool: 0, crashed: false, jackpot: 0 }));
       setPositions([]);
     };
     socket.on('rugged:restart', onRestart);
@@ -327,7 +333,15 @@ export default function RuggedGame({ onOpenChat }) {
       // If this is the first buy after a rug (pool was at/near zero), clear the chart history
       const wasAtZero = Number(pool || 0) <= 0.01;
       if (wasAtZero && srvPool > 0) {
-        setStatus(prev => ({ ...prev, pool: srvPool, jackpot: srvJackpot, priceHistory: [], price: 0, rugged: false }));
+        // Only reset priceHistory if pool is actually 0
+        setStatus(prev => ({ 
+          ...prev, 
+          pool: srvPool, 
+          jackpot: srvJackpot, 
+          priceHistory: srvPool === 0 ? [] : prev.priceHistory,
+          price: srvPool === 0 ? 0 : prev.price,
+          rugged: false 
+        }));
         try { localStorage.removeItem(LOCAL_KEY); } catch { /* ignore */ }
       } else {
         // store pool as dollars
@@ -542,35 +556,7 @@ export default function RuggedGame({ onOpenChat }) {
                   </div>
                 </div>
                 <div style={{ marginTop: 12, position: 'relative' }}>
-                  {/* Live price ticker above chart */}
-                  <div style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'center',
-                    padding: '8px 16px',
-                    background: 'rgba(0, 230, 255, 0.05)',
-                    borderRadius: '8px 8px 0 0',
-                    borderBottom: '1px solid rgba(0, 230, 255, 0.1)'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <span style={{ fontSize: 12, color: '#9fb', opacity: 0.7 }}>LIVE PRICE</span>
-                      <span style={{ 
-                        fontSize: 18, 
-                        fontWeight: 'bold',
-                        color: '#ffd36a',
-                        textShadow: '0 0 10px rgba(255, 211, 106, 0.3)',
-                        fontFamily: 'monospace',
-                        animation: status.priceHistory?.length > 1 ? 'pulse 2s infinite' : 'none'
-                      }}>
-                        ${(status.price || 0).toFixed(6)}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: 11, color: '#9fb', opacity: 0.5 }}>
-                      {status.priceHistory?.length || 0} data points
-                    </div>
-                  </div>
-                  
-                  <div style={{ position: 'relative', background: '#0a1520', borderRadius: '0 0 8px 8px' }}>
+                  <div style={{ position: 'relative', background: '#0a1520', borderRadius: '8px' }}>
                     <RuggedChart priceHistory={status.priceHistory || []} width={900} height={240} />
                     {
                       // show a centered countdown only during the cooldown between pumps (when market is paused)

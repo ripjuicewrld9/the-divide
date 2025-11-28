@@ -1179,10 +1179,6 @@ app.post('/keno/play', auth, async (req, res) => {
     const winCents = Math.round(betCents * multiplier);
     const win = Number((winCents / 100).toFixed(2));
 
-    // House cut and jackpot cut (5% house, 2% jackpot from bet)
-    const houseCut = Number((betAmount * 0.05).toFixed(2));
-    const jackpotCut = Number((betAmount * 0.02).toFixed(2));
-
     // Update user balance
     const newBalanceCents = user.balance - betCents + winCents;
     user.balance = newBalanceCents;
@@ -1226,8 +1222,6 @@ app.post('/keno/play', auth, async (req, res) => {
       gameSeed,
       risk,
       multiplier,
-      houseCut,
-      jackpotCut,
       reserveChange: 0,
       timestamp: new Date(),
       verified: false
@@ -1259,8 +1253,6 @@ app.post('/keno/play', auth, async (req, res) => {
       matches,
       win,
       multiplier,
-      houseCut,
-      jackpotCut,
       balance: toDollars(newBalanceCents),
       balanceAfterBet: toDollars(user.balance - betCents),
       serverSeed,
