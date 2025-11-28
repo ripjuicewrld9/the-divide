@@ -1337,9 +1337,9 @@ app.get('/api/recent-games', async (req, res) => {
         game: 'Plinko',
         username: user?.username || 'Hidden',
         profileImage: user?.profileImage || '',
-        wager: game.betAmount / 100,
+        wager: toDollars(game.betAmount),
         multiplier: game.multiplier.toFixed(2) + 'x',
-        payout: game.payout / 100,
+        payout: toDollars(game.payout),
         time: game.createdAt,
         icon: '⚪'
       });
@@ -1418,7 +1418,7 @@ app.get('/api/recent-games', async (req, res) => {
         game: 'Rugged Buy',
         username: user?.username || 'Hidden',
         profileImage: user?.profileImage || '',
-        wager: buy.amount / 100,
+        wager: toDollars(buy.amount),
         multiplier: '0.00x',
         payout: 0,
         time: buy.createdAt,
@@ -1443,7 +1443,7 @@ app.get('/api/recent-games', async (req, res) => {
         profileImage: user?.profileImage || '',
         wager: wager,
         multiplier: mult.toFixed(2) + 'x',
-        payout: (sell.amount || 0) / 100,
+        payout: toDollars(sell.amount || 0),
         time: sell.createdAt,
         icon: '📉'
       });
@@ -1512,9 +1512,9 @@ app.get('/api/my-games', auth, async (req, res) => {
         game: 'Plinko',
         username: user?.username || 'Hidden',
         profileImage: user?.profileImage || '',
-        wager: game.betAmount / 100,
+        wager: toDollars(game.betAmount),
         multiplier: game.multiplier.toFixed(2) + 'x',
-        payout: game.payout / 100,
+        payout: toDollars(game.payout),
         time: game.createdAt,
         icon: '⚪'
       });
@@ -1588,7 +1588,7 @@ app.get('/api/my-games', auth, async (req, res) => {
         game: 'Rugged Buy',
         username: user?.username || 'Hidden',
         profileImage: user?.profileImage || '',
-        wager: buy.amount / 100,
+        wager: toDollars(buy.amount),
         multiplier: '0.00x',
         payout: 0,
         time: buy.createdAt,
@@ -1613,7 +1613,7 @@ app.get('/api/my-games', auth, async (req, res) => {
         profileImage: user?.profileImage || '',
         wager: wager,
         multiplier: mult.toFixed(2) + 'x',
-        payout: (sell.amount || 0) / 100,
+        payout: toDollars(sell.amount || 0),
         time: sell.createdAt,
         icon: '📉'
       });
@@ -1686,10 +1686,10 @@ app.get('/api/top-wins', async (req, res) => {
         game: 'Plinko',
         username: user?.username || 'Hidden',
         profileImage: user?.profileImage || '',
-        wager: game.betAmount / 100,
+        wager: toDollars(game.betAmount),
         multiplier: game.multiplier,
         multiplierDisplay: game.multiplier.toFixed(2) + 'x',
-        payout: game.payout / 100,
+        payout: toDollars(game.payout),
         time: game.createdAt,
         icon: '⚪'
       });
@@ -2474,10 +2474,10 @@ app.get('/admin/finance', auth, adminOnly, async (req, res) => {
 
     res.json({
       global: {
-        jackpotAmount: (jackpot?.amount || 0) / 100,
+        jackpotAmount: toDollars(jackpot?.amount || 0),
         houseTotal: (house.houseTotal || 0) / 100,
         totalRedemptions: house.totalRedemptions || 0,
-        totalRedemptionAmount: (house.totalRedemptionAmount || 0) / 100
+        totalRedemptionAmount: toDollars(house.totalRedemptionAmount || 0)
       },
       games
     });
@@ -2952,7 +2952,7 @@ app.post("/api/verify-game", async (req, res) => {
               path: gameData.path,
               finalSlot: gameData.finalSlot,
               multiplier: gameData.multiplier,
-              payout: gameData.payout / 100
+              payout: toDollars(gameData.payout)
             }
           });
         }
@@ -3331,3 +3331,4 @@ setTimeout(() => {
     console.error('Failed to schedule daily snapshot', e);
   }
 }, 5000);
+
