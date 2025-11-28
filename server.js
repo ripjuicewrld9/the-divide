@@ -2605,7 +2605,7 @@ setInterval(async () => {
 // GET CURRENT USER (for frontend refresh)
 app.get("/api/me", auth, async (req, res) => {
   try {
-    const user = await User.findById(req.userId).select("_id username balance role holdingsDC holdingsInvested profileImage wagered totalWon totalDeposited totalWithdrawn");
+    const user = await User.findById(req.userId).select("_id username balance role holdingsDC holdingsInvested profileImage wagered totalWon totalDeposited totalWithdrawn totalBets totalWins totalLosses createdAt");
     if (!user) return res.status(404).json({ error: "User not found" });
     res.json({ 
       id: user._id, 
@@ -2618,7 +2618,11 @@ app.get("/api/me", auth, async (req, res) => {
       wagered: toDollars(user.wagered || 0),
       totalWon: toDollars(user.totalWon || 0),
       totalDeposited: toDollars(user.totalDeposited || 0),
-      totalWithdrawn: toDollars(user.totalWithdrawn || 0)
+      totalWithdrawn: toDollars(user.totalWithdrawn || 0),
+      totalBets: user.totalBets || 0,
+      totalWins: user.totalWins || 0,
+      totalLosses: user.totalLosses || 0,
+      createdAt: user.createdAt
     });
   } catch (err) {
     res.status(500).json({ error: "Server error" });
