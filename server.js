@@ -469,6 +469,14 @@ app.post('/divides/vote', auth, async (req, res) => {
     // divide.pot stored in dollars in DB (legacy); keep pot arithmetic in dollars
     divide.pot = Number((divide.pot + boostAmount).toFixed(2));
 
+    // Update user statistics for paid votes (track engagement)
+    if (!isFree && boostAmount > 0) {
+      user.totalBets = (user.totalBets || 0) + 1;
+      user.wagered = (user.wagered || 0) + boostCents;
+      // Divides voting is a bet - outcome (win/loss) determined when divide ends
+      // For now, count all paid votes as "bets" without immediate win/loss classification
+    }
+
     await divide.save();
     await user.save();
 
@@ -562,6 +570,13 @@ app.post('/Divides/vote', auth, async (req, res) => {
     if (side === 'A') divide.votesA += voteCount;
     else divide.votesB += voteCount;
     divide.pot = Number((divide.pot + (betAmount || boostAmount)).toFixed(2));
+
+    // Update user statistics for paid votes
+    const paidAmount = betAmount || boostAmount;
+    if (!isFree && paidAmount > 0) {
+      user.totalBets = (user.totalBets || 0) + 1;
+      user.wagered = (user.wagered || 0) + toCents(paidAmount);
+    }
 
     await divide.save();
     await user.save();
@@ -2487,12 +2502,32 @@ async function endDivideById(divideId, invokedByUserId = null) {
             const shareCents = Math.round((winner.voteCount / totalWinnerVotes) * winnerPotCents);
             const share = Number((shareCents / 100).toFixed(2));
             voter.balance = Number((voter.balance + share).toFixed(2));
+            voter.totalWon = (voter.totalWon || 0) + shareCents;
+            // Only increment win count if they made a profit (share > their bet)
+            const betCents = Math.round((winner.voteCount || 0) * 100);
+            if (shareCents > betCents) {
+              voter.totalWins = (voter.totalWins || 0) + 1;
+            }
             await voter.save();
             distributed += share;
           } catch (e) {
             console.error('Failed to credit user-created divide winner', winner.userId, e);
           }
         }
+        
+        // Track losses for voters on losing side
+        const losers = divide.votes.filter(v => v.side !== winnerSide && !v.isFree && v.voteCount > 0);
+        for (const loser of losers) {
+          try {
+            const voter = await User.findById(loser.userId);
+            if (!voter) continue;
+            voter.totalLosses = (voter.totalLosses || 0) + 1;
+            await voter.save();
+          } catch (e) {
+            console.error('Failed to update loser stats', loser.userId, e);
+          }
+        }
+        
         distributed = Number(distributed.toFixed(2));
       }
     } else {
@@ -2526,11 +2561,34 @@ async function endDivideById(divideId, invokedByUserId = null) {
             if (!voter) continue;
             const share = Number((s.shareCents / 100).toFixed(2));
             voter.balance = Number((voter.balance + share).toFixed(2));
+            voter.totalWon = (voter.totalWon || 0) + s.shareCents;
+            // Check if this was a winning vote (only for paid votes)
+            const voterRecord = divide.votes.find(v => String(v.userId) === String(s.userId));
+            if (voterRecord && !voterRecord.isFree) {
+              const betCents = Math.round((voterRecord.voteCount || 0) * 100);
+              if (s.shareCents > betCents) {
+                voter.totalWins = (voter.totalWins || 0) + 1;
+              }
+            }
             await voter.save();
           } catch (e) {
             console.error('Failed to credit winner share', s.userId, e);
           }
         }
+        
+        // Track losses for voters on losing side
+        const losers = divide.votes.filter(v => v.side !== winnerSide && !v.isFree && v.voteCount > 0);
+        for (const loser of losers) {
+          try {
+            const voter = await User.findById(loser.userId);
+            if (!voter) continue;
+            voter.totalLosses = (voter.totalLosses || 0) + 1;
+            await voter.save();
+          } catch (e) {
+            console.error('Failed to update loser stats', loser.userId, e);
+          }
+        }
+        
         distributed = Math.round((distributedCents / 100) * 100) / 100;
       }
     }

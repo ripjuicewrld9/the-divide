@@ -192,6 +192,9 @@ export default function registerRugged(app, io, { auth, adminOnly, updateHouseSt
           if (userDoc.wagerRequirement > 0) {
             userDoc.wagerRequirement = Math.max(0, userDoc.wagerRequirement - usdAmount);
           }
+          // Track buy as a bet
+          userDoc.totalBets = (userDoc.totalBets || 0) + 1;
+          userDoc.wagered = (userDoc.wagered || 0) + usdAmount;
           await userDoc.save({ session });
 
           // 1% to global jackpot, 99% to pool (like other games)
@@ -324,6 +327,9 @@ export default function registerRugged(app, io, { auth, adminOnly, updateHouseSt
         if (user.wagerRequirement > 0) {
           user.wagerRequirement = Math.max(0, user.wagerRequirement - usdAmount);
         }
+        // Track buy as a bet
+        user.totalBets = (user.totalBets || 0) + 1;
+        user.wagered = (user.wagered || 0) + usdAmount;
         await user.save();
 
         // 1% to global jackpot, 99% to pool (like other games)
@@ -441,17 +447,30 @@ export default function registerRugged(app, io, { auth, adminOnly, updateHouseSt
           const state = await RuggedState.findOne({ id: 'global' }).session(session);
           const currentPool = Number(state.pool || 0);
           let totalPayout = 0;
+          let totalInvestment = 0; // Track original investment for win/loss
           // calculate payout for fraction of each position
           for (const p of positions) {
+            const entryAmount = Number(p.entryAmount || 0);
             const entryPool = Number(p.entryPool || currentPool || 1);
             const mult = currentPool / entryPool;
-            const payout = Math.floor((Number(p.entryAmount || 0) * mult * fraction));
+            const payout = Math.floor((entryAmount * mult * fraction));
             totalPayout += payout;
+            totalInvestment += Math.floor(entryAmount * fraction); // Track what was invested
           }
           totalPayout = Math.min(totalPayout, currentPool);
 
           state.pool = Number(state.pool || 0) - totalPayout;
           user.balance = Number(user.balance || 0) + totalPayout;
+          
+          // Track win/loss based on payout vs investment
+          if (totalPayout > totalInvestment) {
+            user.totalWins = (user.totalWins || 0) + 1;
+          } else if (totalPayout < totalInvestment) {
+            user.totalLosses = (user.totalLosses || 0) + 1;
+          }
+          // If equal, don't increment either (breakeven)
+          user.totalWon = (user.totalWon || 0) + totalPayout;
+          
           // append a price point to the lightweight state doc (cents -> display)
           try {
             state.priceHistory = state.priceHistory || [];
@@ -528,15 +547,27 @@ export default function registerRugged(app, io, { auth, adminOnly, updateHouseSt
       const state = await ensureState();
       const currentPool = Number(state.pool || 0);
       let totalPayout = 0;
+      let totalInvestment = 0; // Track original investment for win/loss
       for (const p of positions) {
+        const entryAmount = Number(p.entryAmount || 0);
         const entryPool = Number(p.entryPool || currentPool || 1);
         const mult = currentPool / entryPool;
-        const payout = Math.floor((Number(p.entryAmount || 0) * mult * fraction));
+        const payout = Math.floor((entryAmount * mult * fraction));
         totalPayout += payout;
+        totalInvestment += Math.floor(entryAmount * fraction);
       }
       totalPayout = Math.min(totalPayout, currentPool);
       state.pool = Number(state.pool || 0) - totalPayout;
       user.balance = Number(user.balance || 0) + totalPayout;
+      
+      // Track win/loss based on payout vs investment
+      if (totalPayout > totalInvestment) {
+        user.totalWins = (user.totalWins || 0) + 1;
+      } else if (totalPayout < totalInvestment) {
+        user.totalLosses = (user.totalLosses || 0) + 1;
+      }
+      user.totalWon = (user.totalWon || 0) + totalPayout;
+      
       try {
         state.priceHistory = state.priceHistory || [];
         const raw = state.pool ? Number((state.pool / 100) / DISPLAY_DIVISOR) : 0;
