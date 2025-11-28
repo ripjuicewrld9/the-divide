@@ -501,7 +501,19 @@ export default function registerRugged(app, io, { auth, adminOnly, updateHouseSt
             }
           }
 
-          try { await Ledger.create([{ type: 'rugged_sell', amount: totalPayout, userId: req.userId, meta: { percent } }], { session }); } catch (e) {}
+          try { 
+            const mult = totalInvestment > 0 ? (totalPayout / totalInvestment) : 1;
+            await Ledger.create([{ 
+              type: 'rugged_sell', 
+              amount: totalPayout, 
+              userId: req.userId, 
+              meta: { 
+                percent, 
+                wager: totalInvestment, 
+                multiplier: mult 
+              } 
+            }], { session }); 
+          } catch (e) {}
           await session.commitTransaction();
           session.endSession();
           
@@ -593,7 +605,19 @@ export default function registerRugged(app, io, { auth, adminOnly, updateHouseSt
         }
       }
 
-      try { await Ledger.create({ type: 'rugged_sell', amount: totalPayout, userId: req.userId, meta: { percent } }); } catch (e) {}
+      try { 
+        const mult = totalInvestment > 0 ? (totalPayout / totalInvestment) : 1;
+        await Ledger.create({ 
+          type: 'rugged_sell', 
+          amount: totalPayout, 
+          userId: req.userId, 
+          meta: { 
+            percent, 
+            wager: totalInvestment, 
+            multiplier: mult 
+          } 
+        }); 
+      } catch (e) {}
       
       // Track sell as payout in finance system (player-vs-player, no house loss)
       if (updateHouseStats) {

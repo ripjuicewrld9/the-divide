@@ -1388,6 +1388,51 @@ app.get('/api/recent-games', async (req, res) => {
       });
     }
 
+    // Fetch Rugged buys and sells from Ledger
+    const ruggedBuys = await Ledger.find({ type: 'rugged_buy' })
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .select('_id userId amount createdAt')
+      .lean();
+
+    for (const buy of ruggedBuys) {
+      const user = await getUserCached(buy.userId);
+      games.push({
+        _id: buy._id,
+        game: 'Rugged Buy',
+        username: user?.username || 'Hidden',
+        profileImage: user?.profileImage || '',
+        wager: buy.amount / 100,
+        multiplier: '0.00x',
+        payout: 0,
+        time: buy.createdAt,
+        icon: '📈'
+      });
+    }
+
+    const ruggedSells = await Ledger.find({ type: 'rugged_sell' })
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .select('_id userId amount meta createdAt')
+      .lean();
+
+    for (const sell of ruggedSells) {
+      const user = await getUserCached(sell.userId);
+      const wager = (sell.meta?.wager || 0) / 100;
+      const mult = sell.meta?.multiplier || 1;
+      games.push({
+        _id: sell._id,
+        game: 'Rugged Sell',
+        username: user?.username || 'Hidden',
+        profileImage: user?.profileImage || '',
+        wager: wager,
+        multiplier: mult.toFixed(2) + 'x',
+        payout: (sell.amount || 0) / 100,
+        time: sell.createdAt,
+        icon: '📉'
+      });
+    }
+
     // Sort all games by time and limit
     games.sort((a, b) => new Date(b.time) - new Date(a.time));
     const recentGames = games.slice(0, limit);
@@ -1511,6 +1556,50 @@ app.get('/api/my-games', auth, async (req, res) => {
         payout: battle.pot,
         time: battle.createdAt,
         icon: '⚔️'
+      });
+    }
+
+    // Fetch user's Rugged buys
+    const ruggedBuys = await Ledger.find({ userId, type: 'rugged_buy' })
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
+
+    for (const buy of ruggedBuys) {
+      const user = await User.findById(userId).select('username profileImage').lean();
+      games.push({
+        _id: buy._id,
+        game: 'Rugged Buy',
+        username: user?.username || 'Hidden',
+        profileImage: user?.profileImage || '',
+        wager: buy.amount / 100,
+        multiplier: '0.00x',
+        payout: 0,
+        time: buy.createdAt,
+        icon: '📈'
+      });
+    }
+
+    // Fetch user's Rugged sells
+    const ruggedSells = await Ledger.find({ userId, type: 'rugged_sell' })
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
+
+    for (const sell of ruggedSells) {
+      const user = await User.findById(userId).select('username profileImage').lean();
+      const wager = (sell.meta?.wager || 0) / 100;
+      const mult = sell.meta?.multiplier || 1;
+      games.push({
+        _id: sell._id,
+        game: 'Rugged Sell',
+        username: user?.username || 'Hidden',
+        profileImage: user?.profileImage || '',
+        wager: wager,
+        multiplier: mult.toFixed(2) + 'x',
+        payout: (sell.amount || 0) / 100,
+        time: sell.createdAt,
+        icon: '📉'
       });
     }
 
