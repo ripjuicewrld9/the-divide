@@ -191,9 +191,9 @@ export default function UserSettingsModal({ isOpen, onClose }) {
                 onClick={() => setActiveTab(tab)}
                 style={{
                   padding: '12px 24px',
-                  background: activeTab === tab ? 'rgba(0, 255, 255, 0.1)' : 'transparent',
+                  background: activeTab === tab ? 'rgba(0, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0)',
                   border: 'none',
-                  borderBottom: activeTab === tab ? '2px solid #00ffff' : '2px solid transparent',
+                  borderBottom: activeTab === tab ? '2px solid #00ffff' : '2px solid rgba(0, 0, 0, 0)',
                   color: activeTab === tab ? '#00ffff' : '#9ca3af',
                   fontSize: '14px',
                   fontWeight: 600,

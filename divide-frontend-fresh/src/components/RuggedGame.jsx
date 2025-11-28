@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { isMobile } from '../utils/deviceDetect';
 import useSocket from '../hooks/useSocket';
@@ -27,12 +27,12 @@ export default function RuggedGame({ onOpenChat }) {
   // firstPrice: pool/1_000_000 when pool first reaches $100 (null until set)
   const [firstPrice, setFirstPrice] = useState(null);
   // per-user UI values
-  const [myEntry, setMyEntry] = useState(0);
+  const [_myEntry, setMyEntry] = useState(0);
   const [myMultiplier, setMyMultiplier] = useState(1);
   const [myCashout, setMyCashout] = useState(0);
-  const [players, setPlayers] = useState({});
+  const [_players, setPlayers] = useState({});
   const [showProvenFair, setShowProvenFair] = useState(false);
-  const [lastRngData, setLastRngData] = useState(null); // Store RNG rug pull data
+  const [_lastRngData, setLastRngData] = useState(null); // Store RNG rug pull data
 
   const LOCAL_KEY = 'rugged_priceHistory';
   // Display mapping: show a "fake stock price" where price = pool / DISPLAY_DIVISOR.
@@ -48,7 +48,7 @@ export default function RuggedGame({ onOpenChat }) {
       if (!raw) return [];
       const parsed = JSON.parse(raw);
       return Array.isArray(parsed) ? parsed.map(p => ({ ...p, ts: new Date(p.ts) })) : [];
-    } catch (e) {
+    } catch {
       return [];
     }
   };
@@ -56,7 +56,7 @@ export default function RuggedGame({ onOpenChat }) {
   const saveLocalHistory = (history) => {
     try {
       localStorage.setItem(LOCAL_KEY, JSON.stringify(history));
-    } catch (e) { }
+    } catch { /* ignore */ }
   };
 
   useEffect(() => {
@@ -68,7 +68,7 @@ export default function RuggedGame({ onOpenChat }) {
         if (ph && ph.length && mounted) {
           setStatus(prev => ({ ...prev, priceHistory: ph }));
         }
-      } catch (e) { }
+      } catch { /* ignore */ }
       // fetch user's open positions so they survive page reload
       try {
         const resp = await api.get('/rugged/positions').catch(() => null);
@@ -87,7 +87,7 @@ export default function RuggedGame({ onOpenChat }) {
             }
           } catch (e) { console.error('failed to restore positions UI state', e); }
         }
-      } catch (e) { /* ignore */ }
+      } catch { /* ignore */ }
     })();
     return () => { mounted = false; };
   }, []);
@@ -126,7 +126,7 @@ export default function RuggedGame({ onOpenChat }) {
       }
       setMyMultiplier(Number.isFinite(mult) ? Number(mult.toFixed(6)) : 1);
       setMyCashout(Number.isFinite(cashoutSum) ? Number(cashoutSum.toFixed(2)) : 0);
-    } catch (e) {
+    } catch {
       setMyMultiplier(1);
       setMyCashout(0);
     }
@@ -146,7 +146,7 @@ export default function RuggedGame({ onOpenChat }) {
         return { id: it.id, entryAmt, entryPool, mult, cashout: entryAmt * mult };
       });
       return { pool: p, totalEntry, per };
-    } catch (e) { return null; }
+    } catch { return null; }
   }, [pool, positions]);
 
   useEffect(() => {
@@ -157,7 +157,6 @@ export default function RuggedGame({ onOpenChat }) {
       setStatus(prev => {
         // price broadcast: server sends USD-per-DC (server units). Convert to display units.
         // If price not provided, derive from pool. If neither provided, fall back to previous value.
-        const totalSupply = SERVER_TOTAL_SUPPLY;
         // Server emits price in display units already (pool / DISPLAY_DIVISOR). Use prev.price as fallback.
         const serverPriceFallback = (prev && typeof prev.price !== 'undefined') ? Number(prev.price || 0) : 0;
         const serverPrice = Number(typeof data.price !== 'undefined' ? data.price : (typeof data.pool !== 'undefined' ? (Number(data.pool) / DISPLAY_DIVISOR) : serverPriceFallback));
@@ -207,7 +206,7 @@ export default function RuggedGame({ onOpenChat }) {
         // Use confirm so user can optionally open the seed proof in a new tab
         const openProof = data.serverSeedLink ? window.confirm(msg + '\n\nOpen server seed proof now?') : window.alert(msg);
         if (openProof && data.serverSeedLink) window.open(data.serverSeedLink, '_blank');
-      } catch (e) {
+      } catch {
         // fallback alert
         alert('Rug pull occurred: ' + (data.reason || 'unknown'));
       }
@@ -256,7 +255,7 @@ export default function RuggedGame({ onOpenChat }) {
     socket.on('rugged:update', onUpdate);
     socket.on('rugged:rugPull', onRug);
     socket.on('rugged:trade', onTrade);
-    const onRestart = (data) => {
+    const onRestart = () => {
       // admin-forced restart: reset pool and clear positions
       setStatus(prev => ({ ...prev, pool: 0, priceHistory: [], crashed: false, jackpot: 0 }));
       setPositions([]);
@@ -281,9 +280,10 @@ export default function RuggedGame({ onOpenChat }) {
         if (v > 0) return v;
       }
       return null;
-    } catch (e) { return null; }
+    } catch { return null; }
   }, [status.priceHistory]);
 
+  // eslint-disable-next-line no-unused-vars
   async function handleBuySell(data) {
     // Handle server responses if backend used. Expected shapes: { pool, jackpot, crashed, balance }
     if (!data) return;
@@ -296,7 +296,7 @@ export default function RuggedGame({ onOpenChat }) {
     if (typeof data.crashed !== 'undefined') setStatus(prev => ({ ...prev, crashed: !!data.crashed }));
     if (typeof data.balance !== 'undefined') setBalance(Number(data.balance));
     // Also update global AuthContext so the header shows the new balance immediately
-    try { updateUser && updateUser({ balance: Number(data.balance) }); } catch (e) { }
+    try { updateUser && updateUser({ balance: Number(data.balance) }); } catch { /* ignore */ }
   }
 
   // PURE RNG frontend actions: buy into pool and sell all positions
@@ -328,7 +328,7 @@ export default function RuggedGame({ onOpenChat }) {
       const wasAtZero = Number(pool || 0) <= 0.01;
       if (wasAtZero && srvPool > 0) {
         setStatus(prev => ({ ...prev, pool: srvPool, jackpot: srvJackpot, priceHistory: [], price: 0, rugged: false }));
-        try { localStorage.removeItem(LOCAL_KEY); } catch (e) { }
+        try { localStorage.removeItem(LOCAL_KEY); } catch { /* ignore */ }
       } else {
         // store pool as dollars
         setStatus(prev => ({ ...prev, pool: srvPool, jackpot: srvJackpot }));
@@ -336,7 +336,7 @@ export default function RuggedGame({ onOpenChat }) {
       setPool(srvPool);
       if (typeof resp.balance !== 'undefined') {
         setBalance(Number(resp.balance));
-        try { updateUser && updateUser({ balance: Number(resp.balance) }); } catch (e) { }
+        try { updateUser && updateUser({ balance: Number(resp.balance) }); } catch { /* ignore */ }
       }
       // add created position if returned (position.entryPool is pool after buy)
       if (resp.position) {
@@ -371,7 +371,7 @@ export default function RuggedGame({ onOpenChat }) {
       }
       if (typeof resp.balance !== 'undefined') {
         setBalance(Number(resp.balance));
-        try { updateUser && updateUser({ balance: Number(resp.balance) }); } catch (e) { }
+        try { updateUser && updateUser({ balance: Number(resp.balance) }); } catch { /* ignore */ }
       }
       // If server returned canonical updated positions, use them. Otherwise
       // fall back to client-side approximation for partial sells.
@@ -382,7 +382,7 @@ export default function RuggedGame({ onOpenChat }) {
         try {
           const myTotal = (resp.positions || []).reduce((s, p) => s + Number(p.entryAmount || 0), 0);
           setPlayers(prev => ({ ...prev, me: myTotal > 0 ? { amount: myTotal, entry: (resp.positions[0]?.entryPool ? Number(resp.positions[0].entryPool || 0) : 0) } : undefined }));
-        } catch (e) { /* ignore */ }
+        } catch { /* ignore */ }
       } else {
         // Update positions locally to reflect partial sells. Server did not return positions, so approximate.
         const pct = Number(percent || 100);
@@ -625,3 +625,4 @@ export default function RuggedGame({ onOpenChat }) {
     </>
   );
 }
+

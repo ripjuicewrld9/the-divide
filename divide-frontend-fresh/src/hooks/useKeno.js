@@ -54,6 +54,7 @@ export default function useKeno() {
   const clickAudioRef = useRef(null);
   const bellAudioRef = useRef(null);
   const guncockAudioRef = useRef(null);
+  const isMountedRef = useRef(true);
   // ensure local balance follows global auth user when it changes
   useEffect(() => {
     if (user && typeof user.balance === 'number') setBalance(Number(user.balance));
@@ -69,32 +70,13 @@ export default function useKeno() {
     }
   }, []);
 
-  // preload common sounds once on mount to avoid repeated creation and
-  // improve reliability on some browsers (autoplay policies / creation costs)
+  // Create audio lazily on first interaction, not on mount
+  // This prevents any sounds from playing during page enter/exit
   useEffect(() => {
-    try {
-      // Use root-relative sound paths so audio loads from the same origin
-      // that serves the UI (Vite dev server or backend static).
-      try {
-        const sClick = new Audio('/sounds/click.wav');
-        sClick.preload = 'auto';
-        try { sClick.load(); } catch { /* ignore */ }
-        clickAudioRef.current = sClick;
-      } catch { clickAudioRef.current = null; }
-      try {
-        const sBell = new Audio('/sounds/bell.wav');
-        sBell.preload = 'auto';
-        try { sBell.load(); } catch { /* ignore */ }
-        bellAudioRef.current = sBell;
-      } catch { bellAudioRef.current = null; }
-      try {
-        const sGun = new Audio('/sounds/guncock.wav');
-        sGun.preload = 'auto';
-        try { sGun.load(); } catch { /* ignore */ }
-        guncockAudioRef.current = sGun;
-      } catch { guncockAudioRef.current = null; }
-    } catch { /* ignore */ }
     return () => {
+      // Mark as unmounted first to prevent any sounds
+      isMountedRef.current = false;
+      
       // stop and cleanup all audio on unmount
       try {
         if (clickAudioRef.current) {
@@ -127,21 +109,14 @@ export default function useKeno() {
   }
 
   function playGuncock() {
+    if (!isMountedRef.current) return; // Don't play if unmounted
     try {
+      // Create audio on demand if not already created
+      if (!guncockAudioRef.current) {
+        guncockAudioRef.current = new Audio('/sounds/guncock.wav');
+      }
       if (guncockAudioRef.current) {
         try { guncockAudioRef.current.currentTime = 0; guncockAudioRef.current.play().catch(() => { }); return; } catch { /* ignore audio playback errors */ }
-      }
-      // fallback to trying common extensions
-      const candidates = ['/sounds/guncock.wav', '/sounds/guncock.mp3', '/sounds/guncock'];
-      for (const url of candidates) {
-        try {
-          const a = new Audio(url);
-          a.currentTime = 0;
-          const p = a.play();
-          if (!p) continue;
-          p.then(() => { }).catch(() => { });
-          return;
-        } catch { /* ignore per-candidate audio failures */ }
       }
     } catch { /* ignore */ }
   }
@@ -207,17 +182,19 @@ export default function useKeno() {
       }
       const n = picks[idx];
       // play a small pick/draw sound for each auto-picked number
-      try {
-        if (clickAudioRef.current) {
-          try { clickAudioRef.current.currentTime = 0; clickAudioRef.current.play().catch(() => { }); }
-          catch { /* fallback below */ }
-        } else {
-          const s = new Audio('/sounds/click.wav');
-          s.currentTime = 0;
-          s.play().catch(() => { });
+      if (isMountedRef.current) { // Only play if still mounted
+        try {
+          // Create audio on demand if not already created
+          if (!clickAudioRef.current) {
+            clickAudioRef.current = new Audio('/sounds/click.wav');
+          }
+          if (clickAudioRef.current) {
+            try { clickAudioRef.current.currentTime = 0; clickAudioRef.current.play().catch(() => { }); }
+            catch { /* ignore */ }
+          }
+        } catch {
+          // ignore any errors during random pick audio playback
         }
-      } catch {
-        // ignore any errors during random pick audio playback
       }
       // add current pick to selection state
       try {
@@ -260,16 +237,21 @@ export default function useKeno() {
     setMessage(data.win > 0 ? `You won $${formatCurrency(Number(data.win), 2)}!` : 'No win this round');
 
     // play bell only when a monetary win occurred
-    try {
-      if (Number(data.win || 0) > 0) {
-        if (bellAudioRef.current) {
-          try { bellAudioRef.current.currentTime = 0; bellAudioRef.current.play().catch(() => { }); }
-          catch { try { const bell = new Audio('/sounds/bell.wav'); bell.currentTime = 0; bell.play().catch(() => { }); } catch { /* ignore */ } }
-        } else {
-          try { const bell = new Audio('/sounds/bell.wav'); bell.currentTime = 0; bell.play().catch(() => { }); } catch { /* ignore */ }
+    if (isMountedRef.current) { // Only play if still mounted
+      try {
+        if (Number(data.win || 0) > 0) {
+          // Create audio on demand if not already created
+          if (!bellAudioRef.current) {
+            bellAudioRef.current = new Audio('/sounds/bell.wav');
+            bellAudioRef.current.volume = 0.6;
+          }
+          if (bellAudioRef.current) {
+            try { bellAudioRef.current.currentTime = 0; bellAudioRef.current.play().catch(() => { }); }
+            catch { /* ignore */ }
+          }
         }
-      }
-    } catch { /* ignore */ }
+      } catch { /* ignore */ }
+    }
 
     const mult = Number(data.multiplier || 0);
     if (mult > 0) {

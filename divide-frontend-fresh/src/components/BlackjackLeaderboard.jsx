@@ -73,8 +73,8 @@ export default function BlackjackLeaderboard() {
             e.currentTarget.style.borderColor = 'rgba(0, 255, 255, 0.2)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = i % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'transparent';
-            e.currentTarget.style.borderColor = 'transparent';
+            e.currentTarget.style.background = i % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0)';
+            e.currentTarget.style.borderColor = 'rgba(0, 0, 0, 0)';
           }}
         >
           <div style={{

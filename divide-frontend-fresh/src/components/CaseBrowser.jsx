@@ -371,7 +371,7 @@ export default function CaseBrowser({ onSelectCase, selectedCaseIds, onRemoveCas
                   e.currentTarget.style.color = '#ffc107';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0)';
                   e.currentTarget.style.color = '#fff';
                 }}
               >

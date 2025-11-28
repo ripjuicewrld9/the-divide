@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import api from '../services/api';
 import Countdown from './Countdown';
 
 // Rugged Controls for PURE RNG crash game.
 // Keeps visual layout but changes semantics: buy USD into pool, sell to cash out your positions.
-export default function RuggedControls({ pool = 0, onBuy, onSellAll, positions = [], onRefresh, balance = 0, rugged = false, myMultiplier = 1, myCashout = 0, debugEnabled = false, debugInfo = null, onShowFairness }) {
+// eslint-disable-next-line no-unused-vars
+export default function RuggedControls({ pool = 0, onBuy, onSellAll, positions = [], balance = 0, rugged = false, myMultiplier = 1, myCashout = 0, debugEnabled = false, debugInfo = null, onShowFairness }) {
   const [mode, setMode] = useState('buy'); // 'buy' or 'sell'
   // value: when buy -> USD amount; when sell -> percent (0-100)
   const [value, setValue] = useState(1);

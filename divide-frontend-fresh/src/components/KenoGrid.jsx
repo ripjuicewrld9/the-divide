@@ -18,6 +18,7 @@ export default function KenoGrid({ playerNumbers = [], onToggle = () => {}, draw
   const pickSound = useRef(null);
   const matchSound = useRef(null);
   const creditSound = useRef(null);
+  const isMounted = useRef(true);
 
   // revealedNumbers controls the sequential reveal animation
   const [revealedNumbers, setRevealedNumbers] = useState([]);
@@ -82,37 +83,12 @@ export default function KenoGrid({ playerNumbers = [], onToggle = () => {}, draw
   }
 
   useEffect(() => {
-    // setup audio objects once
-    try {
-      // Use root-relative sound paths so audio loads from the same origin
-      // that serves the UI (Vite dev server or backend static).
-      pickSound.current = new Audio('/sounds/click.wav');
-      matchSound.current = new Audio('/sounds/ding.wav');
-      creditSound.current = new Audio('/sounds/bell.wav');
-      if (creditSound.current) creditSound.current.volume = 0.6;
-
-      // unlock audio on first user interaction (improves autoplay behavior)
-      const unlock = () => {
-        try {
-          [pickSound.current, matchSound.current, creditSound.current].forEach((a) => {
-            if (!a) return;
-            a.muted = false;
-            a.currentTime = 0;
-            a.play().then(() => a.pause()).catch(() => {/* ignore audio errors */});
-          });
-        } catch {
-          /* ignore audio unlock errors */
-        }
-      };
-
-      // listen for multiple user gesture types to maximize chance audio unlock
-      document.addEventListener('click', unlock, { once: true });
-      document.addEventListener('pointerdown', unlock, { once: true });
-      document.addEventListener('keydown', unlock, { once: true });
-    } catch {
-      // ignore audio creation errors
-    }
+    // Don't create audio on mount - create it lazily when needed
+    // This prevents any sounds during page enter/exit
     return () => {
+      // Mark as unmounted to prevent sounds from playing
+      isMounted.current = false;
+      
       // cleanup: stop and clear all audio
       try {
         [pickSound.current, matchSound.current, creditSound.current].forEach((a) => {
@@ -142,17 +118,24 @@ export default function KenoGrid({ playerNumbers = [], onToggle = () => {}, draw
     if (instantReveal) {
       // show all drawn numbers immediately and play sounds quickly
       setRevealedNumbers(Array.isArray(drawnNumbers) ? drawnNumbers.map(Number) : []);
-      try {
-        // play pick and match sounds quickly for each drawn number
-        (Array.isArray(drawnNumbers) ? drawnNumbers.map(Number) : []).forEach((num) => {
-          try { if (pickSound.current) { pickSound.current.currentTime = 0; pickSound.current.play().catch(() => {/* ignore */}); } } catch { /* ignore audio errors */ }
-          if (matchSet.has(num)) {
-            try { if (matchSound.current) { matchSound.current.currentTime = 0; matchSound.current.play().catch(() => {/* ignore */}); } } catch { /* ignore audio errors */ }
-          }
-          try { console.debug('[KenoGrid] instantReveal', { num: Number(num), isSelected: selectedSet.has(Number(num)), isMatch: matchSet.has(Number(num)) }); } catch { /* ignore console errors */ }
-        });
-      } catch {
-        /* ignore instant reveal errors */
+      // Only play sounds if component is still mounted
+      if (isMounted.current) {
+        try {
+          // Create audio on demand if needed
+          if (!pickSound.current) pickSound.current = new Audio('/sounds/click.wav');
+          if (!matchSound.current) matchSound.current = new Audio('/sounds/ding.wav');
+          
+          // play pick and match sounds quickly for each drawn number
+          (Array.isArray(drawnNumbers) ? drawnNumbers.map(Number) : []).forEach((num) => {
+            try { if (pickSound.current) { pickSound.current.currentTime = 0; pickSound.current.play().catch(() => {/* ignore */}); } } catch { /* ignore audio errors */ }
+            if (matchSet.has(num)) {
+              try { if (matchSound.current) { matchSound.current.currentTime = 0; matchSound.current.play().catch(() => {/* ignore */}); } } catch { /* ignore audio errors */ }
+            }
+            try { console.debug('[KenoGrid] instantReveal', { num: Number(num), isSelected: selectedSet.has(Number(num)), isMatch: matchSet.has(Number(num)) }); } catch { /* ignore console errors */ }
+          });
+        } catch {
+          /* ignore instant reveal errors */
+        }
       }
       // in instant mode we do NOT call onRevealComplete (hook handles applying results immediately)
       return;
@@ -166,11 +149,18 @@ export default function KenoGrid({ playerNumbers = [], onToggle = () => {}, draw
     revealTimerRef.current = setInterval(() => {
       const num = Number(drawnNumbers[idx]);
       setRevealedNumbers((r) => {
-        // play pick sound (reset time to allow rapid replays)
-        try { if (pickSound.current) { pickSound.current.currentTime = 0; pickSound.current.play().catch(() => {/* ignore */}); } } catch { /* ignore audio errors */ }
-        // if match, play match sound
-        if (matchSet.has(Number(num))) {
-          try { if (matchSound.current) { matchSound.current.currentTime = 0; matchSound.current.play().catch(() => {/* ignore */}); } } catch { /* ignore audio errors */ }
+        // Only play sounds if component is still mounted
+        if (isMounted.current) {
+          // Create audio on demand if needed
+          if (!pickSound.current) pickSound.current = new Audio('/sounds/click.wav');
+          if (!matchSound.current) matchSound.current = new Audio('/sounds/ding.wav');
+          
+          // play pick sound (reset time to allow rapid replays)
+          try { if (pickSound.current) { pickSound.current.currentTime = 0; pickSound.current.play().catch(() => {/* ignore */}); } } catch { /* ignore audio errors */ }
+          // if match, play match sound
+          if (matchSet.has(Number(num))) {
+            try { if (matchSound.current) { matchSound.current.currentTime = 0; matchSound.current.play().catch(() => {/* ignore */}); } } catch { /* ignore audio errors */ }
+          }
         }
         return [...r, Number(num)];
       });

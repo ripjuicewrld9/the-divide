@@ -24,30 +24,6 @@ interface BlackjackGameProps {
   onOpenChat?: () => void;
 }
 
-const syncBalanceToServer = async (balance: number, token: string, refreshUser: () => Promise<any>) => {
-  try {
-    const apiUrl = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000';
-    const response = await fetch(`${apiUrl}/api/me/balance`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ balance }),
-    });
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[Blackjack] Failed to sync balance:', response.statusText, errorText);
-    } else {
-      const data = await response.json();
-      // Refresh user data so header nav bar updates
-      await refreshUser();
-    }
-  } catch (error) {
-    console.error('[Blackjack] Error syncing balance:', error);
-  }
-};
-
 const saveBlackjackGameResult = async (gameState: any, token: string) => {
   try {
     const apiUrl = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000';
@@ -168,6 +144,10 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
   // Sync game balance with user balance when returning to betting phase
   useEffect(() => {
     if (gameState.gamePhase === 'betting' && userBalance !== undefined && userBalance !== null) {
+      // Don't sync if player has active bets - this would override visual deduction
+      const hasActiveBets = gameState.playerHands.length > 0 && gameState.playerHands[0].bet > 0;
+      if (hasActiveBets) return;
+      
       // Only update balance if it changed significantly (more than current bet amounts)
       // This prevents fighting with other games' optimistic balance updates
       const difference = Math.abs(gameState.balance - userBalance);
@@ -178,20 +158,26 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
     }
   }, [gameState.gamePhase, userBalance, gameState.balance, gameState]);
 
-  // Sync balance to server and save game when round ends
+  // Save game when round ends and refresh user balance from server
   useEffect(() => {
     if (gameState.gamePhase === 'gameOver' && token && !gameSavedRef.current) {
       gameSavedRef.current = true;
-      syncBalanceToServer(gameState.balance, token, refreshUser);
       // Save game result to database for recent games feed
-      saveBlackjackGameResult(gameState, token).catch(err =>
-        console.error('[Blackjack] Failed to save game:', err)
-      );
+      saveBlackjackGameResult(gameState, token)
+        .then(() => {
+          // Refresh user data after save to get updated balance from server
+          refreshUser();
+        })
+        .catch(err => {
+          console.error('[Blackjack] Failed to save game:', err);
+          // Still try to refresh user data even if save failed
+          refreshUser();
+        });
     } else if (gameState.gamePhase === 'betting') {
       // Reset save flag when new round starts
       gameSavedRef.current = false;
     }
-  }, [gameState.gamePhase, gameState.balance, token, refreshUser]);
+  }, [gameState.gamePhase, token, refreshUser]);
 
   // Handle keyboard shortcuts
   useEffect(() => {

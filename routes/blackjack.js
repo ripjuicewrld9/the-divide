@@ -191,6 +191,15 @@ router.post('/game/save', authMiddleware, async (req, res) => {
         const totalBetCents = Math.round(totalBet * 100);
         const totalPayoutCents = Math.round(totalPayout * 100);
 
+        // SECURITY: Validate user has enough balance for the bet
+        if (user.balance < totalBetCents) {
+          return res.status(400).json({ 
+            error: 'Insufficient balance',
+            required: totalBet,
+            available: user.balance / 100
+          });
+        }
+
         // Deduct bet and add payout
         user.balance = user.balance - totalBetCents + totalPayoutCents;
 

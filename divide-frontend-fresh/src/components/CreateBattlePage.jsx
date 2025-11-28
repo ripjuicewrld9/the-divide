@@ -183,7 +183,7 @@ export default function CreateBattlePage({ onOpenChat }) {
               e.target.style.background = 'rgba(0, 255, 255, 0.1)';
             }}
             onMouseLeave={(e) => {
-              e.target.style.background = 'transparent';
+              e.target.style.background = 'rgba(0, 0, 0, 0)';
             }}
           >
             ← Back to Battles

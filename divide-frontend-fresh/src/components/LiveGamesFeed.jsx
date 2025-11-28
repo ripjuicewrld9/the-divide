@@ -32,10 +32,10 @@ const GameRow = memo(({ game, idx, onGameClick, isNew }) => {
         gridTemplateColumns: '1.5fr 1.2fr 1fr 1fr 1fr 1fr',
         gap: '16px',
         padding: '14px 16px',
-        background: idx % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'transparent',
+        background: idx % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0)',
         borderRadius: '6px',
         alignItems: 'center',
-        border: isLuckyWin ? '1px solid rgba(255, 215, 0, 0.3)' : '1px solid transparent',
+        border: isLuckyWin ? '1px solid rgba(255, 215, 0, 0.3)' : '1px solid rgba(0, 0, 0, 0)',
         cursor: 'pointer'
       }}
       onClick={() => onGameClick(game)}
@@ -215,7 +215,7 @@ export default function LiveGamesFeed({ maxGames = 20 }) {
                 fontSize: '12px',
                 fontWeight: 600,
                 color: activeTab === 'all' ? '#000' : '#9ca3af',
-                background: activeTab === 'all' ? '#00ffff' : 'transparent',
+                background: activeTab === 'all' ? '#00ffff' : 'rgba(0, 0, 0, 0)',
                 border: 'none',
                 borderRadius: '6px',
                 cursor: 'pointer',
@@ -231,14 +231,14 @@ export default function LiveGamesFeed({ maxGames = 20 }) {
                 fontSize: '12px',
                 fontWeight: 600,
                 color: activeTab === 'my' ? '#000' : '#9ca3af',
-                background: activeTab === 'my' ? '#00ffff' : 'transparent',
+                background: activeTab === 'my' ? '#00ffff' : 'rgba(0, 0, 0, 0)',
                 border: 'none',
                 borderRadius: '6px',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease'
               }}
             >
-              My Wagers
+              My Games
             </button>
           </div>
 

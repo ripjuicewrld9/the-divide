@@ -237,7 +237,7 @@ export default function LiveGames({ isMobile = false }) {
                 fontSize: '12px',
                 fontWeight: 600,
                 color: activeTab === 'all' ? '#000' : '#9ca3af',
-                background: activeTab === 'all' ? '#00ffff' : 'transparent',
+                background: activeTab === 'all' ? '#00ffff' : 'rgba(0, 0, 0, 0)',
                 border: 'none',
                 borderRadius: '6px',
                 cursor: 'pointer',
@@ -253,14 +253,14 @@ export default function LiveGames({ isMobile = false }) {
                 fontSize: '12px',
                 fontWeight: 600,
                 color: activeTab === 'my' ? '#000' : '#9ca3af',
-                background: activeTab === 'my' ? '#00ffff' : 'transparent',
+                background: activeTab === 'my' ? '#00ffff' : 'rgba(0, 0, 0, 0)',
                 border: 'none',
                 borderRadius: '6px',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease'
               }}
             >
-              My Wagers
+              My Games
             </button>
           </div>
           
@@ -366,8 +366,8 @@ export default function LiveGames({ isMobile = false }) {
                   e.currentTarget.style.borderColor = 'rgba(0, 255, 255, 0.2)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = idx % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'transparent';
-                  e.currentTarget.style.borderColor = isLuckyWin ? 'rgba(255, 215, 0, 0.3)' : 'transparent';
+                  e.currentTarget.style.background = idx % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0)';
+                  e.currentTarget.style.borderColor = isLuckyWin ? 'rgba(255, 215, 0, 0.3)' : 'rgba(0, 0, 0, 0)';
                 }}
               >
                 {/* Game */}
