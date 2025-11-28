@@ -5,6 +5,7 @@ import Rugged from '../models/Rugged.js';
 import RuggedPosition from '../models/RuggedPosition.js';
 import User from '../models/User.js';
 import Ledger from '../models/Ledger.js';
+import Jackpot from '../models/Jackpot.js';
 
 // Helpers: convert dollars (float/string) -> integer cents, and cents -> dollars (number)
 const toCents = (n) => Math.round((Number(n) || 0) * 100);
@@ -193,11 +194,26 @@ export default function registerRugged(app, io, { auth, adminOnly, updateHouseSt
           }
           await userDoc.save({ session });
 
-          const created = await RuggedPosition.create([{ userId: req.userId, entryAmount: usdAmount, entryPool: newPool }], { session });
+          // 1% to global jackpot, 99% to pool (like other games)
+          const jackpotFee = Math.floor(usdAmount * 0.01);
+          const toPool = usdAmount - jackpotFee;
+          const newPoolActual = prevPool + toPool;
+
+          const created = await RuggedPosition.create([{ userId: req.userId, entryAmount: toPool, entryPool: newPoolActual }], { session });
           const createdPos = Array.isArray(created) ? created[0] : created;
 
           const stateDoc = await RuggedState.findOne({ id: 'global' }).session(session);
-          stateDoc.pool = newPool;
+          stateDoc.pool = newPoolActual;ctual;
+          
+          // Add 1% to global jackpot (outside session for safety)
+          try {
+            await Jackpot.findOneAndUpdate(
+              { id: 'global' },
+              { $inc: { amount: jackpotFee } },
+              { upsert: true }
+            );
+          } catch (e) { console.error('Failed to add jackpot fee', e); }
+
           const seed = stateDoc.serverSeed;
           const nonce = (stateDoc.nonce || 0) + 1;
           const hash = crypto.createHash('sha256').update(seed + ':' + nonce).digest('hex');
@@ -207,9 +223,19 @@ export default function registerRugged(app, io, { auth, adminOnly, updateHouseSt
 
           if (roll === 1 || stateDoc.pool <= 1) {
             const poolValue = Number(stateDoc.pool || 0);
-            const jackpotGain = Math.floor(poolValue * 0.5);
+            const jackpotGain = Math.floor(poolValue * 0.05);
             const houseGain = poolValue - jackpotGain;
-            stateDoc.jackpot = Number(stateDoc.jackpot || 0) + jackpotGain;
+            
+            // Add to global jackpot instead of RuggedState.jackpot
+            try {
+              await Jackpot.findOneAndUpdate(
+                { id: 'global' },
+                { $inc: { amount: jackpotGain } },
+                { upsert: true }
+              );
+            } catch (e) { console.error('Failed to add rug pull jackpot', e); }
+            
+            // Track house profit from rug pull
             stateDoc.house = Number(stateDoc.house || 0) + houseGain;
             stateDoc.pool = 0;
             stateDoc.crashed = true;
@@ -246,9 +272,9 @@ export default function registerRugged(app, io, { auth, adminOnly, updateHouseSt
           await session.commitTransaction();
           session.endSession();
           
-          // Track buy as bet in finance system
+          // Track buy as bet in finance system (player-vs-player, house profits from rug pulls only)
           if (updateHouseStats) {
-            await updateHouseStats('rugged', usdAmount, 0); // buy = bet, no payout yet
+            await updateHouseStats('rugged', usdAmount, 0);
           }
 
             // Mirror this trade into the authoritative Rugged doc so the
@@ -300,15 +326,39 @@ export default function registerRugged(app, io, { auth, adminOnly, updateHouseSt
         }
         await user.save();
 
-        const createdPos = await RuggedPosition.create({ userId: req.userId, entryAmount: usdAmount, entryPool: newPool });
+        // 1% to global jackpot, 99% to pool (like other games)
+        const jackpotFee = Math.floor(usdAmount * 0.01);
+        const toPool = usdAmount - jackpotFee;
+        const newPoolActual = prevPool + toPool;
 
-        stateDoc.pool = newPool;
+        const createdPos = await RuggedPosition.create({ userId: req.userId, entryAmount: toPool, entryPool: newPoolActual });
+
+        stateDoc.pool = newPoolActual;
+        
+        // Add 1% to global jackpot
+        try {
+          await Jackpot.findOneAndUpdate(
+            { id: 'global' },
+            { $inc: { amount: jackpotFee } },
+            { upsert: true }
+          );
+        } catch (e) { console.error('Failed to add jackpot fee', e); }
 
         if (roll === 1 || stateDoc.pool <= 1) {
           const poolValue = Number(stateDoc.pool || 0);
-          const jackpotGain = Math.floor(poolValue * 0.5);
+          const jackpotGain = Math.floor(poolValue * 0.05);
           const houseGain = poolValue - jackpotGain;
-          stateDoc.jackpot = Number(stateDoc.jackpot || 0) + jackpotGain;
+          
+          // Add to global jackpot instead of RuggedState.jackpot
+          try {
+            await Jackpot.findOneAndUpdate(
+              { id: 'global' },
+              { $inc: { amount: jackpotGain } },
+              { upsert: true }
+            );
+          } catch (e) { console.error('Failed to add rug pull jackpot', e); }
+          
+          // Track house profit from rug pull
           stateDoc.house = Number(stateDoc.house || 0) + houseGain;
           stateDoc.pool = 0;
           stateDoc.crashed = true;
@@ -335,7 +385,7 @@ export default function registerRugged(app, io, { auth, adminOnly, updateHouseSt
         await stateDoc.save();
         try { await Ledger.create({ type: 'rugged_buy', amount: usdAmount, userId: req.userId }); } catch (e) {}
         
-        // Track buy as bet in finance system
+        // Track buy as bet in finance system (player-vs-player, house profits from rug pulls only)
         if (updateHouseStats) {
           await updateHouseStats('rugged', usdAmount, 0);
         }
@@ -430,9 +480,9 @@ export default function registerRugged(app, io, { auth, adminOnly, updateHouseSt
           await session.commitTransaction();
           session.endSession();
           
-          // Track sell as payout in finance system
+          // Track sell as payout in finance system (player-vs-player, no house loss)
           if (updateHouseStats) {
-            await updateHouseStats('rugged', 0, totalPayout); // sell = payout, no new bet
+            await updateHouseStats('rugged', 0, totalPayout);
           }
           
           // Mirror updated canonical price into Rugged doc for clients
@@ -508,7 +558,7 @@ export default function registerRugged(app, io, { auth, adminOnly, updateHouseSt
 
       try { await Ledger.create({ type: 'rugged_sell', amount: totalPayout, userId: req.userId, meta: { percent } }); } catch (e) {}
       
-      // Track sell as payout in finance system
+      // Track sell as payout in finance system (player-vs-player, no house loss)
       if (updateHouseStats) {
         await updateHouseStats('rugged', 0, totalPayout);
       }
@@ -562,7 +612,7 @@ export default function registerRugged(app, io, { auth, adminOnly, updateHouseSt
     try {
       const state = await ensureState();
       const poolValue = Number(state.pool || 0); // cents
-      const jackpotGain = Math.floor(poolValue * 0.5);
+      const jackpotGain = Math.floor(poolValue * 0.05);
       const houseGain = poolValue - jackpotGain;
       state.jackpot = Number(state.jackpot || 0) + jackpotGain;
       state.house = Number(state.house || 0) + houseGain;

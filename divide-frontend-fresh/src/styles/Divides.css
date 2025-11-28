@@ -56,9 +56,10 @@
   font-size: 1.2rem;
   font-weight: 600;
   text-shadow: 0 0 12px #940000;
-  white-space: nowrap;
-  overflow: visible;
-  text-overflow: ellipsis;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  hyphens: auto;
+  line-height: 1.3;
 }
 
 /* PIE + GLOW WRAPPER */
@@ -238,11 +239,18 @@
   transform: translateX(-50%);
   width: 85%;
   text-align: center;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   z-index: 200;
   max-width: 85px;
-  word-wrap: break-word;
-  line-height: 1.2;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  hyphens: auto;
+  line-height: 1.1;
+  max-height: 50px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
 }
 
 .vote-btn:hover {

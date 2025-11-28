@@ -26,14 +26,12 @@ export const BlackjackBetBar: React.FC<BlackjackBetBarProps> = ({
 
   const handleDouble = () => {
     const v = betAmount * 2;
-    const maxBet = balance / 100; // balance is in cents
-    const capped = Math.min(v, maxBet);
+    const capped = balance ? Math.min(v, Number(balance)) : v;
     onBetAmountChange(Number(capped.toFixed(2)));
   };
 
   const handleMax = () => {
-    const maxBet = balance / 100; // balance is in cents
-    onBetAmountChange(Number(maxBet.toFixed(2)));
+    onBetAmountChange(Number(balance.toFixed(2)));
   };
 
   // Responsive check

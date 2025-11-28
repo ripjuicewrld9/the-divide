@@ -30,7 +30,15 @@ export default function RuggedControls({ pool = 0, onBuy, onSellAll, positions =
     else setValue(Number(Math.max(1, Math.floor((value || 0) / 2))));
   }
   function applyMax() { if (mode === 'buy') setValue(Number(maxBuy.toFixed(2))); else setValue(100); }
-  function applyDouble() { if (mode === 'buy') setValue(Number(Math.min(maxBuy, (value || 0) * 2).toFixed(2))); else setValue(Number(Math.min(100, Math.floor((value || 0) * 2)))); }
+  function applyDouble() {
+    if (mode === 'buy') {
+      const doubled = Number(value || 0) * 2;
+      const capped = Math.min(doubled, maxBuy);
+      setValue(Number(capped.toFixed(2)));
+    } else {
+      setValue(Number(Math.min(100, Math.floor((value || 0) * 2))));
+    }
+  }
 
   async function doAction() {
     try {

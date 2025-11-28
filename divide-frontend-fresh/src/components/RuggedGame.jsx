@@ -611,7 +611,7 @@ export default function RuggedGame({ onOpenChat }) {
       )}
 
       {/* ProvenFair Modal - shows recent provably fair rug pulls */}
-      {showProvenFair && createPortal(
+      {showProvenFair && typeof document !== 'undefined' && document.body && createPortal(
         <ProvenFairModal 
           isOpen={showProvenFair} 
           onClose={() => setShowProvenFair(false)} 
