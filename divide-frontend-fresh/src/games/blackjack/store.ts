@@ -132,14 +132,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
       return;
     }
 
-    // Convert balance from cents to dollars for comparison
-    const balanceInDollars = state.balance / 100;
-    const amountInCents = Math.round(amount * 100);
+    // Balance is already in dollars from AuthContext
+    console.log('[placeBet] amount:', amount, 'mode:', mode, 'balance before:', state.balance);
 
-    console.log('[placeBet] amount:', amount, 'mode:', mode, 'balance before:', balanceInDollars);
-
-    if (state.balance < amountInCents) {
-      console.log('[placeBet] insufficient balance:', balanceInDollars, '<', amount);
+    if (state.balance < amount) {
+      console.log('[placeBet] insufficient balance:', state.balance, '<', amount);
       set({ message: 'Insufficient balance' });
       return;
     }
@@ -155,7 +152,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         };
         set({
           playerHands: [newHand],
-          balance: state.balance - amountInCents,
+          balance: state.balance - amount,
         });
       } else {
         const hands = [...state.playerHands];
@@ -163,7 +160,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         hands[0].betPlacementOrder.push(['main', amount]);
         set({
           playerHands: hands,
-          balance: state.balance - amountInCents,
+          balance: state.balance - amount,
         });
       }
     } else if (state.playerHands.length > 0) {
@@ -178,7 +175,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       hands[0].betPlacementOrder.push([mode as 'perfectPairs' | 'twentyPlusThree' | 'blazingSevens', amount]);
       set({
         playerHands: hands,
-        balance: state.balance - amountInCents,
+        balance: state.balance - amount,
       });
     } else {
       // Need main bet first before side bets
@@ -189,7 +186,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   clearBets: () => {
     const state = get();
 
-    // Calculate total bets to return to balance (in dollars, convert to cents)
+    // Calculate total bets to return to balance (already in dollars)
     let totalBetsToReturn = 0;
     if (state.playerHands.length > 0) {
       const hand = state.playerHands[0];
@@ -199,12 +196,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
         hand.sideBets.blazingSevens;
     }
 
-    const totalBetsInCents = Math.round(totalBetsToReturn * 100);
-
     set({
       playerHands: [],
       dealerHand: { cards: [], bet: 0, sideBets: { perfectPairs: 0, twentyPlusThree: 0, blazingSevens: 0 }, betPlacementOrder: [], isDealerHand: true },
-      balance: state.balance + totalBetsInCents,
+      balance: state.balance + totalBetsToReturn,
     });
   },
 
@@ -223,7 +218,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!lastPlacement) return;
 
     const [mode, amount] = lastPlacement;
-    const amountInCents = Math.round(amount * 100);
     const hands = [...state.playerHands];
     const updatedHand = { ...hand, betPlacementOrder: newPlacementOrder };
 
@@ -241,7 +235,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     set({
       playerHands: hands,
-      balance: state.balance + amountInCents,
+      balance: state.balance + amount,
     });
   },
 
@@ -254,9 +248,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (state.gamePhase === 'betting' && state.playerHands.length > 0 && state.playerHands[0].betPlacementOrder.length > 0) return;
 
     const totalBetAmount = state.lastBets.mainBet + state.lastBets.perfectPairs + state.lastBets.twentyPlusThree + state.lastBets.blazingSevens;
-    const totalBetInCents = Math.round(totalBetAmount * 100);
 
-    if (state.balance < totalBetInCents) {
+    if (state.balance < totalBetAmount) {
       set({ message: 'Insufficient balance for redo' });
       return;
     }
@@ -282,7 +275,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     set({
       playerHands: [hand],
-      balance: state.balance - totalBetInCents,
+      balance: state.balance - totalBetAmount,
       message: 'Bets placed',
     });
   },
