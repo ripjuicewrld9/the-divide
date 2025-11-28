@@ -2,7 +2,7 @@
  * Backfill User Statistics Script
  * 
  * This script calculates historical statistics for all users based on their
- * game history in Keno, Plinko, and Blackjack collections.
+ * game history in Keno, Plinko, Blackjack, Divides, and Rugged collections.
  * 
  * Run with: node scripts/backfill-user-stats.js
  */
@@ -12,9 +12,11 @@ import User from '../models/User.js';
 import KenoRound from '../models/KenoRound.js';
 import PlinkoGame from '../models/PlinkoGame.js';
 import BlackjackGame from '../models/BlackjackGame.js';
+import Divide from '../models/Divide.js';
+import Ledger from '../models/Ledger.js';
 
-// MongoDB connection string
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/divide';
+// MongoDB connection string - uses environment variable or falls back to server default
+const MONGODB_URI = process.env.MONGODB_URI;
 
 async function backfillUserStats() {
     try {
@@ -94,6 +96,55 @@ async function backfillUserStats() {
                         totalLosses++;
                     }
                 }
+
+                // ========== DIVIDES ==========
+                // Find all divides where user voted with a paid bet (not free)
+                const divides = await Divide.find({
+                    'votes.userId': user._id.toString(),
+                    ended: true
+                });
+                console.log(`  - Divide votes: ${divides.length}`);
+
+                for (const divide of divides) {
+                    const vote = divide.votes.find(v => v.userId === user._id.toString());
+                    if (!vote || vote.isFree) continue; // Skip free votes
+
+                    totalBets++;
+                    const betAmount = (vote.bet || vote.voteCount || 0);
+                    wagered += Math.round(betAmount * 100); // Convert to cents
+
+                    // Check if user won
+                    if (divide.winnerSide && vote.side === divide.winnerSide) {
+                        totalWins++;
+                        // Note: Can't easily calculate exact payout from historical data
+                        // Just count as win without adding to totalWon
+                    } else if (divide.winnerSide) {
+                        totalLosses++;
+                    }
+                }
+
+                // ========== RUGGED ==========
+                // Count buys from ledger (each buy is a bet)
+                const ruggedBuys = await Ledger.find({
+                    userId: user._id,
+                    type: 'rugged_buy'
+                });
+                console.log(`  - Rugged buys: ${ruggedBuys.length}`);
+
+                for (const buy of ruggedBuys) {
+                    totalBets++;
+                    wagered += Math.round((buy.amount || 0) * 100); // Convert to cents
+                }
+
+                // Count sells (outcomes: win if sold for profit, loss otherwise)
+                const ruggedSells = await Ledger.find({
+                    userId: user._id,
+                    type: 'rugged_sell'
+                });
+                console.log(`  - Rugged sells: ${ruggedSells.length}`);
+
+                // Note: Can't determine win/loss from sell ledger alone without position data
+                // Sells are already counted as outcomes in real-time tracking going forward
 
                 // Update user statistics
                 user.totalBets = totalBets;

@@ -3,6 +3,8 @@ import mongoose from 'mongoose';
 const houseSchema = new mongoose.Schema({
   id: { type: String, default: 'global', index: true },
   houseTotal: { type: Number, default: 0 },
+  totalRedemptions: { type: Number, default: 0 }, // count of all user withdrawals
+  totalRedemptionAmount: { type: Number, default: 0 }, // total amount withdrawn in cents
   
   // Per-game statistics (all amounts in cents)
   plinko: {

@@ -210,8 +210,7 @@ const upload = multer({
 // Serve uploaded files as static assets
 app.use('/uploads', express.static(uploadDir));
 
-// Image upload endpoint
-// Image upload endpoint
+// Image upload endpoint - saves as base64 in database to persist across deploys
 app.post('/upload', auth, (req, res, next) => {
   upload.single('file')(req, res, async (err) => {
     if (err) {
@@ -222,13 +221,21 @@ app.post('/upload', auth, (req, res, next) => {
       if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
       }
-      const url = `/uploads/${req.file.filename}`;
-      // Save to user profile if authenticated
+      
+      // Convert image to base64 and save directly to database
+      const imageBuffer = fs.readFileSync(req.file.path);
+      const base64Image = `data:${req.file.mimetype};base64,${imageBuffer.toString('base64')}`;
+      
+      // Delete the temporary file from disk
+      fs.unlinkSync(req.file.path);
+      
+      // Save base64 image to user profile
       if (req.userId) {
-        await User.findByIdAndUpdate(req.userId, { profileImage: url });
+        await User.findByIdAndUpdate(req.userId, { profileImage: base64Image });
+        console.log('Profile image saved to database for user:', req.userId);
       }
-      console.log('File uploaded successfully:', req.file.filename);
-      res.json({ url });
+      
+      res.json({ url: base64Image });
     } catch (err) {
       console.error('Upload error:', err);
       res.status(500).json({ error: err.message || 'Upload failed' });
@@ -2363,7 +2370,9 @@ app.get('/admin/finance', auth, adminOnly, async (req, res) => {
     res.json({
       global: {
         jackpotAmount: (jackpot?.amount || 0) / 100,
-        houseTotal: (house.houseTotal || 0) / 100
+        houseTotal: (house.houseTotal || 0) / 100,
+        totalRedemptions: house.totalRedemptions || 0,
+        totalRedemptionAmount: (house.totalRedemptionAmount || 0) / 100
       },
       games
     });
@@ -2663,7 +2672,7 @@ setInterval(async () => {
 // GET CURRENT USER (for frontend refresh)
 app.get("/api/me", auth, async (req, res) => {
   try {
-    const user = await User.findById(req.userId).select("_id username balance role holdingsDC holdingsInvested profileImage wagered totalWon totalDeposited totalWithdrawn totalBets totalWins totalLosses createdAt");
+    const user = await User.findById(req.userId).select("_id username balance role holdingsDC holdingsInvested profileImage wagered totalWon totalDeposited totalWithdrawn totalRedemptions totalBets totalWins totalLosses createdAt");
     if (!user) return res.status(404).json({ error: "User not found" });
     res.json({ 
       id: user._id, 
@@ -2677,6 +2686,7 @@ app.get("/api/me", auth, async (req, res) => {
       totalWon: toDollars(user.totalWon || 0),
       totalDeposited: toDollars(user.totalDeposited || 0),
       totalWithdrawn: toDollars(user.totalWithdrawn || 0),
+      totalRedemptions: user.totalRedemptions || 0,
       totalBets: user.totalBets || 0,
       totalWins: user.totalWins || 0,
       totalLosses: user.totalLosses || 0,
@@ -3026,7 +3036,24 @@ app.post("/api/withdraw", auth, async (req, res) => {
     // Process withdrawal
     user.balance -= amountCents;
     user.totalWithdrawn = (user.totalWithdrawn || 0) + amountCents;
+    user.totalRedemptions = (user.totalRedemptions || 0) + 1;
     await user.save();
+    
+    // Track global redemptions in House stats
+    try {
+      await House.findOneAndUpdate(
+        { id: 'global' },
+        { 
+          $inc: { 
+            totalRedemptions: 1,
+            totalRedemptionAmount: amountCents
+          }
+        },
+        { upsert: true }
+      );
+    } catch (e) {
+      console.error('[WITHDRAW] Failed to update House redemption stats', e);
+    }
 
     console.log(`[WITHDRAW] User ${user.username} withdrew $${amount}, new balance: $${toDollars(user.balance)}`);
 
