@@ -1,10 +1,24 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 
 // SVG chart with smoother curve, subtle grid and glow. Expects priceHistory = [{ts, price}]
 export default function RuggedChart({ priceHistory = [], width = 800, height = 220 }) {
   const pad = 12;
   const w = width - pad * 2;
   const h = height - pad * 2;
+  const [isPulsing, setIsPulsing] = useState(false);
+  const [lastPrice, setLastPrice] = useState(0);
+
+  // Trigger pulse animation when price changes
+  useEffect(() => {
+    if (priceHistory.length > 0) {
+      const currentPrice = Number(priceHistory[priceHistory.length - 1]?.price || 0);
+      if (currentPrice !== lastPrice && lastPrice !== 0) {
+        setIsPulsing(true);
+        setTimeout(() => setIsPulsing(false), 600);
+      }
+      setLastPrice(currentPrice);
+    }
+  }, [priceHistory]);
 
   // Map history to points in SVG space
   const points = useMemo(() => {
@@ -95,6 +109,14 @@ export default function RuggedChart({ priceHistory = [], width = 800, height = 2
             <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
+        <filter id="pulse" x="-100%" y="-100%" width="300%" height="300%">
+          <feGaussianBlur stdDeviation="4" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
       </defs>
 
   {/* background */}
@@ -118,21 +140,33 @@ export default function RuggedChart({ priceHistory = [], width = 800, height = 2
       ))}
 
       {/* filled area */}
-      {areaPath ? <path d={areaPath} fill="url(#ruggedArea)" /> : null}
+      {areaPath ? <path d={areaPath} fill="url(#ruggedArea)" style={{ transition: 'all 0.3s ease-out' }} /> : null}
 
       {/* glow behind line */}
-      {smoothPath ? <path d={smoothPath} stroke="url(#ruggedLine)" strokeWidth="8" fill="none" opacity="0.12" filter="url(#glow)" strokeLinecap="round" strokeLinejoin="round" /> : null}
+      {smoothPath ? <path d={smoothPath} stroke="url(#ruggedLine)" strokeWidth="8" fill="none" opacity="0.12" filter="url(#glow)" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'all 0.3s ease-out' }} /> : null}
 
-      {/* main line */}
-      {smoothPath ? <path d={smoothPath} stroke="url(#ruggedLine)" strokeWidth="2.6" fill="none" strokeLinejoin="round" strokeLinecap="round" /> : null}
+      {/* main line with smooth transition */}
+      {smoothPath ? <path d={smoothPath} stroke="url(#ruggedLine)" strokeWidth="2.6" fill="none" strokeLinejoin="round" strokeLinecap="round" style={{ transition: 'all 0.3s ease-out' }} /> : null}
 
-      {/* highlight last point */}
+      {/* highlight last point with pulse animation */}
       {points.length ? (() => {
         const last = points[points.length - 1];
         return (
           <g>
-            <circle cx={last.x} cy={last.y} r={4.2} fill="#ffd36a" stroke="#fff2" strokeWidth={0.6} />
-            <circle cx={last.x} cy={last.y} r={2.2} fill="#1a1a1a" />
+            {/* Outer pulse ring */}
+            {isPulsing && (
+              <circle cx={last.x} cy={last.y} r={12} fill="#ffd36a" opacity="0.3" filter="url(#pulse)">
+                <animate attributeName="r" from="6" to="16" dur="0.6s" />
+                <animate attributeName="opacity" from="0.5" to="0" dur="0.6s" />
+              </circle>
+            )}
+            {/* Main dot */}
+            <circle cx={last.x} cy={last.y} r={4.8} fill="#ffd36a" stroke="#fff3" strokeWidth={1.2} style={{ transition: 'all 0.2s ease-out' }}>
+              <animate attributeName="r" values="4.8;5.2;4.8" dur="2s" repeatCount="indefinite" />
+            </circle>
+            <circle cx={last.x} cy={last.y} r={2.4} fill="#1a1a1a" />
+            {/* Vertical line to bottom */}
+            <line x1={last.x} x2={last.x} y1={last.y} y2={height - pad} stroke="#ffd36a" strokeWidth="1" opacity="0.15" strokeDasharray="4 4" />
           </g>
         );
       })() : null}

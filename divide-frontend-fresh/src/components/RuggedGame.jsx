@@ -542,7 +542,35 @@ export default function RuggedGame({ onOpenChat }) {
                   </div>
                 </div>
                 <div style={{ marginTop: 12, position: 'relative' }}>
-                  <div style={{ position: 'relative' }}>
+                  {/* Live price ticker above chart */}
+                  <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center',
+                    padding: '8px 16px',
+                    background: 'rgba(0, 230, 255, 0.05)',
+                    borderRadius: '8px 8px 0 0',
+                    borderBottom: '1px solid rgba(0, 230, 255, 0.1)'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <span style={{ fontSize: 12, color: '#9fb', opacity: 0.7 }}>LIVE PRICE</span>
+                      <span style={{ 
+                        fontSize: 18, 
+                        fontWeight: 'bold',
+                        color: '#ffd36a',
+                        textShadow: '0 0 10px rgba(255, 211, 106, 0.3)',
+                        fontFamily: 'monospace',
+                        animation: status.priceHistory?.length > 1 ? 'pulse 2s infinite' : 'none'
+                      }}>
+                        ${(status.price || 0).toFixed(6)}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 11, color: '#9fb', opacity: 0.5 }}>
+                      {status.priceHistory?.length || 0} data points
+                    </div>
+                  </div>
+                  
+                  <div style={{ position: 'relative', background: '#0a1520', borderRadius: '0 0 8px 8px' }}>
                     <RuggedChart priceHistory={status.priceHistory || []} width={900} height={240} />
                     {
                       // show a centered countdown only during the cooldown between pumps (when market is paused)

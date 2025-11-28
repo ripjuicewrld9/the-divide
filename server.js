@@ -249,6 +249,30 @@ app.post('/api/profile-image', auth, async (req, res) => {
     if (!req.userId) return res.status(401).json({ error: 'Not authenticated' });
     const { imagePath } = req.body || {};
     if (!imagePath || typeof imagePath !== 'string') return res.status(400).json({ error: 'Missing imagePath' });
+    
+    // If it's a local file path (preset SVG), convert to base64
+    if (imagePath.startsWith('/profilesvg/') || imagePath.startsWith('/uploads/')) {
+      try {
+        const filePath = path.join(__dirname, 'divide-frontend-fresh', 'public', imagePath);
+        if (fs.existsSync(filePath)) {
+          const fileBuffer = fs.readFileSync(filePath);
+          const ext = path.extname(filePath).toLowerCase();
+          const mimeType = ext === '.svg' ? 'image/svg+xml' : 
+                          ext === '.png' ? 'image/png' : 
+                          ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : 
+                          ext === '.webp' ? 'image/webp' : 'image/svg+xml';
+          const base64Image = `data:${mimeType};base64,${fileBuffer.toString('base64')}`;
+          await User.findByIdAndUpdate(req.userId, { profileImage: base64Image });
+          console.log('Preset avatar converted to base64 and saved for user:', req.userId);
+          return res.json({ success: true, imagePath: base64Image });
+        }
+      } catch (e) {
+        console.error('Error converting preset avatar to base64:', e);
+        // Fall through to save the path as-is if conversion fails
+      }
+    }
+    
+    // For external URLs or if file not found, save as-is
     await User.findByIdAndUpdate(req.userId, { profileImage: imagePath });
     res.json({ success: true, imagePath });
   } catch (err) {
