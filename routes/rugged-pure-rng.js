@@ -202,7 +202,10 @@ export default function registerRugged(app, io, { auth, adminOnly, updateHouseSt
           const toPool = usdAmount - jackpotFee;
           const newPoolActual = prevPool + toPool;
 
-          const created = await RuggedPosition.create([{ userId: req.userId, entryAmount: toPool, entryPool: newPoolActual }], { session });
+          // Record entryPool as the pool BEFORE this buy (prevents self-pumping)
+          // If pool was 0, use toPool as entryPool (first buy case)
+          const entryPoolForPosition = prevPool > 0 ? prevPool : toPool;
+          const created = await RuggedPosition.create([{ userId: req.userId, entryAmount: toPool, entryPool: entryPoolForPosition }], { session });
           const createdPos = Array.isArray(created) ? created[0] : created;
 
           const stateDoc = await RuggedState.findOne({ id: 'global' }).session(session);
@@ -337,7 +340,10 @@ export default function registerRugged(app, io, { auth, adminOnly, updateHouseSt
         const toPool = usdAmount - jackpotFee;
         const newPoolActual = prevPool + toPool;
 
-        const createdPos = await RuggedPosition.create({ userId: req.userId, entryAmount: toPool, entryPool: newPoolActual });
+        // Record entryPool as the pool BEFORE this buy (prevents self-pumping)
+        // If pool was 0, use toPool as entryPool (first buy case)
+        const entryPoolForPosition = prevPool > 0 ? prevPool : toPool;
+        const createdPos = await RuggedPosition.create({ userId: req.userId, entryAmount: toPool, entryPool: entryPoolForPosition });
 
         stateDoc.pool = newPoolActual;
         
