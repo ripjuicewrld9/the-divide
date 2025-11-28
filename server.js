@@ -235,7 +235,7 @@ app.post('/upload', auth, (req, res, next) => {
         console.log('Profile image saved to database for user:', req.userId);
       }
       
-      res.json({ url: base64Image });
+      res.json({ url: base64Image, profileImage: base64Image });
     } catch (err) {
       console.error('Upload error:', err);
       res.status(500).json({ error: err.message || 'Upload failed' });
