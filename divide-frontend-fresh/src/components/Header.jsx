@@ -144,15 +144,13 @@ export default function Header() {
                       className="absolute right-0 top-full mt-2 w-56 overflow-hidden rounded-xl border border-white/10 bg-[#111] shadow-2xl backdrop-blur-xl z-50"
                     >
                       <div className="p-2">
-                        <button
-                          onClick={() => {
-                            setMenuOpen(false);
-                            setShowSettingsModal(true);
-                          }}
+                        <Link
+                          to="/profile"
+                          onClick={() => setMenuOpen(false)}
                           className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-300 transition-colors hover:bg-white/5 hover:text-white"
                         >
                           👤 Profile
-                        </button>
+                        </Link>
                         {!isAdmin && (
                           <button
                             onClick={handlePromoteToAdmin}

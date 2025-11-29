@@ -4,6 +4,7 @@ import UserAvatar from '../components/UserAvatar';
 import { formatCurrency } from '../utils/format';
 import MobileGameHeader from '../components/MobileGameHeader';
 import DiscordOAuthButton from '../components/DiscordOAuthButton';
+import DiscordLinkHandler from '../components/DiscordLinkHandler';
 
 export default function ProfilePage({ onOpenChat }) {
     const { user, logout, updateUser } = useAuth();
@@ -48,6 +49,9 @@ export default function ProfilePage({ onOpenChat }) {
 
     return (
         <div className="min-h-screen bg-[#0b0b0b] text-white pb-24">
+            {/* Discord Link Handler - handles OAuth callback */}
+            <DiscordLinkHandler />
+            
             {/* Mobile Header */}
             <MobileGameHeader title="Profile V2" onOpenChat={onOpenChat} className="md:hidden" />
 

@@ -39,9 +39,11 @@ Still in the OAuth2 section:
    http://localhost:3000/auth/discord/callback
    ```
 4. For **production** (Render), add:
+
    ```
    https://your-app-name.onrender.com/auth/discord/callback
    ```
+
    Replace `your-app-name` with your actual Render app URL.
 
 5. Click **"Save Changes"**
@@ -61,6 +63,7 @@ FRONTEND_URL=http://localhost:5173
 ```
 
 **Replace the placeholder values with:**
+
 - `DISCORD_CLIENT_ID`: The Client ID from Step 2
 - `DISCORD_CLIENT_SECRET`: The Client Secret from Step 2
 - Leave `DISCORD_REDIRECT_URI` as `http://localhost:3000/auth/discord/callback` for local development
@@ -74,18 +77,19 @@ In your Render dashboard:
 2. Click **"Environment"** in the left sidebar
 3. Add these environment variables:
 
-| Key | Value |
-|-----|-------|
-| `DISCORD_CLIENT_ID` | Your Client ID from Step 2 |
-| `DISCORD_CLIENT_SECRET` | Your Client Secret from Step 2 |
-| `DISCORD_REDIRECT_URI` | `https://your-app-name.onrender.com/auth/discord/callback` |
-| `FRONTEND_URL` | `https://your-frontend-url.com` (your production frontend URL) |
+| Key                     | Value                                                          |
+| ----------------------- | -------------------------------------------------------------- |
+| `DISCORD_CLIENT_ID`     | Your Client ID from Step 2                                     |
+| `DISCORD_CLIENT_SECRET` | Your Client Secret from Step 2                                 |
+| `DISCORD_REDIRECT_URI`  | `https://your-app-name.onrender.com/auth/discord/callback`     |
+| `FRONTEND_URL`          | `https://your-frontend-url.com` (your production frontend URL) |
 
 ⚠️ **Important**: The `DISCORD_REDIRECT_URI` in Render **must exactly match** one of the redirect URLs you added in Step 3.
 
 ## Step 6: Restart Your Backend
 
 **Local Development:**
+
 ```powershell
 # Stop your server (Ctrl+C if running)
 # Then restart:
@@ -93,12 +97,14 @@ npm start
 ```
 
 **Production (Render):**
+
 - Render will automatically restart when you save environment variables
 - Or manually restart from the Render dashboard
 
 ## Step 7: Test the OAuth Flow
 
 1. **Start both servers locally:**
+
    ```powershell
    # Terminal 1 - Backend (root directory)
    npm start
@@ -109,11 +115,13 @@ npm start
    ```
 
 2. **Navigate to your profile:**
+
    - Go to `http://localhost:5173`
    - Log in
    - Click "Profile" in the navigation
 
 3. **Connect Discord:**
+
    - You should see a "Connect Discord" button at the top of Account Settings
    - Click it
    - You'll be redirected to Discord's authorization page
@@ -132,6 +140,7 @@ npm start
 ## How It Works
 
 ### OAuth Flow:
+
 1. User clicks "Connect Discord" → redirects to `https://discord.com/oauth2/authorize?client_id=...&redirect_uri=...&response_type=code&scope=identify`
 2. User authorizes → Discord redirects back to `/auth/discord/callback?code=ABC123`
 3. Backend exchanges code for Discord user data
@@ -142,6 +151,7 @@ npm start
 8. Frontend updates local user state and shows "Connected" status
 
 ### Support Ticket Integration:
+
 - When a user submits a ticket, the backend checks if they have a `discordId`
 - If linked, the thread message includes `<@DISCORD_USER_ID>` to mention them
 - If not linked, the message includes their username without mentioning
@@ -151,25 +161,30 @@ npm start
 ## Troubleshooting
 
 ### "OAuth not configured" error
+
 - Check that `DISCORD_CLIENT_ID` and `DISCORD_CLIENT_SECRET` are set in `.env`
 - Make sure there's an `=` sign: `DISCORD_CLIENT_ID=value` (not `DISCORD_CLIENT_ID value`)
 - Restart your backend after changing `.env`
 
 ### "Redirect URI mismatch" error
+
 - The redirect URI in your Discord app settings must **exactly match** the `DISCORD_REDIRECT_URI` in your `.env`
 - Check for trailing slashes, http vs https, localhost vs 127.0.0.1
 
 ### "Invalid OAuth code" error
+
 - OAuth codes expire after ~10 minutes
 - Make sure your system clock is correct
 - Try the flow again from the beginning
 
 ### Discord link button doesn't show
+
 - Check browser console for errors
 - Make sure you're logged in
 - Check that `DiscordOAuthButton` is imported in `ProfileNew.jsx`
 
 ### User not mentioned in Discord thread
+
 - Check that the user has a `discordId` saved (check MongoDB or `/api/me` response)
 - Make sure your bot has permission to mention users
 - Test unlinking and re-linking the Discord account
@@ -203,6 +218,7 @@ Let me know if you want help implementing any of these!
 ## Need Help?
 
 If something isn't working:
+
 1. Check the backend console logs for errors
 2. Check the browser console for errors
 3. Verify all environment variables are set correctly
