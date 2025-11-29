@@ -1,16 +1,31 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+interface WinBreakdown {
+  mainPayout?: number;
+  mainOutcome?: 'win' | 'loss' | 'push' | 'blackjack' | 'bust';
+  perfectPairsPayout?: number;
+  perfectPairsRatio?: string;
+  twentyPlusThreePayout?: number;
+  twentyPlusThreeRatio?: string;
+  blazingSevensPayout?: number;
+  blazingSevenRatio?: string;
+}
+
 interface WinOverlayProps {
   amount: number;
   visible: boolean;
-  status?: 'win' | 'push';
+  breakdown?: WinBreakdown;
   onDismiss?: () => void;
 }
 
-export const WinOverlay: React.FC<WinOverlayProps> = ({ amount, visible, status = 'win', onDismiss }) => {
-  const isWin = status === 'win';
-  const isPush = status === 'push';
+export const WinOverlay: React.FC<WinOverlayProps> = ({ amount, visible, breakdown, onDismiss }) => {
+  const hasMainWin = breakdown?.mainPayout && breakdown.mainPayout > 0;
+  const hasPerfectPairs = breakdown?.perfectPairsPayout && breakdown.perfectPairsPayout > 0;
+  const hasTwentyPlusThree = breakdown?.twentyPlusThreePayout && breakdown.twentyPlusThreePayout > 0;
+  const hasBlazingSevens = breakdown?.blazingSevensPayout && breakdown.blazingSevensPayout > 0;
+  const isPush = breakdown?.mainOutcome === 'push' && !hasPerfectPairs && !hasTwentyPlusThree && !hasBlazingSevens;
+  const isWin = amount > 0;
   
   return (
     <AnimatePresence>
@@ -117,35 +132,225 @@ export const WinOverlay: React.FC<WinOverlayProps> = ({ amount, visible, status 
                   Bet Returned
                 </motion.div>
               ) : (
-                <motion.div
-                  initial={{ scale: 0.5, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ 
-                    delay: 0.2,
-                    type: "spring",
-                    stiffness: 200,
-                    damping: 15
-                  }}
-                  style={{ 
-                    fontSize: '48px',
-                    fontWeight: 900,
-                    background: 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    backgroundClip: 'text',
-                    letterSpacing: '-0.03em',
-                    lineHeight: 1,
-                  }}
-                >
-                  +${amount.toFixed(2)}
-                </motion.div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {/* Main bet payout */}
+                  {hasMainWin && (
+                    <motion.div
+                      initial={{ x: -20, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{ delay: 0.2 }}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '8px 12px',
+                        background: 'rgba(16, 185, 129, 0.1)',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(16, 185, 129, 0.2)',
+                      }}
+                    >
+                      <span style={{ 
+                        fontSize: '14px',
+                        fontWeight: 600,
+                        color: '#10b981',
+                      }}>
+                        {breakdown.mainOutcome === 'blackjack' ? '♠️ Blackjack' : '🎴 Main Bet'}
+                      </span>
+                      <span style={{ 
+                        fontSize: '20px',
+                        fontWeight: 800,
+                        background: 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text',
+                      }}>
+                        +${breakdown.mainPayout?.toFixed(2)}
+                      </span>
+                    </motion.div>
+                  )}
+
+                  {/* Perfect Pairs */}
+                  {hasPerfectPairs && (
+                    <motion.div
+                      initial={{ x: -20, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{ delay: 0.3 }}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '8px 12px',
+                        background: 'rgba(236, 72, 153, 0.1)',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(236, 72, 153, 0.2)',
+                      }}
+                    >
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                        <span style={{ 
+                          fontSize: '14px',
+                          fontWeight: 600,
+                          color: '#ec4899',
+                        }}>
+                          💎 Perfect Pairs
+                        </span>
+                        {breakdown.perfectPairsRatio && (
+                          <span style={{
+                            fontSize: '10px',
+                            color: '#ec4899',
+                            opacity: 0.7,
+                          }}>
+                            {breakdown.perfectPairsRatio}
+                          </span>
+                        )}
+                      </div>
+                      <span style={{ 
+                        fontSize: '20px',
+                        fontWeight: 800,
+                        background: 'linear-gradient(135deg, #ec4899 0%, #f97316 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text',
+                      }}>
+                        +${breakdown.perfectPairsPayout?.toFixed(2)}
+                      </span>
+                    </motion.div>
+                  )}
+
+                  {/* 21+3 */}
+                  {hasTwentyPlusThree && (
+                    <motion.div
+                      initial={{ x: -20, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{ delay: 0.4 }}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '8px 12px',
+                        background: 'rgba(139, 92, 246, 0.1)',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(139, 92, 246, 0.2)',
+                      }}
+                    >
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                        <span style={{ 
+                          fontSize: '14px',
+                          fontWeight: 600,
+                          color: '#8b5cf6',
+                        }}>
+                          🎯 21+3
+                        </span>
+                        {breakdown.twentyPlusThreeRatio && (
+                          <span style={{
+                            fontSize: '10px',
+                            color: '#8b5cf6',
+                            opacity: 0.7,
+                          }}>
+                            {breakdown.twentyPlusThreeRatio}
+                          </span>
+                        )}
+                      </div>
+                      <span style={{ 
+                        fontSize: '20px',
+                        fontWeight: 800,
+                        background: 'linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text',
+                      }}>
+                        +${breakdown.twentyPlusThreePayout?.toFixed(2)}
+                      </span>
+                    </motion.div>
+                  )}
+
+                  {/* Blazing 7s */}
+                  {hasBlazingSevens && (
+                    <motion.div
+                      initial={{ x: -20, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{ delay: 0.5 }}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '8px 12px',
+                        background: 'rgba(239, 68, 68, 0.1)',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(239, 68, 68, 0.2)',
+                      }}
+                    >
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                        <span style={{ 
+                          fontSize: '14px',
+                          fontWeight: 600,
+                          color: '#ef4444',
+                        }}>
+                          🔥 Blazing 7s
+                        </span>
+                        {breakdown.blazingSevenRatio && (
+                          <span style={{
+                            fontSize: '10px',
+                            color: '#ef4444',
+                            opacity: 0.7,
+                          }}>
+                            {breakdown.blazingSevenRatio}
+                          </span>
+                        )}
+                      </div>
+                      <span style={{ 
+                        fontSize: '20px',
+                        fontWeight: 800,
+                        background: 'linear-gradient(135deg, #ef4444 0%, #f97316 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text',
+                      }}>
+                        +${breakdown.blazingSevensPayout?.toFixed(2)}
+                      </span>
+                    </motion.div>
+                  )}
+
+                  {/* Total */}
+                  {amount > 0 && (
+                    <motion.div
+                      initial={{ scale: 0.5, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ 
+                        delay: 0.6,
+                        type: "spring",
+                        stiffness: 200,
+                        damping: 15
+                      }}
+                      style={{ 
+                        fontSize: '14px',
+                        fontWeight: 600,
+                        color: '#94a3b8',
+                        marginTop: '8px',
+                        paddingTop: '12px',
+                        borderTop: '1px solid rgba(148, 163, 184, 0.2)',
+                      }}
+                    >
+                      Total: <span style={{
+                        fontSize: '32px',
+                        fontWeight: 900,
+                        background: 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text',
+                        marginLeft: '8px',
+                      }}>
+                        +${amount.toFixed(2)}
+                      </span>
+                    </motion.div>
+                  )}
+                </div>
               )}
               
               {/* Animated progress bar */}
               <motion.div 
                 initial={{ width: 0 }}
                 animate={{ width: '100%' }}
-                transition={{ delay: 0.3, duration: 0.6, ease: 'easeOut' }}
+                transition={{ delay: 0.7, duration: 0.6, ease: 'easeOut' }}
                 style={{ 
                   height: '4px',
                   marginTop: '20px',

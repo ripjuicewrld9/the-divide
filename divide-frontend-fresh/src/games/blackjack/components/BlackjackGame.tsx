@@ -123,6 +123,7 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
   const [isVerifying, setIsVerifying] = useState(false);
   const [showWinAnimation, setShowWinAnimation] = useState(false);
   const [winAmount, setWinAmount] = useState(0);
+  const [winBreakdown, setWinBreakdown] = useState<any>(null);
   const balanceInitializedRef = useRef(false);
   const gameSavedRef = useRef(false);
 
@@ -215,6 +216,7 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
     // Hide win overlay when user advances to the next round
     setShowWinAnimation(false);
     setWinAmount(0);
+    setWinBreakdown(null);
     setVerificationResult(null);
     // Clear the current game ID for the new round
     delete (gameState as any).currentGameId;
@@ -332,6 +334,7 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
     if (!latest) {
       setShowWinAnimation(false);
       setWinAmount(0);
+      setWinBreakdown(null);
       return;
     }
 
@@ -342,21 +345,60 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
     // This shows what the player receives from the house
     let totalPayout = 0;
     let hadPush = false;
+    let mainPayout = 0;
+    let perfectPairsPayout = 0;
+    let twentyPlusThreePayout = 0;
+    let blazingSevensPayout = 0;
+    let mainOutcome: 'win' | 'loss' | 'push' | 'blackjack' | 'bust' | undefined;
+    let perfectPairsRatio: string | undefined;
+    let twentyPlusThreeRatio: string | undefined;
+    let blazingSevenRatio: string | undefined;
+
     for (const r of roundGroup) {
       totalPayout += (r.payout || 0) + (r.perfectPairsPayout || 0) + (r.twentyPlusThreePayout || 0) + (r.blazingSevensPayout || 0);
       if (r.outcome === 'push') hadPush = true;
+      
+      // Collect breakdown data
+      mainPayout += r.payout || 0;
+      mainOutcome = r.outcome;
+      if (r.perfectPairsPayout) {
+        perfectPairsPayout += r.perfectPairsPayout;
+        perfectPairsRatio = r.perfectPairsRatio;
+      }
+      if (r.twentyPlusThreePayout) {
+        twentyPlusThreePayout += r.twentyPlusThreePayout;
+        twentyPlusThreeRatio = r.twentyPlusThreeRatio;
+      }
+      if (r.blazingSevensPayout) {
+        blazingSevensPayout += r.blazingSevensPayout;
+        blazingSevenRatio = r.blazingSevenRatio;
+      }
     }
 
     if (totalPayout > 0) {
       setWinAmount(totalPayout);
+      setWinBreakdown({
+        mainPayout: mainPayout > 0 ? mainPayout : undefined,
+        mainOutcome,
+        perfectPairsPayout: perfectPairsPayout > 0 ? perfectPairsPayout : undefined,
+        perfectPairsRatio,
+        twentyPlusThreePayout: twentyPlusThreePayout > 0 ? twentyPlusThreePayout : undefined,
+        twentyPlusThreeRatio,
+        blazingSevensPayout: blazingSevensPayout > 0 ? blazingSevensPayout : undefined,
+        blazingSevenRatio,
+      });
       setShowWinAnimation(true);
     } else if (totalPayout === 0 && hadPush) {
       setWinAmount(0);
+      setWinBreakdown({
+        mainOutcome: 'push',
+      });
       setShowWinAnimation(true);
     } else {
       // loss or nothing worth showing
       setShowWinAnimation(false);
       setWinAmount(0);
+      setWinBreakdown(null);
     }
   }, [gameState.roundResults]);
 
@@ -495,6 +537,7 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
                       <WinOverlay 
                         amount={winAmount} 
                         visible={showWinAnimation}
+                        breakdown={winBreakdown}
                         onDismiss={() => setShowWinAnimation(false)}
                       />
                       
