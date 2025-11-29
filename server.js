@@ -581,7 +581,10 @@ app.get('/auth/discord/callback', async (req, res) => {
     );
 
     // Redirect back to frontend with the link token
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/profile?discord_link=${linkToken}`);
+    const redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/profile?discord_link=${linkToken}`;
+    console.log('🔗 Discord OAuth - Redirecting to:', redirectUrl);
+    console.log('🌐 FRONTEND_URL env var:', process.env.FRONTEND_URL);
+    res.redirect(redirectUrl);
   } catch (error) {
     console.error('Discord OAuth error:', error);
     res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=discord_oauth_error`);
@@ -3559,6 +3562,11 @@ app.post("/api/promote-to-admin", auth, async (req, res) => {
 
 // 6️⃣ Finally start the server
 console.log('startup: about to call server.listen');
+console.log('🌐 Environment Variables Check:');
+console.log('   FRONTEND_URL:', process.env.FRONTEND_URL);
+console.log('   DISCORD_CLIENT_ID:', process.env.DISCORD_CLIENT_ID ? '✅ Set' : '❌ Missing');
+console.log('   DISCORD_CLIENT_SECRET:', process.env.DISCORD_CLIENT_SECRET ? '✅ Set' : '❌ Missing');
+console.log('   DISCORD_REDIRECT_URI:', process.env.DISCORD_REDIRECT_URI);
 server.listen(PORT, () => console.log(`✅ Server running at http://localhost:${PORT}`));
 
 // -----------------------------
