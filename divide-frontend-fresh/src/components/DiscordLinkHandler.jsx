@@ -6,16 +6,21 @@ export default function DiscordLinkHandler() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { updateUser } = useAuth();
-  const [status, setStatus] = useState('linking');
+  const [status, setStatus] = useState('idle');
 
   useEffect(() => {
     const linkToken = searchParams.get('discord_link');
     
-    if (!linkToken) return;
+    if (!linkToken) {
+      setStatus('idle');
+      return;
+    }
 
     const linkDiscordAccount = async () => {
       try {
         const token = localStorage.getItem('token');
+        
+        console.log('[Discord Link] Attempting to link with token:', linkToken.substring(0, 20) + '...');
         
         const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/link-discord`, {
           method: 'POST',
@@ -26,8 +31,11 @@ export default function DiscordLinkHandler() {
           body: JSON.stringify({ linkToken })
         });
 
+        console.log('[Discord Link] Response status:', response.status);
+        
         if (response.ok) {
           const data = await response.json();
+          console.log('[Discord Link] Success:', data);
           updateUser({ 
             discordId: data.discordId,
             discordUsername: data.discordUsername
@@ -39,16 +47,23 @@ export default function DiscordLinkHandler() {
             navigate('/profile', { replace: true });
           }, 2000);
         } else {
+          const errorText = await response.text();
+          console.error('[Discord Link] Failed:', response.status, errorText);
           setStatus('error');
         }
       } catch (error) {
-        console.error('Failed to link Discord:', error);
+        console.error('[Discord Link] Error:', error);
         setStatus('error');
       }
     };
 
     linkDiscordAccount();
   }, [searchParams, navigate, updateUser]);
+
+  // Don't render anything if no discord_link param
+  if (status === 'idle') {
+    return null;
+  }
 
   if (status === 'linking') {
     return (
