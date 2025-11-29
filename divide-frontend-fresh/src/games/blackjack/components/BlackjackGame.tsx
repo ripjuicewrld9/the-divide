@@ -596,16 +596,15 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
                                   gameState.resetGame();
                                   setTimeout(() => {
                                     gameState.redoBet();
-                                    setTimeout(() => handleDeal(), 100);
                                   }, 50);
                                 }}
                                 disabled={!(gameState.lastBets && (gameState.lastBets.mainBet > 0 || gameState.lastBets.perfectPairs > 0 || gameState.lastBets.twentyPlusThree > 0 || gameState.lastBets.blazingSevens > 0))}
                                 className={isMobile ? "w-full py-2 px-4 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-sm rounded transition-colors" : "w-full py-3 px-4 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded transition-colors"}
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
-                                title="Place previous round's bets and deal"
+                                title="Place previous round's bets"
                               >
-                                ↻ Redo Bet + Deal
+                                ↻ Redo Bet
                               </motion.button>
                             </div>
                           ) : (

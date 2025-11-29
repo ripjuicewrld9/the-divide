@@ -135,17 +135,20 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({ onOpenChat }) => {
 
       // Ball landed - use the game result passed with the ball, not from a ref
       if (gameResult) {
-        // balanceAfter from API is already in dollars
-        let newBalanceInDollars = gameResult.balanceAfter ?? 0;
-
-        // Ensure it's a valid number
-        if (typeof newBalanceInDollars !== 'number' || isNaN(newBalanceInDollars)) {
-          newBalanceInDollars = 0;
-        }
-
-        // Update balance with the authoritative balance from backend (already in dollars)
-        setBalance(newBalanceInDollars);
-        if (updateUser) updateUser({ balance: newBalanceInDollars });
+        // Calculate new balance incrementally from payout instead of using balanceAfter
+        // This prevents race conditions when spamming bets
+        const payout = typeof gameResult.payout === 'number' ? gameResult.payout : 0;
+        
+        // Get current balance state (not from gameResult to avoid stale data)
+        setBalance((currentBalance) => {
+          const validBalance = typeof currentBalance === 'number' && !isNaN(currentBalance) ? currentBalance : 0;
+          const newBalance = Math.max(0, validBalance + payout);
+          
+          // Update global balance
+          if (updateUser) updateUser({ balance: newBalance });
+          
+          return newBalance;
+        });
 
         // Add win record for visual feedback
         addWinRecord({
