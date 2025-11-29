@@ -358,6 +358,33 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
     }
 
+    // Check for blackjacks and insurance
+    const playerBJ = hands.some(h => isBlackjack(h.cards));
+    const dealerUpCard = dealerHand.cards[0];
+    const dealerHasBlackjack = isBlackjack(dealerHand.cards);
+
+    // CRITICAL FIX: Check dealer blackjack BEFORE setting state to playing
+    // If dealer has 10/J/Q/K showing and hole card gives blackjack, round ends immediately
+    if (dealerHasBlackjack && dealerUpCard && (dealerUpCard.rank === '10' || dealerUpCard.rank === 'J' || dealerUpCard.rank === 'Q' || dealerUpCard.rank === 'K')) {
+      // Dealer has blackjack with 10-value up card - round ends immediately
+      set({
+        deck,
+        playerHands: hands,
+        dealerHand,
+        currentDealRatios: {
+          perfectPairsRatio: currentPerfectPairsRatio,
+          twentyPlusThreeRatio: currentTwentyPlusThreeRatio,
+          blazingSevenRatio: currentBlazingSevenRatio,
+        },
+        lastBets,
+        gamePhase: 'settling',
+        currentHandIndex: 0,
+        message: 'Dealer has Blackjack!',
+      });
+      setTimeout(() => get().settleHands(), 500);
+      return;
+    }
+
     set({
       deck,
       playerHands: hands,
@@ -373,10 +400,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
       message: 'Your turn',
     });
 
-    // Check for blackjacks and insurance
-    const playerBJ = hands.some(h => isBlackjack(h.cards));
-    const dealerUpCard = dealerHand.cards[0];
-
     if (dealerUpCard && dealerUpCard.rank === 'A') {
       set({ gamePhase: 'insurance', message: 'Insurance offered', insuranceOffered: true });
     } else if (playerBJ && dealerUpCard && dealerUpCard.rank !== 'A') {
@@ -388,6 +411,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
   hit: () => {
     const state = get();
     if (state.gamePhase !== 'playing') return;
+
+    // CRITICAL FIX: Prevent hitting if dealer already has blackjack
+    if (isBlackjack(state.dealerHand.cards)) {
+      set({ gamePhase: 'settling', message: 'Dealer has Blackjack!' });
+      setTimeout(() => get().settleHands(), 500);
+      return;
+    }
 
     let deck = [...state.deck];
     const hands = [...state.playerHands];

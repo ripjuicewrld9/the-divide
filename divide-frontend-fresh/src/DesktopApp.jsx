@@ -19,6 +19,8 @@ import Sidebar from "./components/Sidebar.jsx";
 import ChatSidebar from "./components/ChatSidebar.jsx";
 import BlackjackPage from "./games/blackjack/index.tsx";
 import PlinkoPage from "./games/plinko/index.tsx";
+import WheelPage from "./games/wheel/index.tsx";
+import WheelLobby from "./games/wheel/WheelLobby.tsx";
 import ProfilePage from "./pages/ProfileNew.jsx";
 import CaseBattlesPage from "./components/CaseBattlesPage.jsx";
 
@@ -58,6 +60,8 @@ export default function DesktopApp() {
             <Route path="/rugged" element={<RuggedPage />} />
             <Route path="/blackjack" element={<BlackjackPage />} />
             <Route path="/plinko" element={<PlinkoPage />} />
+            <Route path="/wheel" element={<WheelLobby />} />
+            <Route path="/wheel/:gameId" element={<WheelPage />} />
             <Route path="/battles" element={<ActiveBattlesPage />} />
             <Route path="/case-battles" element={<CaseBattlesPage />} />
             <Route path="/case-battles/create" element={<CreateBattlePage />} />

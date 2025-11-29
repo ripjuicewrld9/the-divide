@@ -7,5 +7,13 @@ export default defineConfig({
     fs: {
       strict: false
     }
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: undefined
+      }
+    },
+    sourcemap: true // Enable source maps for debugging
   }
 });

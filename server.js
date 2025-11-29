@@ -31,6 +31,8 @@ import registerCases from './routes/cases.js';
 import { setupItemRoutes } from './routes/items.js';
 import blackjackRoutes from './routes/blackjack.js';
 import registerPlinko from './routes/plinko.js';
+import registerWheelRoutes from './routes/wheel.js';
+import WheelGameManager from './utils/wheelGameManager.js';
 import { generateServerSeedFromRandomOrg, getEOSBlockHash, createGameSeed, generateDrawnNumbers, hashServerSeed } from './utils/kenoProofOfFair.js';
 
 // ONLY ONE __dirname — AT THE TOP
@@ -2171,6 +2173,13 @@ try {
   console.log('startup: setupItemRoutes returned');
 } catch (e) { console.error('Failed to register items routes', e); }
 
+// Register Wheel routes
+try {
+  console.log('startup: about to register wheel routes');
+  registerWheelRoutes(app, io, { auth });
+  console.log('startup: wheel routes registered');
+} catch (e) { console.error('Failed to register wheel routes', e); }
+
 // Register Plinko routes
 async function ensureRuggedInit() {
   try {
@@ -2309,6 +2318,55 @@ setInterval(async () => {
 
 // ========================================
 // END CHAT SYSTEM
+// ========================================
+
+// ========================================
+// 🎡 WHEEL GAME SOCKET.IO EVENTS
+// ========================================
+const wheelNamespace = io.of('/wheel');
+
+wheelNamespace.on('connection', (socket) => {
+  console.log('[Wheel] User connected:', socket.id);
+
+  // Join a specific game room
+  socket.on('wheel:joinGame', (gameId) => {
+    socket.join(`wheel-${gameId}`);
+    console.log(`[Wheel] User ${socket.id} joined game ${gameId}`);
+  });
+
+  // Leave a specific game room
+  socket.on('wheel:leaveGame', (gameId) => {
+    socket.leave(`wheel-${gameId}`);
+    console.log(`[Wheel] User ${socket.id} left game ${gameId}`);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('[Wheel] User disconnected:', socket.id);
+  });
+});
+
+// Initialize Wheel Game Manager (needs to be after namespace creation)
+try {
+  console.log('startup: initializing wheel game manager');
+  const wheelGameManager = new WheelGameManager(wheelNamespace);
+  app.locals.wheelGameManager = wheelGameManager;
+  
+  // Create 4 initial game instances
+  (async () => {
+    try {
+      await wheelGameManager.createGameInstance();
+      await wheelGameManager.createGameInstance();
+      await wheelGameManager.createGameInstance();
+      await wheelGameManager.createGameInstance();
+      console.log('startup: wheel game manager initialized with 4 games');
+    } catch (e) {
+      console.error('Failed to create initial wheel game instances', e);
+    }
+  })();
+} catch (e) { console.error('Failed to initialize wheel game manager', e); }
+
+// ========================================
+// END WHEEL GAME SYSTEM
 // ========================================
 
 // 4️⃣ Divide vote live update

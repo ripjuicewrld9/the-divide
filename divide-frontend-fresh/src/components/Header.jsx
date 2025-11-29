@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { formatCurrency } from '../utils/format';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -21,6 +21,13 @@ export default function Header() {
   const [promoteSuccess, setPromoteSuccess] = useState('');
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [showSupportModal, setShowSupportModal] = useState(false);
+
+  // Track balance for debugging
+  useEffect(() => {
+    if (user) {
+      console.log('[Header] Balance updated:', user.balance);
+    }
+  }, [user?.balance]);
 
   const handleUserButton = () => {
     if (!user) {

@@ -18,6 +18,7 @@ export default function Home() {
       'Keno': '/tiles-svgrepo-com.svg',
       'Plinko': '/ball-pyramid-svgrepo-com.svg',
       'Blackjack': '/cards-game-solitaire-poker-blackjack-casino-svgrepo-com.svg',
+      'Wheel': '/helm-wheel-svgrepo-com.svg',
       'Case Battle': '/swords-power-svgrepo-com.svg'
     };
     return iconMap[gameName] || '/tiles-svgrepo-com.svg';
@@ -97,6 +98,17 @@ export default function Home() {
       path: '/plinko',
       label: 'Play Plinko',
       tagline: 'Drop & Win'
+    },
+    {
+      id: 'wheel',
+      title: 'Lucky Wheel',
+      description: 'Reserve your seat and spin the wheel for massive prizes',
+      icon: '/helm-wheel-svgrepo-com.svg',
+      color: '#3b82f6',
+      gradient: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+      path: '/wheel',
+      label: 'Spin Wheel',
+      tagline: 'Spin & Win'
     },
     {
       id: 'battles',

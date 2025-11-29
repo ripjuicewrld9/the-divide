@@ -11,6 +11,8 @@ import CreateBattlePage from "./components/CreateBattlePage.jsx";
 import CaseBattleDetail from "./components/CaseBattleDetail.jsx";
 import BlackjackPage from "./games/blackjack/index.tsx";
 import PlinkoPage from "./games/plinko/index.tsx";
+import WheelPage from "./games/wheel/index.tsx";
+import WheelLobby from "./games/wheel/WheelLobby.tsx";
 import MobileMainLayout from "./components/MobileMainLayout.jsx";
 import MobileChatOverlay from "./components/MobileChatOverlay.jsx";
 import MobileBottomNav from "./components/MobileBottomNav.jsx";
@@ -37,6 +39,8 @@ export default function MobileApp() {
                 <Route path="/rugged" element={<RuggedPage />} />
                 <Route path="/blackjack" element={<BlackjackPage onOpenChat={() => setIsChatOpen(true)} />} />
                 <Route path="/plinko" element={<PlinkoPage onOpenChat={() => setIsChatOpen(true)} />} />
+                <Route path="/wheel" element={<WheelLobby />} />
+                <Route path="/wheel/:gameId" element={<WheelPage onOpenChat={() => setIsChatOpen(true)} />} />
                 <Route path="/divides" element={<Divides onOpenChat={() => setIsChatOpen(true)} />} />
 
                 {/* Case Battles */}

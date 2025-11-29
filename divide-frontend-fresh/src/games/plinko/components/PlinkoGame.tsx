@@ -293,6 +293,10 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({ onOpenChat }) => {
         console.error('[Plinko] Error incrementing nonce:', err);
       }
 
+      // CRITICAL FIX: Backend already deducted bet and returned balanceAfter
+      // Don't use balanceAfter as it causes issues with rapid betting
+      // Instead, just use the payout to update balance incrementally
+      
       // Ensure profit is always a valid number
       if (typeof result.profit !== 'number' || isNaN(result.profit)) {
         const payout = typeof result.payout === 'number' ? result.payout : 0;
@@ -305,16 +309,15 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({ onOpenChat }) => {
         result.profit = 0;
       }
 
-      // Store result to be applied when ball lands in bin
-      // (no need to store in ref anymore - it's passed with the ball)
-
       // Drop ball with the result from backend
+      // The ball callback will add the payout when it lands (not balanceAfter)
       if (engineRef.current) {
         const ballCreated = engineRef.current.dropBall(betAmount, result.binIndex, result);
-        // If ball wasn't created, the callback already fired and decremented counter
-        // So we don't need to do anything here
         if (!ballCreated) {
-          console.warn('[Plinko] Ball creation failed, counter already decremented by callback');
+          console.warn('[Plinko] Ball creation failed, refunding bet');
+          // Refund if ball wasn't created
+          const currentBalance = typeof balance === 'number' && !isNaN(balance) ? balance : 0;
+          setBalance(currentBalance + betAmount);
         }
       } else {
         // No engine available - refund

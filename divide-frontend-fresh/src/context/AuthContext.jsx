@@ -39,6 +39,38 @@ export const AuthProvider = ({ children }) => {
             }
         };
         loadUser();
+
+        // CRITICAL FIX: Periodically refresh balance from server to prevent desync
+        // This ensures Header always shows accurate balance even after game plays
+        const refreshInterval = setInterval(async () => {
+            if (token) {
+                try {
+                    const res = await fetch(`${API_BASE}/api/me`, {
+                        headers: { Authorization: `Bearer ${token}` },
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        setUser((prevUser) => {
+                            // Only update if balance changed on server (prevents fighting with local updates)
+                            if (prevUser && Math.abs((prevUser.balance || 0) - data.balance) > 0.01) {
+                                console.log('[Auth] Balance synced from server:', data.balance);
+                                return {
+                                    ...prevUser,
+                                    balance: data.balance,
+                                    wagered: data.wagered || prevUser.wagered,
+                                    totalWon: data.totalWon || prevUser.totalWon,
+                                };
+                            }
+                            return prevUser;
+                        });
+                    }
+                } catch (err) {
+                    console.error('[Auth] Periodic refresh error:', err.message);
+                }
+            }
+        }, 5000); // Refresh every 5 seconds
+
+        return () => clearInterval(refreshInterval);
     }, [token]);
 
     // REGISTER
@@ -154,7 +186,7 @@ export const AuthProvider = ({ children }) => {
     // Update user object locally AND persist to server
     const updateUser = async (patch = {}) => {
         try {
-            // 1. Optimistic update
+            // 1. Optimistic update - ALWAYS update local state immediately
             setUser((u) => ({ ...(u || {}), ...patch }));
 
             // 2. Persist to backend (only for allowed fields like profileImage)
@@ -173,6 +205,11 @@ export const AuthProvider = ({ children }) => {
                     refreshUser();
                 }
             }
+
+            // 3. If balance was updated, log it for debugging
+            if (patch.balance !== undefined) {
+                console.log('[AuthContext] Balance updated to:', patch.balance);
+            }
         } catch (e) {
             console.error('updateUser failed', e);
         }
@@ -180,7 +217,12 @@ export const AuthProvider = ({ children }) => {
 
     // Update balance locally only (optimistic UI, server will send authoritative value)
     const setBalance = (newBalance) => {
-        setUser((u) => ({ ...(u || {}), balance: newBalance }));
+        console.log('[AuthContext] setBalance called with:', newBalance);
+        setUser((u) => {
+            const updated = { ...(u || {}), balance: newBalance };
+            console.log('[AuthContext] User state updated:', updated);
+            return updated;
+        });
     };
 
     return (
