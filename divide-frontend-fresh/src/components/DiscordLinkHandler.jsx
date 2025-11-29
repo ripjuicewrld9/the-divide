@@ -24,7 +24,12 @@ export default function DiscordLinkHandler() {
         
         console.log('[Discord Link] Attempting to link with token:', linkToken.substring(0, 20) + '...');
         
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/link-discord`, {
+        // Add timeout
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Request timeout')), 10000)
+        );
+        
+        const fetchPromise = fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/link-discord`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -32,6 +37,8 @@ export default function DiscordLinkHandler() {
           },
           body: JSON.stringify({ linkToken })
         });
+
+        const response = await Promise.race([fetchPromise, timeoutPromise]);
 
         console.log('[Discord Link] Response status:', response.status);
         
