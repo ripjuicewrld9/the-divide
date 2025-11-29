@@ -11,7 +11,11 @@ export default function DiscordLinkHandler() {
   useEffect(() => {
     const linkToken = searchParams.get('discord_link');
     
+    console.log('[Discord Link] Component mounted, linkToken:', linkToken ? 'present' : 'none');
+    console.log('[Discord Link] Current status:', status);
+    
     if (!linkToken) {
+      console.log('[Discord Link] No token, forcing idle state');
       setStatus('idle');
       return;
     }
@@ -80,7 +84,16 @@ export default function DiscordLinkHandler() {
         <div className="bg-[#1a1d29] rounded-lg p-8 max-w-md text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
           <h3 className="text-xl font-bold text-white mb-2">Linking Discord Account...</h3>
-          <p className="text-gray-400">Please wait while we connect your Discord account.</p>
+          <p className="text-gray-400 mb-4">Please wait while we connect your Discord account.</p>
+          <button
+            onClick={() => {
+              console.log('[Discord Link] User cancelled');
+              window.location.href = '/profile';
+            }}
+            className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+          >
+            Cancel
+          </button>
         </div>
       </div>
     );
