@@ -133,22 +133,10 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({ onOpenChat }) => {
 
     engine.setOnBallInBin((binIndex, betAmount, gameResult) => {
 
-      // Ball landed - use the game result passed with the ball, not from a ref
-      if (gameResult) {
-        // Calculate new balance incrementally from payout instead of using balanceAfter
-        // This prevents race conditions when spamming bets
-        const payout = typeof gameResult.payout === 'number' ? gameResult.payout : 0;
-        
-        // Get current balance state (not from gameResult to avoid stale data)
-        setBalance((currentBalance) => {
-          const validBalance = typeof currentBalance === 'number' && !isNaN(currentBalance) ? currentBalance : 0;
-          const newBalance = Math.max(0, validBalance + payout);
-          
-          // Update global balance
-          if (updateUser) updateUser({ balance: newBalance });
-          
-          return newBalance;
-        });
+      // Ball landed - update balance to the server's calculated balanceAfter
+      if (gameResult && typeof gameResult.balanceAfter === 'number') {
+        setBalance(gameResult.balanceAfter);
+        if (updateUser) updateUser({ balance: gameResult.balanceAfter });
 
         // Add win record for visual feedback
         addWinRecord({
@@ -243,19 +231,11 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({ onOpenChat }) => {
 
     try {
       lastBetAmountRef.current = betAmount;
-      // Deduct bet immediately from display balance and sync global balance
-      const currentBalance = typeof balance === 'number' && !isNaN(balance) ? balance : 0;
-      const newLocalBalance = Math.max(0, currentBalance - betAmount);
-      setBalance(newLocalBalance);
-      if (updateUser) updateUser({ balance: newLocalBalance });
 
       // Get token from localStorage
       const token = localStorage.getItem('token');
       if (!token) {
         console.error('No token found');
-        // Refund on error
-        const currentBalance = typeof balance === 'number' && !isNaN(balance) ? balance : 0;
-        setBalance(currentBalance + betAmount);
         return;
       }
 
@@ -276,9 +256,6 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({ onOpenChat }) => {
       if (!response.ok) {
         const errorData = await response.json();
         console.error('Error from backend:', errorData);
-        // Refund the bet if API call fails
-        const currentBalance = typeof balance === 'number' && !isNaN(balance) ? balance : 0;
-        setBalance(currentBalance + betAmount);
         return;
       }
 
@@ -293,43 +270,20 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({ onOpenChat }) => {
         console.error('[Plinko] Error incrementing nonce:', err);
       }
 
-      // CRITICAL FIX: Backend already deducted bet and returned balanceAfter
-      // Don't use balanceAfter as it causes issues with rapid betting
-      // Instead, just use the payout to update balance incrementally
-      
-      // Ensure profit is always a valid number
+      // Ensure profit is a valid number
       if (typeof result.profit !== 'number' || isNaN(result.profit)) {
         const payout = typeof result.payout === 'number' ? result.payout : 0;
         const betAmt = typeof result.betAmount === 'number' ? result.betAmount : betAmount;
         result.profit = payout - betAmt;
       }
 
-      // Ensure profit is still a valid number
-      if (typeof result.profit !== 'number' || isNaN(result.profit)) {
-        result.profit = 0;
-      }
-
       // Drop ball with the result from backend
-      // The ball callback will add the payout when it lands (not balanceAfter)
+      // The ball callback will update balance to balanceAfter when it lands
       if (engineRef.current) {
-        const ballCreated = engineRef.current.dropBall(betAmount, result.binIndex, result);
-        if (!ballCreated) {
-          console.warn('[Plinko] Ball creation failed, refunding bet');
-          // Refund if ball wasn't created
-          const currentBalance = typeof balance === 'number' && !isNaN(balance) ? balance : 0;
-          setBalance(currentBalance + betAmount);
-        }
-      } else {
-        // No engine available - refund
-        console.error('[Plinko] No engine available');
-        const currentBalance = typeof balance === 'number' && !isNaN(balance) ? balance : 0;
-        setBalance(currentBalance + betAmount);
+        engineRef.current.dropBall(betAmount, result.binIndex, result);
       }
     } catch (error) {
       console.error('Error playing round:', error);
-      // Refund on error if balance was deducted
-      const currentBalance = typeof balance === 'number' && !isNaN(balance) ? balance : 0;
-      setBalance(currentBalance + betAmount);
     }
   };
 

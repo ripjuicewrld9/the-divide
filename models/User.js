@@ -34,6 +34,8 @@ const userSchema = new mongoose.Schema({
   holdingsDC: { type: Number, default: 0 },
   holdingsInvested: { type: Number, default: 0 },
   profileImage: { type: String, default: '' },
+  discordId: { type: String, default: '' }, // Discord user ID for support ticket integration
+  discordUsername: { type: String, default: '' }, // Discord username for display
   createdAt: { type: Date, default: Date.now }
 });
 

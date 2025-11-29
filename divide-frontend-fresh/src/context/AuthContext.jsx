@@ -175,7 +175,16 @@ export const AuthProvider = ({ children }) => {
             const res = await fetch(`${API_BASE}/api/me`, { headers: { Authorization: `Bearer ${token}` } });
             if (!res.ok) return null;
             const data = await res.json();
-            setUser((u) => ({ ...(u || {}), id: data.id, username: data.username, balance: data.balance, role: data.role || 'user', profileImage: data.profileImage || '' }));
+            setUser((u) => ({ 
+                ...(u || {}), 
+                id: data.id, 
+                username: data.username, 
+                balance: data.balance, 
+                role: data.role || 'user', 
+                profileImage: data.profileImage || '',
+                discordId: data.discordId || null,
+                discordUsername: data.discordUsername || null
+            }));
             return data;
         } catch (err) {
             console.error('refreshUser error', err);
@@ -189,8 +198,8 @@ export const AuthProvider = ({ children }) => {
             // 1. Optimistic update - ALWAYS update local state immediately
             setUser((u) => ({ ...(u || {}), ...patch }));
 
-            // 2. Persist to backend (only for allowed fields like profileImage)
-            if (token && Object.keys(patch).some(key => key === 'profileImage')) {
+            // 2. Persist to backend (only for allowed fields like profileImage, discordId, discordUsername)
+            if (token && Object.keys(patch).some(key => ['profileImage', 'discordId', 'discordUsername'].includes(key))) {
                 const res = await fetch(`${API_BASE}/api/me`, {
                     method: 'PATCH',
                     headers: {

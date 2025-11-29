@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import UserAvatar from '../components/UserAvatar';
 import { formatCurrency } from '../utils/format';
 import MobileGameHeader from '../components/MobileGameHeader';
+import DiscordOAuthButton from '../components/DiscordOAuthButton';
 
 export default function ProfilePage({ onOpenChat }) {
     const { user, logout, updateUser } = useAuth();
@@ -92,6 +93,7 @@ export default function ProfilePage({ onOpenChat }) {
                             <span>⚙️</span> Account Settings
                         </h2>
                         <div className="space-y-3">
+                            <DiscordOAuthButton />
                             <button className="w-full text-left p-3 rounded-lg bg-white/5 hover:bg-white/10 transition flex justify-between items-center group">
                                 <span>Change Password</span>
                                 <span className="text-gray-500 group-hover:text-white transition">→</span>

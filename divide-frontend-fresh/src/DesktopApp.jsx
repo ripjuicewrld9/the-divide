@@ -23,6 +23,7 @@ import WheelPage from "./games/wheel/index.tsx";
 import WheelLobby from "./games/wheel/WheelLobby.tsx";
 import ProfilePage from "./pages/ProfileNew.jsx";
 import CaseBattlesPage from "./components/CaseBattlesPage.jsx";
+import DiscordLinkHandler from "./components/DiscordLinkHandler.jsx";
 
 function ProtectedRoute({ children, requiredRole = null }) {
   const { user } = React.useContext(AuthContext);
@@ -77,6 +78,7 @@ export default function DesktopApp() {
             <Route path="/battles/create" element={<CreateBattlePage />} />
             <Route path="/battles/:id" element={<CaseBattleDetail />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/link-discord" element={<DiscordLinkHandler />} />
 
             {/* Admin routes */}
             <Route

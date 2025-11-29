@@ -296,6 +296,7 @@ app.post('/api/support/ticket', async (req, res) => {
     // Get user info if authenticated
     let username = 'Guest';
     let userId = 'Not logged in';
+    let discordId = null;
     
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -306,6 +307,7 @@ app.post('/api/support/ticket', async (req, res) => {
         if (user) {
           username = user.username;
           userId = user._id.toString();
+          discordId = user.discordId || null;
         }
       } catch (err) {
         // Token invalid, continue as guest
@@ -316,6 +318,10 @@ app.post('/api/support/ticket', async (req, res) => {
     const botToken = process.env.DISCORD_BOT_TOKEN;
     const channelId = process.env.DISCORD_SUPPORT_CHANNEL_ID;
     const adminRoleId = process.env.DISCORD_ADMIN_ROLE_ID;
+    
+    console.log('[Support Ticket] Debug - botToken:', botToken ? 'SET (length:' + botToken.length + ')' : 'NOT SET');
+    console.log('[Support Ticket] Debug - channelId:', channelId || 'NOT SET');
+    console.log('[Support Ticket] Debug - adminRoleId:', adminRoleId || 'NOT SET');
     
     if (!botToken || !channelId) {
       console.warn('⚠️ DISCORD_BOT_TOKEN or DISCORD_SUPPORT_CHANNEL_ID not set in .env - ticket will not be sent to Discord');
@@ -373,6 +379,7 @@ app.post('/api/support/ticket', async (req, res) => {
     };
 
     // First, create initial message in the channel to get message ID for thread
+    const mentionUser = discordId ? `<@${discordId}>` : username;
     const initialMessage = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
       method: 'POST',
       headers: {
@@ -380,7 +387,7 @@ app.post('/api/support/ticket', async (req, res) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        content: adminRoleId ? `<@&${adminRoleId}> New support ticket from **${username}**!` : `@here New support ticket from **${username}**!`,
+        content: `${adminRoleId ? `<@&${adminRoleId}>` : '@here'} New support ticket from **${username}** ${discordId ? `(<@${discordId}>)` : ''}`,
         embeds: [embed]
       })
     });
@@ -498,6 +505,127 @@ app.post('/login', async (req, res) => {
     res.json({ token, userId: u._id, balance: toDollars(u.balance), role: u.role });
   } catch (e) {
     console.error('Login error', e);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ──────────────────────────────────────────────
+//  DISCORD OAUTH FOR ACCOUNT LINKING
+// ──────────────────────────────────────────────
+
+// Step 1: Redirect to Discord OAuth
+app.get('/auth/discord', (req, res) => {
+  const clientId = process.env.DISCORD_CLIENT_ID;
+  const redirectUri = encodeURIComponent(process.env.DISCORD_REDIRECT_URI || 'http://localhost:3000/auth/discord/callback');
+  const scope = encodeURIComponent('identify');
+  
+  const discordAuthUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
+  res.redirect(discordAuthUrl);
+});
+
+// Step 2: Handle Discord OAuth callback
+app.get('/auth/discord/callback', async (req, res) => {
+  const { code } = req.query;
+  
+  if (!code) {
+    return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=discord_auth_failed`);
+  }
+
+  try {
+    // Exchange code for access token
+    const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        client_id: process.env.DISCORD_CLIENT_ID,
+        client_secret: process.env.DISCORD_CLIENT_SECRET,
+        grant_type: 'authorization_code',
+        code: code,
+        redirect_uri: process.env.DISCORD_REDIRECT_URI || 'http://localhost:3000/auth/discord/callback',
+      }),
+    });
+
+    const tokenData = await tokenResponse.json();
+
+    if (!tokenData.access_token) {
+      console.error('Discord OAuth error:', tokenData);
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=discord_token_failed`);
+    }
+
+    // Get user info from Discord
+    const userResponse = await fetch('https://discord.com/api/users/@me', {
+      headers: {
+        Authorization: `Bearer ${tokenData.access_token}`,
+      },
+    });
+
+    const discordUser = await userResponse.json();
+
+    if (!discordUser.id) {
+      console.error('Failed to get Discord user:', discordUser);
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=discord_user_failed`);
+    }
+
+    // Create a temporary token to link this Discord account to website account
+    // This token will be used by the frontend to complete the linking
+    const linkToken = jwt.sign(
+      { 
+        discordId: discordUser.id,
+        discordUsername: `${discordUser.username}#${discordUser.discriminator}`,
+        type: 'discord_link'
+      },
+      JWT_SECRET,
+      { expiresIn: '5m' }
+    );
+
+    // Redirect back to frontend with the link token
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/profile?discord_link=${linkToken}`);
+  } catch (error) {
+    console.error('Discord OAuth error:', error);
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=discord_oauth_error`);
+  }
+});
+
+// Step 3: Link Discord account to website account
+app.post('/api/link-discord', auth, async (req, res) => {
+  try {
+    const { linkToken } = req.body;
+
+    if (!linkToken) {
+      return res.status(400).json({ error: 'Link token required' });
+    }
+
+    // Verify the link token
+    let linkData;
+    try {
+      linkData = jwt.verify(linkToken, JWT_SECRET);
+    } catch (err) {
+      return res.status(400).json({ error: 'Invalid or expired link token' });
+    }
+
+    if (linkData.type !== 'discord_link') {
+      return res.status(400).json({ error: 'Invalid link token type' });
+    }
+
+    // Update user with Discord info
+    const user = await User.findById(req.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    user.discordId = linkData.discordId;
+    user.discordUsername = linkData.discordUsername;
+    await user.save();
+
+    res.json({
+      success: true,
+      discordId: linkData.discordId,
+      discordUsername: linkData.discordUsername
+    });
+  } catch (error) {
+    console.error('Link Discord error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -3263,9 +3391,9 @@ app.patch("/api/me", auth, async (req, res) => {
       });
     }
 
-    // Allow updating safe fields only (e.g., profileImage, username if needed)
+    // Allow updating safe fields only (e.g., profileImage, discordId, discordUsername, username if needed)
     const safeFields = {};
-    const allowedFields = ['profileImage']; // Add other safe fields as needed
+    const allowedFields = ['profileImage', 'discordId', 'discordUsername']; // Add other safe fields as needed
 
     for (const field of allowedFields) {
       if (field in patch) {

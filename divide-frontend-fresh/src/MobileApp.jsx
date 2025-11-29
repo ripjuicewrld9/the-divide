@@ -17,6 +17,7 @@ import MobileMainLayout from "./components/MobileMainLayout.jsx";
 import MobileChatOverlay from "./components/MobileChatOverlay.jsx";
 import MobileBottomNav from "./components/MobileBottomNav.jsx";
 import ProfilePage from "./pages/ProfileNew.jsx";
+import DiscordLinkHandler from "./components/DiscordLinkHandler.jsx";
 
 function ProtectedRoute({ children, requiredRole = null }) {
     const { user } = React.useContext(AuthContext);
@@ -61,6 +62,7 @@ export default function MobileApp() {
 
                 {/* Profile */}
                 <Route path="/profile" element={<ProfilePage onOpenChat={() => setIsChatOpen(true)} />} />
+                <Route path="/link-discord" element={<DiscordLinkHandler />} />
 
                 {/* Admin Routes */}
                 <Route path="/admin" element={
