@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 export default function DiscordLinkHandler() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { updateUser } = useAuth();
+  const { updateUser, refreshUser } = useAuth();
   const [status, setStatus] = useState('idle');
 
   useEffect(() => {
@@ -49,10 +49,10 @@ export default function DiscordLinkHandler() {
         if (response.ok) {
           const data = await response.json();
           console.log('[Discord Link] Success:', data);
-          updateUser({ 
-            discordId: data.discordId,
-            discordUsername: data.discordUsername
-          });
+          
+          // Refresh user data from server to get Discord info
+          await refreshUser();
+          
           setStatus('success');
           
           // Clear the URL parameter and navigate back to profile
