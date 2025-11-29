@@ -3136,7 +3136,7 @@ setInterval(async () => {
 // GET CURRENT USER (for frontend refresh)
 app.get("/api/me", auth, async (req, res) => {
   try {
-    const user = await User.findById(req.userId).select("_id username balance role holdingsDC holdingsInvested profileImage wagered totalWon totalDeposited totalWithdrawn totalRedemptions totalBets totalWins totalLosses createdAt");
+    const user = await User.findById(req.userId).select("_id username balance role holdingsDC holdingsInvested profileImage wagered totalWon totalDeposited totalWithdrawn totalRedemptions totalBets totalWins totalLosses createdAt discordId discordUsername");
     if (!user) return res.status(404).json({ error: "User not found" });
     res.json({
       id: user._id,
@@ -3154,7 +3154,9 @@ app.get("/api/me", auth, async (req, res) => {
       totalBets: user.totalBets || 0,
       totalWins: user.totalWins || 0,
       totalLosses: user.totalLosses || 0,
-      createdAt: user.createdAt
+      createdAt: user.createdAt,
+      discordId: user.discordId || null,
+      discordUsername: user.discordUsername || null
     });
   } catch (err) {
     res.status(500).json({ error: "Server error" });

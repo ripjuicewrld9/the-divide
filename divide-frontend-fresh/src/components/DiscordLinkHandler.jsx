@@ -7,6 +7,7 @@ export default function DiscordLinkHandler() {
   const navigate = useNavigate();
   const { updateUser, refreshUser } = useAuth();
   const [status, setStatus] = useState('idle');
+  const [hasLinked, setHasLinked] = useState(false);
 
   useEffect(() => {
     const linkToken = searchParams.get('discord_link');
@@ -14,13 +15,14 @@ export default function DiscordLinkHandler() {
     console.log('[Discord Link] Component mounted, linkToken:', linkToken ? 'present' : 'none');
     console.log('[Discord Link] Current status:', status);
     
-    if (!linkToken) {
-      console.log('[Discord Link] No token, forcing idle state');
+    if (!linkToken || hasLinked) {
+      console.log('[Discord Link] No token or already linked, forcing idle state');
       setStatus('idle');
       return;
     }
 
     setStatus('linking');
+    setHasLinked(true);
 
     const linkDiscordAccount = async () => {
       try {
@@ -71,7 +73,7 @@ export default function DiscordLinkHandler() {
     };
 
     linkDiscordAccount();
-  }, [searchParams, navigate, updateUser]);
+  }, [searchParams, navigate, updateUser, hasLinked]);
 
   // Don't render anything if no discord_link param
   if (status === 'idle') {
