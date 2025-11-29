@@ -107,7 +107,7 @@ export default function Home() {
       color: '#3b82f6',
       gradient: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
       path: '/wheel',
-      label: 'Spin Wheel',
+      label: 'Coming Soon',
       tagline: 'Spin & Win'
     },
     {

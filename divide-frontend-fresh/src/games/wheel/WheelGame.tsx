@@ -223,7 +223,7 @@ export const WheelGame: React.FC<WheelGameProps> = ({ gameId, onOpenChat }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0a0a14] via-[#1a1a2e] to-[#0a0a14]">
-      {isMobile && <MobileGameHeader title="Lucky Wheel" onOpenChat={onOpenChat} />}
+      {isMobile && <MobileGameHeader />}
 
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* Header */}

@@ -39,8 +39,16 @@ export default function MobileApp() {
                 <Route path="/rugged" element={<RuggedPage />} />
                 <Route path="/blackjack" element={<BlackjackPage onOpenChat={() => setIsChatOpen(true)} />} />
                 <Route path="/plinko" element={<PlinkoPage onOpenChat={() => setIsChatOpen(true)} />} />
-                <Route path="/wheel" element={<WheelLobby />} />
-                <Route path="/wheel/:gameId" element={<WheelPage onOpenChat={() => setIsChatOpen(true)} />} />
+                <Route path="/wheel" element={
+                    <ProtectedRoute requiredRole="admin">
+                        <WheelLobby />
+                    </ProtectedRoute>
+                } />
+                <Route path="/wheel/:gameId" element={
+                    <ProtectedRoute requiredRole="admin">
+                        <WheelPage onOpenChat={() => setIsChatOpen(true)} />
+                    </ProtectedRoute>
+                } />
                 <Route path="/divides" element={<Divides onOpenChat={() => setIsChatOpen(true)} />} />
 
                 {/* Case Battles */}

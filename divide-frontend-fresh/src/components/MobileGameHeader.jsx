@@ -5,7 +5,7 @@ import { formatCurrency } from '../utils/format';
 import DepositWithdrawModal from './DepositWithdrawModal';
 import SupportTicket from './SupportTicket';
 
-export default function MobileGameHeader({ title, onOpenChat, className = "" }) {
+export default function MobileGameHeader({ className = "" }) {
     const navigate = useNavigate();
     const { user } = useAuth();
     const [showDepositModal, setShowDepositModal] = useState(false);

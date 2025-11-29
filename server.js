@@ -283,7 +283,7 @@ app.post('/api/profile-image', auth, async (req, res) => {
   }
 });
 
-// Support Ticket System - sends tickets to Discord webhook
+// Support Ticket System - creates private Discord threads
 app.post('/api/support/ticket', async (req, res) => {
   try {
     const { subject, category, description, email } = req.body;
@@ -312,21 +312,25 @@ app.post('/api/support/ticket', async (req, res) => {
       }
     }
 
-    // Discord webhook URL from environment variable
-    const discordWebhookUrl = process.env.DISCORD_SUPPORT_WEBHOOK_URL;
+    // Discord bot token and channel ID from environment
+    const botToken = process.env.DISCORD_BOT_TOKEN;
+    const channelId = process.env.DISCORD_SUPPORT_CHANNEL_ID;
+    const adminRoleId = process.env.DISCORD_ADMIN_ROLE_ID;
     
-    if (!discordWebhookUrl) {
-      console.warn('⚠️ DISCORD_SUPPORT_WEBHOOK_URL not set in .env - ticket will not be sent to Discord');
-      // Still return success so the form doesn't break
+    if (!botToken || !channelId) {
+      console.warn('⚠️ DISCORD_BOT_TOKEN or DISCORD_SUPPORT_CHANNEL_ID not set in .env - ticket will not be sent to Discord');
       return res.json({ 
-        message: 'Ticket received (Discord webhook not configured)', 
+        message: 'Ticket received (Discord bot not configured)', 
         ticketId: Date.now().toString(36) 
       });
     }
 
+    const ticketId = Date.now().toString(36).toUpperCase();
+    const threadName = `🎫 ${category.toUpperCase()} - ${username} - ${ticketId}`;
+
     // Create Discord embed
     const embed = {
-      title: `🎫 New Support Ticket`,
+      title: `New Support Ticket #${ticketId}`,
       color: category === 'bug' ? 0xff0000 : 
              category === 'complaint' ? 0xff9900 :
              category === 'payment' ? 0x00ff00 : 0x3b82f6,
@@ -368,28 +372,69 @@ app.post('/api/support/ticket', async (req, res) => {
       }
     };
 
-    // Send to Discord webhook
-    const webhookResponse = await fetch(discordWebhookUrl, {
+    // First, create initial message in the channel to get message ID for thread
+    const initialMessage = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
       method: 'POST',
       headers: {
+        'Authorization': `Bot ${botToken}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        username: 'Support Bot',
+        content: adminRoleId ? `<@&${adminRoleId}> New support ticket from **${username}**!` : `@here New support ticket from **${username}**!`,
         embeds: [embed]
       })
     });
 
-    if (!webhookResponse.ok) {
-      console.error('Failed to send to Discord:', await webhookResponse.text());
-      throw new Error('Discord webhook failed');
+    if (!initialMessage.ok) {
+      const errorText = await initialMessage.text();
+      console.error('Failed to create initial message:', errorText);
+      throw new Error('Discord message creation failed');
     }
 
-    console.log(`✅ Support ticket submitted by ${username} (${userId}) - Category: ${category}`);
+    const message = await initialMessage.json();
+
+    // Create a thread from the message
+    const threadResponse = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages/${message.id}/threads`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bot ${botToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        name: threadName,
+        auto_archive_duration: 10080 // 7 days
+      })
+    });
+
+    if (!threadResponse.ok) {
+      const errorText = await threadResponse.text();
+      console.error('Failed to create Discord thread:', errorText);
+      throw new Error('Discord thread creation failed');
+    }
+
+    const thread = await threadResponse.json();
+
+    // Send follow-up message in thread with instructions
+    const followUpResponse = await fetch(`https://discord.com/api/v10/channels/${thread.id}/messages`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bot ${botToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        content: `📨 **Ticket #${ticketId}** created for **${username}**\n\nAdmins can respond here. The ticket creator will be notified of updates.`
+      })
+    });
+
+    if (!followUpResponse.ok) {
+      console.error('Failed to send follow-up message to thread:', await followUpResponse.text());
+    }
+
+    console.log(`✅ Support ticket #${ticketId} submitted by ${username} (${userId}) - Category: ${category} - Thread: ${thread.id}`);
 
     res.json({ 
       message: 'Ticket submitted successfully! Our team will review it shortly.',
-      ticketId: Date.now().toString(36)
+      ticketId: ticketId
     });
 
   } catch (err) {

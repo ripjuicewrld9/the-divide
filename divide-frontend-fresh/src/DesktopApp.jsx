@@ -60,8 +60,16 @@ export default function DesktopApp() {
             <Route path="/rugged" element={<RuggedPage />} />
             <Route path="/blackjack" element={<BlackjackPage />} />
             <Route path="/plinko" element={<PlinkoPage />} />
-            <Route path="/wheel" element={<WheelLobby />} />
-            <Route path="/wheel/:gameId" element={<WheelPage />} />
+            <Route path="/wheel" element={
+              <ProtectedRoute requiredRole="admin">
+                <WheelLobby />
+              </ProtectedRoute>
+            } />
+            <Route path="/wheel/:gameId" element={
+              <ProtectedRoute requiredRole="admin">
+                <WheelPage />
+              </ProtectedRoute>
+            } />
             <Route path="/battles" element={<ActiveBattlesPage />} />
             <Route path="/case-battles" element={<CaseBattlesPage />} />
             <Route path="/case-battles/create" element={<CreateBattlePage />} />
