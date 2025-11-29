@@ -16,6 +16,8 @@ export default function DiscordLinkHandler() {
       return;
     }
 
+    setStatus('linking');
+
     const linkDiscordAccount = async () => {
       try {
         const token = localStorage.getItem('token');
