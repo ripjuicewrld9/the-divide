@@ -378,9 +378,47 @@ app.post('/api/support/ticket', async (req, res) => {
       }
     };
 
-    // First, create initial message in the channel to get message ID for thread
-    const mentionUser = discordId ? `<@${discordId}>` : username;
-    const initialMessage = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+    // Create a PRIVATE thread in the tickets channel (only visible to invited members)
+    const threadResponse = await fetch(`https://discord.com/api/v10/channels/${channelId}/threads`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bot ${botToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        name: threadName,
+        type: 12, // GUILD_PRIVATE_THREAD - only visible to invited members
+        auto_archive_duration: 10080, // 7 days
+        invitable: false // Only moderators can invite others
+      })
+    });
+
+    if (!threadResponse.ok) {
+      const errorText = await threadResponse.text();
+      console.error('Failed to create Discord thread:', errorText);
+      throw new Error('Discord thread creation failed');
+    }
+
+    const thread = await threadResponse.json();
+
+    // Add the user to the private thread if they have Discord linked
+    if (discordId) {
+      const addMemberResponse = await fetch(`https://discord.com/api/v10/channels/${thread.id}/thread-members/${discordId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bot ${botToken}`
+        }
+      });
+      
+      if (!addMemberResponse.ok) {
+        console.error('Failed to add user to private thread:', await addMemberResponse.text());
+      } else {
+        console.log(`✅ Added user ${discordId} to private thread ${thread.id}`);
+      }
+    }
+
+    // Send the ticket details in the private thread
+    const initialMessageResponse = await fetch(`https://discord.com/api/v10/channels/${thread.id}/messages`, {
       method: 'POST',
       headers: {
         'Authorization': `Bot ${botToken}`,
@@ -392,34 +430,9 @@ app.post('/api/support/ticket', async (req, res) => {
       })
     });
 
-    if (!initialMessage.ok) {
-      const errorText = await initialMessage.text();
-      console.error('Failed to create initial message:', errorText);
-      throw new Error('Discord message creation failed');
+    if (!initialMessageResponse.ok) {
+      console.error('Failed to send initial message to thread:', await initialMessageResponse.text());
     }
-
-    const message = await initialMessage.json();
-
-    // Create a thread from the message
-    const threadResponse = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages/${message.id}/threads`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bot ${botToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        name: threadName,
-        auto_archive_duration: 10080 // 7 days
-      })
-    });
-
-    if (!threadResponse.ok) {
-      const errorText = await threadResponse.text();
-      console.error('Failed to create Discord thread:', errorText);
-      throw new Error('Discord thread creation failed');
-    }
-
-    const thread = await threadResponse.json();
 
     // Send follow-up message in thread with instructions
     const followUpResponse = await fetch(`https://discord.com/api/v10/channels/${thread.id}/messages`, {
