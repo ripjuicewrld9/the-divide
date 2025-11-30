@@ -1,6 +1,7 @@
 // src/components/AuthModal.jsx
 import React, { useState, useContext } from 'react';
 import ReactDOM from 'react-dom';
+import { Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -202,6 +203,23 @@ export default function AuthModal({ onClose, isRegister, setIsRegister }) {
                     </button>
                 </form>
                 {error && <p style={{ color: '#ff0044', marginTop: '0.5rem' }}>{error}</p>}
+                
+                {!isRegister && (
+                    <Link 
+                        to="/forgot-password" 
+                        onClick={onClose}
+                        style={{ 
+                            ...linkStyle, 
+                            marginTop: '1rem',
+                            display: 'block',
+                            color: '#00ffff',
+                            fontSize: '13px'
+                        }}
+                    >
+                        Forgot password?
+                    </Link>
+                )}
+                
                 <button
                     onClick={() => setIsRegister(!isRegister)}
                     style={{ ...linkStyle, marginTop: '1rem' }}

@@ -26,6 +26,7 @@ import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import speakeasy from 'speakeasy';
 import qrcode from 'qrcode';
+import nodemailer from 'nodemailer';
 import { paytables, configured } from './paytable-data.js';
 import http from 'http';
 import registerRugged from './routes/rugged-pure-rng.js';
@@ -64,6 +65,18 @@ try {
 // Auth middleware: verify Bearer JWT and set req.userId. Falls back to no-user when
 // Authorization header missing so public routes still work.
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_change_me';
+
+// Email transporter setup
+const emailTransporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST || 'smtp.gmail.com',
+  port: process.env.SMTP_PORT || 587,
+  secure: false, // true for 465, false for other ports
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS
+  }
+});
+
 // Money helpers (server stores cents as integers, API returns dollars)
 const toCents = (n) => Math.round((Number(n) || 0) * 100);
 const toDollars = (cents) => Number(((Number(cents) || 0) / 100).toFixed(2));
@@ -927,6 +940,107 @@ app.get('/api/security/2fa/status', auth, async (req, res) => {
     res.json({ enabled: user.twoFactorEnabled || false });
   } catch (err) {
     console.error('2FA status error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// POST /api/auth/forgot-password - Request password reset email
+app.post('/api/auth/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body || {};
+    
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    
+    // Always return success to prevent email enumeration
+    if (!user) {
+      return res.json({ success: true, message: 'If that email exists, a reset link has been sent' });
+    }
+
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+    // Save hashed token and expiration (1 hour)
+    user.resetPasswordToken = hashedToken;
+    user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    await user.save();
+
+    // Send email
+    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
+    
+    try {
+      await emailTransporter.sendMail({
+        from: process.env.SMTP_FROM || process.env.SMTP_USER,
+        to: user.email,
+        subject: 'Password Reset Request - BetBro',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #00ffff;">Password Reset Request</h2>
+            <p>Hi ${user.username},</p>
+            <p>You requested to reset your password. Click the link below to create a new password:</p>
+            <a href="${resetUrl}" style="display: inline-block; padding: 12px 24px; background: #00ffff; color: #000; text-decoration: none; border-radius: 4px; font-weight: bold; margin: 16px 0;">
+              Reset Password
+            </a>
+            <p>This link will expire in 1 hour.</p>
+            <p>If you didn't request this, please ignore this email.</p>
+            <hr style="margin: 24px 0; border: none; border-top: 1px solid #ddd;">
+            <p style="color: #666; font-size: 12px;">BetBro.club - Online Gaming Platform</p>
+          </div>
+        `
+      });
+      
+      console.log(`Password reset email sent to ${user.email}`);
+    } catch (emailError) {
+      console.error('Failed to send reset email:', emailError);
+      // Don't expose email errors to client
+    }
+
+    res.json({ success: true, message: 'If that email exists, a reset link has been sent' });
+  } catch (err) {
+    console.error('Forgot password error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// POST /api/auth/reset-password - Reset password with token
+app.post('/api/auth/reset-password', async (req, res) => {
+  try {
+    const { token, newPassword } = req.body || {};
+    
+    if (!token || !newPassword) {
+      return res.status(400).json({ error: 'Token and new password are required' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    // Hash the token to compare with stored hash
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    // Find user with valid token
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: new Date() }
+    });
+
+    if (!user) {
+      return res.status(400).json({ error: 'Invalid or expired reset token' });
+    }
+
+    // Hash new password
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    res.json({ success: true, message: 'Password reset successful' });
+  } catch (err) {
+    console.error('Reset password error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });

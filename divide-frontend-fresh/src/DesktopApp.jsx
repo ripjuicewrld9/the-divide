@@ -24,6 +24,8 @@ import WheelLobby from "./games/wheel/WheelLobby.tsx";
 import ProfilePage from "./pages/ProfileNew.jsx";
 import Support from "./pages/Support.jsx";
 import TicketDetail from "./pages/TicketDetail.jsx";
+import ForgotPassword from "./pages/ForgotPassword.jsx";
+import ResetPassword from "./pages/ResetPassword.jsx";
 import CaseBattlesPage from "./components/CaseBattlesPage.jsx";
 import DiscordLinkHandler from "./components/DiscordLinkHandler.jsx";
 import OAuthLoginHandler from "./components/OAuthLoginHandler.jsx";
@@ -83,6 +85,8 @@ export default function DesktopApp() {
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/support" element={<Support />} />
             <Route path="/support/:id" element={<TicketDetail />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/link-discord" element={<DiscordLinkHandler />} />
 
             {/* Admin routes */}

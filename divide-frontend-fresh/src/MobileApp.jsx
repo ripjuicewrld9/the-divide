@@ -17,6 +17,8 @@ import MobileMainLayout from "./components/MobileMainLayout.jsx";
 import MobileChatOverlay from "./components/MobileChatOverlay.jsx";
 import MobileBottomNav from "./components/MobileBottomNav.jsx";
 import ProfilePage from "./pages/ProfileNew.jsx";
+import ForgotPassword from "./pages/ForgotPassword.jsx";
+import ResetPassword from "./pages/ResetPassword.jsx";
 import DiscordLinkHandler from "./components/DiscordLinkHandler.jsx";
 
 function ProtectedRoute({ children, requiredRole = null }) {
@@ -62,6 +64,8 @@ export default function MobileApp() {
 
                 {/* Profile */}
                 <Route path="/profile" element={<ProfilePage onOpenChat={() => setIsChatOpen(true)} />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/link-discord" element={<DiscordLinkHandler />} />
 
                 {/* Admin Routes */}

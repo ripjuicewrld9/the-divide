@@ -43,8 +43,10 @@ const userSchema = new mongoose.Schema({
   googleId: { type: String, default: '' }, // Google user ID for OAuth login
   googleEmail: { type: String, default: '' }, // Google email for display
   twoFactorSecret: { type: String, default: '' }, // TOTP secret for 2FA
-  twoFactorEnabled: { type: Boolean, default: false }, // Whether 2FA is enabled
+  twoFactorEnabled: { type: Boolean, default: false }, // Whether 2FA is active
   twoFactorBackupCodes: [{ type: String }], // Backup codes for 2FA recovery
+  resetPasswordToken: { type: String }, // Password reset token
+  resetPasswordExpires: { type: Date }, // Token expiration time
   createdAt: { type: Date, default: Date.now }
 });
 
