@@ -646,6 +646,180 @@ app.post('/api/link-discord', auth, async (req, res) => {
   }
 });
 
+// ──────────────────────────────────────────────
+//  DISCORD OAUTH FOR LOGIN/SIGNUP
+// ──────────────────────────────────────────────
+
+// Step 1: Redirect to Discord OAuth for login
+app.get('/auth/discord/login', (req, res) => {
+  const clientId = process.env.DISCORD_CLIENT_ID;
+  const redirectUri = encodeURIComponent(process.env.DISCORD_REDIRECT_URI_LOGIN || 'https://the-divide.onrender.com/auth/discord/login/callback');
+  const scope = encodeURIComponent('identify email');
+  
+  const discordAuthUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
+  res.redirect(discordAuthUrl);
+});
+
+// Step 2: Handle Discord login callback
+app.get('/auth/discord/login/callback', async (req, res) => {
+  const { code } = req.query;
+  
+  if (!code) {
+    return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=discord_login_failed`);
+  }
+
+  try {
+    // Exchange code for access token
+    const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        client_id: process.env.DISCORD_CLIENT_ID,
+        client_secret: process.env.DISCORD_CLIENT_SECRET,
+        grant_type: 'authorization_code',
+        code: code,
+        redirect_uri: process.env.DISCORD_REDIRECT_URI_LOGIN || 'https://the-divide.onrender.com/auth/discord/login/callback',
+      }),
+    });
+
+    const tokenData = await tokenResponse.json();
+
+    if (!tokenData.access_token) {
+      console.error('Discord login error:', tokenData);
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=discord_token_failed`);
+    }
+
+    // Get user info from Discord
+    const userResponse = await fetch('https://discord.com/api/users/@me', {
+      headers: {
+        Authorization: `Bearer ${tokenData.access_token}`,
+      },
+    });
+
+    const discordUser = await userResponse.json();
+
+    if (!discordUser.id) {
+      console.error('Failed to get Discord user:', discordUser);
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=discord_user_failed`);
+    }
+
+    // Check if user exists with this Discord ID
+    let user = await User.findOne({ discordId: discordUser.id });
+
+    if (!user) {
+      // Create new user
+      const username = discordUser.username + '_' + discordUser.discriminator;
+      user = new User({
+        username,
+        password: crypto.randomBytes(32).toString('hex'), // Random password (they'll use Discord login)
+        balance: 0,
+        discordId: discordUser.id,
+        discordUsername: `${discordUser.username}#${discordUser.discriminator}`
+      });
+      await user.save();
+      console.log(`✅ New user created via Discord: ${username} (${discordUser.id})`);
+    }
+
+    // Create JWT token
+    const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '7d' });
+
+    // Redirect to frontend with token
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?discord_login=${token}`);
+  } catch (error) {
+    console.error('Discord login error:', error);
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=discord_login_error`);
+  }
+});
+
+// ──────────────────────────────────────────────
+//  GOOGLE OAUTH FOR LOGIN/SIGNUP
+// ──────────────────────────────────────────────
+
+// Step 1: Redirect to Google OAuth for login
+app.get('/auth/google/login', (req, res) => {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const redirectUri = encodeURIComponent(process.env.GOOGLE_REDIRECT_URI || 'https://the-divide.onrender.com/auth/google/login/callback');
+  const scope = encodeURIComponent('openid email profile');
+  
+  const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
+  res.redirect(googleAuthUrl);
+});
+
+// Step 2: Handle Google login callback
+app.get('/auth/google/login/callback', async (req, res) => {
+  const { code } = req.query;
+  
+  if (!code) {
+    return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=google_login_failed`);
+  }
+
+  try {
+    // Exchange code for access token
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        client_id: process.env.GOOGLE_CLIENT_ID,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET,
+        grant_type: 'authorization_code',
+        code: code,
+        redirect_uri: process.env.GOOGLE_REDIRECT_URI || 'https://the-divide.onrender.com/auth/google/login/callback',
+      }),
+    });
+
+    const tokenData = await tokenResponse.json();
+
+    if (!tokenData.access_token) {
+      console.error('Google login error:', tokenData);
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=google_token_failed`);
+    }
+
+    // Get user info from Google
+    const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: {
+        Authorization: `Bearer ${tokenData.access_token}`,
+      },
+    });
+
+    const googleUser = await userResponse.json();
+
+    if (!googleUser.id) {
+      console.error('Failed to get Google user:', googleUser);
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=google_user_failed`);
+    }
+
+    // Check if user exists with this Google ID
+    let user = await User.findOne({ googleId: googleUser.id });
+
+    if (!user) {
+      // Create new user
+      const username = googleUser.email.split('@')[0] + '_google';
+      user = new User({
+        username,
+        password: crypto.randomBytes(32).toString('hex'), // Random password (they'll use Google login)
+        balance: 0,
+        googleId: googleUser.id,
+        googleEmail: googleUser.email
+      });
+      await user.save();
+      console.log(`✅ New user created via Google: ${username} (${googleUser.email})`);
+    }
+
+    // Create JWT token
+    const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '7d' });
+
+    // Redirect to frontend with token
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?google_login=${token}`);
+  } catch (error) {
+    console.error('Google login error:', error);
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=google_login_error`);
+  }
+});
+
 // TEMPORARY: Disable Rugged backend logic so the project can be restarted
 // from scratch. These stubs keep the backend file and routes present but
 // return a clear 501 response. Re-enable or replace with new Rugged

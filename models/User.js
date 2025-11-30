@@ -36,6 +36,8 @@ const userSchema = new mongoose.Schema({
   profileImage: { type: String, default: '' },
   discordId: { type: String, default: '' }, // Discord user ID for support ticket integration
   discordUsername: { type: String, default: '' }, // Discord username for display
+  googleId: { type: String, default: '' }, // Google user ID for OAuth login
+  googleEmail: { type: String, default: '' }, // Google email for display
   createdAt: { type: Date, default: Date.now }
 });
 
