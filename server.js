@@ -947,17 +947,22 @@ app.get('/api/security/2fa/status', auth, async (req, res) => {
 // POST /api/auth/forgot-password - Request password reset email
 app.post('/api/auth/forgot-password', async (req, res) => {
   try {
-    const { email } = req.body || {};
+    const { username } = req.body || {};
     
-    if (!email) {
-      return res.status(400).json({ error: 'Email is required' });
+    if (!username) {
+      return res.status(400).json({ error: 'Username is required' });
     }
 
-    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    const user = await User.findOne({ username: username.trim() });
     
-    // Always return success to prevent email enumeration
+    // Always return success to prevent username enumeration
     if (!user) {
-      return res.json({ success: true, message: 'If that email exists, a reset link has been sent' });
+      return res.json({ success: true, message: 'If that username exists, a reset link has been sent to the associated email' });
+    }
+
+    // Check if user has an email
+    if (!user.email) {
+      return res.json({ success: true, message: 'If that username exists, a reset link has been sent to the associated email' });
     }
 
     // Generate reset token
@@ -993,13 +998,13 @@ app.post('/api/auth/forgot-password', async (req, res) => {
         `
       });
       
-      console.log(`Password reset email sent to ${user.email}`);
+      console.log(`Password reset email sent to ${user.email} for user ${user.username}`);
     } catch (emailError) {
       console.error('Failed to send reset email:', emailError);
       // Don't expose email errors to client
     }
 
-    res.json({ success: true, message: 'If that email exists, a reset link has been sent' });
+    res.json({ success: true, message: 'If that username exists, a reset link has been sent to the associated email' });
   } catch (err) {
     console.error('Forgot password error:', err);
     res.status(500).json({ error: 'Server error' });

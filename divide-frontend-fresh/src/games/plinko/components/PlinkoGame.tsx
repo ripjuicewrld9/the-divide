@@ -52,7 +52,7 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({ onOpenChat }) => {
     loadBalanceFromBackend,
     addWinRecord,
   } = usePlinkoStore();
-  const { updateUser } = useAuth();
+  const { user, updateUser } = useAuth();
 
   const [betMode, setBetMode] = useState<'manual' | 'auto'>('manual');
   const [autoBetCount, setAutoBetCount] = useState(0);
@@ -62,10 +62,12 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({ onOpenChat }) => {
   const [showProvablyFair, setShowProvablyFair] = useState(false);
   const [showLiveChart, setShowLiveChart] = useState(false);
 
-  // Load balance on component mount
+  // Sync balance from AuthContext (like Keno does)
   useEffect(() => {
-    loadBalanceFromBackend();
-  }, [loadBalanceFromBackend]);
+    if (user && typeof user.balance === 'number') {
+      setBalance(user.balance);
+    }
+  }, [user, setBalance]);
 
   // Initialize engine
   useEffect(() => {

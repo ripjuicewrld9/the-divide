@@ -132,33 +132,16 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
     setShowVerification(true);
   };
 
-  // Initialize game balance with user balance - only once
+  // Sync game balance with AuthContext balance (like Keno does)
   useEffect(() => {
-    // Set initial balance only on first mount when user balance loads
-    // Allow balance of 0 or greater (user might have 0 balance)
-    if (!balanceInitializedRef.current && userBalance !== undefined && userBalance !== null) {
-      gameState.setInitialBalance(userBalance);
-      balanceInitializedRef.current = true;
-    }
-  }, [userBalance, gameState]); // Watch userBalance, but only set once
-
-  // Sync game balance with user balance when returning to betting phase
-  useEffect(() => {
-    if (gameState.gamePhase === 'betting' && userBalance !== undefined && userBalance !== null) {
-      // Don't sync if player has active bets - this would override visual deduction
+    if (userBalance !== undefined && userBalance !== null) {
+      // Only sync if not in middle of a hand to avoid disrupting visual feedback
       const hasActiveBets = gameState.playerHands.length > 0 && gameState.playerHands[0].bet > 0;
-      if (hasActiveBets) return;
-      
-      // Only update balance if it changed significantly (more than current bet amounts)
-      // This prevents fighting with other games' optimistic balance updates
-      const difference = Math.abs(gameState.balance - userBalance);
-      if (difference > 1) { // Only sync if difference is more than $1
-        console.log('[Blackjack] Syncing balance:', gameState.balance, '->', userBalance);
+      if (!hasActiveBets || gameState.gamePhase === 'betting') {
         gameState.setInitialBalance(userBalance);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameState.gamePhase, userBalance]);
+  }, [userBalance, gameState.gamePhase]);
 
   // Save game when round ends and refresh user balance from server
   useEffect(() => {

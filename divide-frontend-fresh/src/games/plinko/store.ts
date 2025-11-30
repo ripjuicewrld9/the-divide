@@ -53,8 +53,8 @@ interface PlinkoGameState {
 export const usePlinkoStore = create<PlinkoGameState>()(
   persist(
     (set, get) => ({
-      balance: 0,
-      betAmount: 0,
+      balance: 0, // Will be synced from AuthContext on mount
+      betAmount: 1,
       riskLevel: 'low' as RiskLevel,
       rowCount: 8 as RowCount,
       winRecords: [],

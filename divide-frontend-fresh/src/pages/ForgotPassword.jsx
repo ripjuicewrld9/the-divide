@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 export default function ForgotPassword() {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [message, setMessage] = useState({ type: '', text: '' });
   const [loading, setLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
@@ -18,7 +18,7 @@ export default function ForgotPassword() {
       const res = await fetch(`${API_BASE}/api/auth/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
+        body: JSON.stringify({ username })
       });
 
       const data = await res.json();
@@ -30,7 +30,7 @@ export default function ForgotPassword() {
       setEmailSent(true);
       setMessage({ 
         type: 'success', 
-        text: 'If an account exists with that email, a password reset link has been sent.' 
+        text: 'If an account exists with that username, a password reset link has been sent to the associated email.' 
       });
     } catch (err) {
       setMessage({ type: 'error', text: err.message });
@@ -67,7 +67,7 @@ export default function ForgotPassword() {
             Forgot Password?
           </h1>
           <p style={{ color: '#9ca3af', fontSize: '14px' }}>
-            Enter your email and we'll send you a reset link
+            Enter your username and we'll send a reset link to your email
           </p>
         </div>
 
@@ -81,14 +81,14 @@ export default function ForgotPassword() {
                 fontSize: '14px',
                 fontWeight: 500
               }}>
-                Email Address
+                Username
               </label>
               <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 required
-                placeholder="your@email.com"
+                placeholder="your_username"
                 style={{
                   width: '100%',
                   padding: '12px 16px',
@@ -159,8 +159,8 @@ export default function ForgotPassword() {
               Check Your Email
             </p>
             <p style={{ color: '#9ca3af', fontSize: '14px', lineHeight: '1.6' }}>
-              If an account exists with <strong style={{ color: '#00ffff' }}>{email}</strong>, 
-              you'll receive a password reset link shortly.
+              If an account exists with username <strong style={{ color: '#00ffff' }}>{username}</strong>, 
+              a password reset link has been sent to the associated email.
             </p>
           </div>
         )}
@@ -189,7 +189,7 @@ export default function ForgotPassword() {
             <button
               onClick={() => {
                 setEmailSent(false);
-                setEmail('');
+                setUsername('');
                 setMessage({ type: '', text: '' });
               }}
               style={{
@@ -201,7 +201,7 @@ export default function ForgotPassword() {
                 textDecoration: 'underline'
               }}
             >
-              Try a different email
+              Try a different username
             </button>
           )}
         </div>
