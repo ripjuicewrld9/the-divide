@@ -24,6 +24,7 @@ import WheelLobby from "./games/wheel/WheelLobby.tsx";
 import ProfilePage from "./pages/ProfileNew.jsx";
 import CaseBattlesPage from "./components/CaseBattlesPage.jsx";
 import DiscordLinkHandler from "./components/DiscordLinkHandler.jsx";
+import OAuthLoginHandler from "./components/OAuthLoginHandler.jsx";
 
 function ProtectedRoute({ children, requiredRole = null }) {
   const { user } = React.useContext(AuthContext);

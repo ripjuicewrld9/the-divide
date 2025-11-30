@@ -31,7 +31,9 @@ export const AuthProvider = ({ children }) => {
                     wagered: data.wagered || 0,
                     totalWon: data.totalWon || 0,
                     totalDeposited: data.totalDeposited || 0,
-                    totalWithdrawn: data.totalWithdrawn || 0
+                    totalWithdrawn: data.totalWithdrawn || 0,
+                    discordId: data.discordId || null,
+                    discordUsername: data.discordUsername || null
                 });
             } catch (err) {
                 console.error('[Auth] loadUser error:', err.message);

@@ -743,19 +743,29 @@ app.get('/auth/google/login', (req, res) => {
   const redirectUri = encodeURIComponent(process.env.GOOGLE_REDIRECT_URI || 'https://the-divide.onrender.com/auth/google/login/callback');
   const scope = encodeURIComponent('openid email profile');
   
+  console.log('🔵 Google OAuth Login initiated');
+  console.log('Client ID:', clientId ? `${clientId.substring(0, 10)}...` : 'MISSING');
+  console.log('Redirect URI:', process.env.GOOGLE_REDIRECT_URI);
+  
   const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
   res.redirect(googleAuthUrl);
 });
 
 // Step 2: Handle Google login callback
 app.get('/auth/google/login/callback', async (req, res) => {
-  const { code } = req.query;
+  const { code, error } = req.query;
+  
+  console.log('🔵 Google OAuth Callback received');
+  console.log('Code present:', !!code);
+  console.log('Error:', error);
   
   if (!code) {
+    console.error('❌ No authorization code received from Google');
     return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=google_login_failed`);
   }
 
   try {
+    console.log('🔵 Exchanging code for access token...');
     // Exchange code for access token
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
@@ -772,12 +782,16 @@ app.get('/auth/google/login/callback', async (req, res) => {
     });
 
     const tokenData = await tokenResponse.json();
+    
+    console.log('Token response status:', tokenResponse.status);
+    console.log('Token data:', tokenData.error ? tokenData : 'Access token received');
 
     if (!tokenData.access_token) {
-      console.error('Google login error:', tokenData);
+      console.error('❌ Google login error:', tokenData);
       return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=google_token_failed`);
     }
 
+    console.log('🔵 Fetching user info from Google...');
     // Get user info from Google
     const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
       headers: {
@@ -786,9 +800,11 @@ app.get('/auth/google/login/callback', async (req, res) => {
     });
 
     const googleUser = await userResponse.json();
+    
+    console.log('Google user:', googleUser.email || 'No email');
 
     if (!googleUser.id) {
-      console.error('Failed to get Google user:', googleUser);
+      console.error('❌ Failed to get Google user:', googleUser);
       return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=google_user_failed`);
     }
 
@@ -798,6 +814,7 @@ app.get('/auth/google/login/callback', async (req, res) => {
     if (!user) {
       // Create new user
       const username = googleUser.email.split('@')[0] + '_google';
+      console.log('🔵 Creating new user:', username);
       user = new User({
         username,
         password: crypto.randomBytes(32).toString('hex'), // Random password (they'll use Google login)
@@ -807,15 +824,18 @@ app.get('/auth/google/login/callback', async (req, res) => {
       });
       await user.save();
       console.log(`✅ New user created via Google: ${username} (${googleUser.email})`);
+    } else {
+      console.log('✅ Existing user found:', user.username);
     }
 
     // Create JWT token
     const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '7d' });
 
+    console.log('✅ Redirecting to frontend with token');
     // Redirect to frontend with token
     res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?google_login=${token}`);
   } catch (error) {
-    console.error('Google login error:', error);
+    console.error('❌ Google login error:', error);
     res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=google_login_error`);
   }
 });
