@@ -7,7 +7,10 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 export default function AuthModal({ onClose, isRegister, setIsRegister }) {
     const [username, setUsername] = useState('');
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [dateOfBirth, setDateOfBirth] = useState('');
+    const [marketingConsent, setMarketingConsent] = useState(false);
     const [error, setError] = useState('');
     const { login, register } = useContext(AuthContext);
 
@@ -22,7 +25,9 @@ export default function AuthModal({ onClose, isRegister, setIsRegister }) {
     const handleSubmit = (e) => {
         e.preventDefault();
         setError('');
-        const success = isRegister ? register(username, password) : login(username, password);
+        const success = isRegister 
+            ? register(username, password, email, dateOfBirth, marketingConsent) 
+            : login(username, password);
         if (success) {
             onClose();
         } else {
@@ -116,6 +121,16 @@ export default function AuthModal({ onClose, isRegister, setIsRegister }) {
                 </div>
 
                 <form onSubmit={handleSubmit}>
+                    {isRegister && (
+                        <input
+                            type="email"
+                            placeholder="Email"
+                            value={email}
+                            onChange={e => setEmail(e.target.value)}
+                            required
+                            style={inputStyle}
+                        />
+                    )}
                     <input
                         type="text"
                         placeholder="Username"
@@ -132,6 +147,30 @@ export default function AuthModal({ onClose, isRegister, setIsRegister }) {
                         required
                         style={inputStyle}
                     />
+                    {isRegister && (
+                        <input
+                            type="date"
+                            placeholder="Date of Birth"
+                            value={dateOfBirth}
+                            onChange={e => setDateOfBirth(e.target.value)}
+                            required
+                            style={inputStyle}
+                        />
+                    )}
+                    {isRegister && (
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', margin: '12px 0' }}>
+                            <input
+                                type="checkbox"
+                                id="marketingConsent"
+                                checked={marketingConsent}
+                                onChange={(e) => setMarketingConsent(e.target.checked)}
+                                style={{ marginTop: '4px', cursor: 'pointer', accentColor: '#00ffff' }}
+                            />
+                            <label htmlFor="marketingConsent" style={{ fontSize: '12px', color: '#ccc', cursor: 'pointer', lineHeight: '1.4' }}>
+                                I agree to receive promotional emails about new features, bonuses, and exclusive offers. You can unsubscribe at any time.
+                            </label>
+                        </div>
+                    )}
                     <button type="submit" style={buttonStyle}>
                         {isRegister ? 'SIGN UP' : 'LOG IN'}
                     </button>

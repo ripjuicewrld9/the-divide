@@ -2,7 +2,11 @@ import mongoose from 'mongoose';
 
 const userSchema = new mongoose.Schema({
   username: String,
+  email: { type: String, default: '' },
   password: String,
+  dateOfBirth: { type: Date },
+  marketingConsent: { type: Boolean, default: false },
+  marketingConsentDate: { type: Date },
   // balance is stored in integer cents (e.g. $1.23 => 123)
   balance: { type: Number, default: 1000 }, // default $10.00 => 1000 cents
   kenoServerSeed: String,

@@ -240,6 +240,33 @@ export default function Admin({ onClose } = {}) {
           <Link to="/admin/ledger" style={{ color: '#0ff', textDecoration: 'none', marginRight: 8 }}>Ledger</Link>
           <Link to="/admin/items" style={{ color: '#0ff', textDecoration: 'none', marginRight: 8 }}>Items</Link>
           <Link to="/admin/cases" style={{ color: '#0ff', textDecoration: 'none', marginRight: 8 }}>Cases</Link>
+          <button onClick={async () => {
+            setMessage('');
+            try {
+              const token = localStorage.getItem('token');
+              if (!token) { setMessage('Not authenticated'); return; }
+              const res = await fetch(`${API_BASE}/api/admin/marketing-emails`, {
+                method: 'GET',
+                headers: { Authorization: `Bearer ${token}` }
+              });
+              if (!res.ok) throw new Error('Failed to export emails');
+              const blob = await res.blob();
+              const url = window.URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = 'marketing-emails.csv';
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+              window.URL.revokeObjectURL(url);
+              setMessage('✅ Email list downloaded!');
+            } catch (err) {
+              console.error('Export error:', err);
+              setMessage('❌ Failed to export emails');
+            }
+          }} style={{ padding: '8px 12px', background: '#0a0', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', marginRight: 8 }}>
+            📧 Export Emails
+          </button>
             <button onClick={async () => {
               if (!window.confirm('Force-restart the Rugged market now?')) return;
               setMessage('');

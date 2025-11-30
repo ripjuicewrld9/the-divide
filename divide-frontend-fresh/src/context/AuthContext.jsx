@@ -76,12 +76,12 @@ export const AuthProvider = ({ children }) => {
     }, [token]);
 
     // REGISTER
-    const register = async (username, password) => {
+    const register = async (username, password, email, dateOfBirth, marketingConsent) => {
         try {
             const res = await fetch(`${API_BASE}/register`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username, password }),
+                body: JSON.stringify({ username, password, email, dateOfBirth, marketingConsent }),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || "Registration failed");

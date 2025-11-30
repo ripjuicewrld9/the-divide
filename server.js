@@ -491,6 +491,34 @@ app.get('/api/support/tickets/all', auth, adminOnly, async (req, res) => {
   }
 });
 
+// Export email list for marketing campaigns (admin only)
+app.get('/api/admin/marketing-emails', auth, adminOnly, async (req, res) => {
+  try {
+    const users = await User.find({
+      marketingConsent: true,
+      email: { $exists: true, $ne: '' }
+    })
+    .select('username email marketingConsentDate createdAt')
+    .sort({ marketingConsentDate: -1 })
+    .lean();
+
+    // Format as CSV
+    const csv = [
+      'Username,Email,Consent Date,Registered Date',
+      ...users.map(u => 
+        `${u.username},${u.email},${u.marketingConsentDate ? new Date(u.marketingConsentDate).toISOString() : ''},${new Date(u.createdAt).toISOString()}`
+      )
+    ].join('\n');
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename=marketing-emails.csv');
+    res.send(csv);
+  } catch (err) {
+    console.error('Export emails error:', err);
+    res.status(500).json({ error: 'Failed to export emails' });
+  }
+});
+
 // Get single ticket
 app.get('/api/support/tickets/:id', auth, async (req, res) => {
   try {
@@ -628,7 +656,7 @@ app.use('/sounds', express.static(path.join(__dirname, 'sounds')));
 // POST /register { username, password } -> { token, userId, balance, role }
 app.post('/register', async (req, res) => {
   try {
-    const { username, password } = req.body || {};
+    const { username, password, email, dateOfBirth, marketingConsent } = req.body || {};
     if (!username || !password) return res.status(400).json({ error: 'Missing username or password' });
 
     // Validate password strength
@@ -636,14 +664,37 @@ app.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Password must be at least 6 characters' });
     }
 
+    // Validate age (must be 18+)
+    if (dateOfBirth) {
+      const dob = new Date(dateOfBirth);
+      const age = Math.floor((new Date() - dob) / (365.25 * 24 * 60 * 60 * 1000));
+      if (age < 18) {
+        return res.status(400).json({ error: 'You must be at least 18 years old to register' });
+      }
+    }
+
     // prevent duplicate username
     const existing = await User.findOne({ username });
     if (existing) return res.status(400).json({ error: 'Username already exists' });
 
+    // prevent duplicate email if provided
+    if (email) {
+      const existingEmail = await User.findOne({ email });
+      if (existingEmail) return res.status(400).json({ error: 'Email already registered' });
+    }
+
     // Hash password with bcrypt (10 salt rounds)
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const u = await User.create({ username, password: hashedPassword, balance: 1000 });
+    const u = await User.create({ 
+      username, 
+      password: hashedPassword, 
+      email: email || '',
+      dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
+      marketingConsent: marketingConsent || false,
+      marketingConsentDate: marketingConsent ? new Date() : null,
+      balance: 1000 
+    });
     const token = jwt.sign({ userId: u._id }, JWT_SECRET, { expiresIn: '7d' });
     res.json({ token, userId: u._id, balance: toDollars(u.balance), role: u.role });
   } catch (e) {
