@@ -1,5 +1,5 @@
 // models/SupportTicket.js
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const ticketMessageSchema = new mongoose.Schema({
   sender: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
@@ -30,4 +30,4 @@ supportTicketSchema.pre('save', function(next) {
   next();
 });
 
-module.exports = mongoose.model('SupportTicket', supportTicketSchema);
+export default mongoose.model('SupportTicket', supportTicketSchema);
