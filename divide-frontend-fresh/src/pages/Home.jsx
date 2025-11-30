@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import RuggedCard from '../components/RuggedCard';
 import UserAvatar from '../components/UserAvatar';
 import ProvenFairModal from '../components/ProvenFairModal';
-import OAuthLoginHandler from '../components/OAuthLoginHandler';
 
 export default function Home() {
   const [hoveredCard, setHoveredCard] = useState(null);
@@ -143,8 +142,6 @@ export default function Home() {
       padding: '40px 20px',
       minHeight: '100%'
     }}>
-      {/* OAuth Login Handler - handles Discord/Google login callbacks */}
-      <OAuthLoginHandler />
             {/* Hero Section */}
       <div style={{
         textAlign: 'center',

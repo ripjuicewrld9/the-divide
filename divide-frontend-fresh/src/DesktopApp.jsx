@@ -46,6 +46,9 @@ export default function DesktopApp() {
 
   return (
     <div className="h-screen bg-[#0b0b0b] text-white flex flex-col overflow-hidden">
+      {/* OAuth handler - processes login tokens from URL params on ALL routes */}
+      <OAuthLoginHandler />
+      
       {/* Global header */}
       <Header
         onOpenAuth={() => setShowAuthModal(true)}

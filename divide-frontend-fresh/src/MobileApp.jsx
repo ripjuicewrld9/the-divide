@@ -20,6 +20,7 @@ import ProfilePage from "./pages/ProfileNew.jsx";
 import ForgotPassword from "./pages/ForgotPassword.jsx";
 import ResetPassword from "./pages/ResetPassword.jsx";
 import DiscordLinkHandler from "./components/DiscordLinkHandler.jsx";
+import OAuthLoginHandler from "./components/OAuthLoginHandler.jsx";
 
 function ProtectedRoute({ children, requiredRole = null }) {
     const { user } = React.useContext(AuthContext);
@@ -33,6 +34,9 @@ export default function MobileApp() {
 
     return (
         <div className="min-h-screen bg-[#0b0b0b] text-white">
+            {/* OAuth handler - processes login tokens from URL params on ALL routes */}
+            <OAuthLoginHandler />
+            
             <Routes>
                 {/* Home */}
                 <Route path="/" element={<MobileMainLayout onOpenChat={() => setIsChatOpen(true)} />} />
