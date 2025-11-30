@@ -6,10 +6,12 @@ import MobileGameHeader from '../components/MobileGameHeader';
 import DiscordOAuthButton from '../components/DiscordOAuthButton';
 import DiscordLinkHandler from '../components/DiscordLinkHandler';
 import OAuthLoginHandler from '../components/OAuthLoginHandler';
+import SecuritySettings from '../components/SecuritySettings';
 
 export default function ProfilePage({ onOpenChat }) {
     const { user, logout, updateUser } = useAuth();
     const [showAvatarModal, setShowAvatarModal] = useState(false);
+    const [showSecurityModal, setShowSecurityModal] = useState(false);
 
     const presetAvatars = [
         '/profilesvg/account-avatar-profile-user-svgrepo-com.svg',
@@ -100,7 +102,10 @@ export default function ProfilePage({ onOpenChat }) {
                         </h2>
                         <div className="space-y-3">
                             <DiscordOAuthButton />
-                            <button className="w-full text-left p-3 rounded-lg bg-white/5 hover:bg-white/10 transition flex justify-between items-center group">
+                            <button 
+                                onClick={() => setShowSecurityModal(true)}
+                                className="w-full text-left p-3 rounded-lg bg-white/5 hover:bg-white/10 transition flex justify-between items-center group"
+                            >
                                 <span>Change Password</span>
                                 <span className="text-gray-500 group-hover:text-white transition">→</span>
                             </button>
@@ -108,7 +113,10 @@ export default function ProfilePage({ onOpenChat }) {
                                 <span>Email Preferences</span>
                                 <span className="text-gray-500 group-hover:text-white transition">→</span>
                             </button>
-                            <button className="w-full text-left p-3 rounded-lg bg-white/5 hover:bg-white/10 transition flex justify-between items-center group">
+                            <button 
+                                onClick={() => setShowSecurityModal(true)}
+                                className="w-full text-left p-3 rounded-lg bg-white/5 hover:bg-white/10 transition flex justify-between items-center group"
+                            >
                                 <span>Two-Factor Auth</span>
                                 <span className="text-gray-500 group-hover:text-white transition">→</span>
                             </button>
@@ -170,6 +178,11 @@ export default function ProfilePage({ onOpenChat }) {
                     </div>
                 </div>
             )}
+
+            <SecuritySettings 
+                isOpen={showSecurityModal} 
+                onClose={() => setShowSecurityModal(false)} 
+            />
         </div>
     );
 }

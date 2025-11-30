@@ -97,23 +97,28 @@ export const AuthProvider = ({ children }) => {
     };
 
     // LOGIN
-    const login = async (username, password) => {
+    const login = async (username, password, twoFactorToken = null) => {
         try {
             const res = await fetch(`${API_BASE}/login`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username, password }),
+                body: JSON.stringify({ username, password, twoFactorToken }),
             });
             const data = await res.json();
+            
+            // Check if 2FA is required
+            if (data.requires2FA) {
+                return { requires2FA: true };
+            }
+            
             if (!res.ok) throw new Error(data.error || "Login failed");
 
             setToken(data.token);
             setUser({ username, id: data.userId, role: data.role || 'user' });
-            return true;
+            return { success: true };
         } catch (err) {
             console.error("Login error:", err);
-            alert(err.message);
-            return false;
+            throw err;
         }
     };
 

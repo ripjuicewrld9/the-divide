@@ -11,6 +11,8 @@ export default function AuthModal({ onClose, isRegister, setIsRegister }) {
     const [password, setPassword] = useState('');
     const [dateOfBirth, setDateOfBirth] = useState('');
     const [marketingConsent, setMarketingConsent] = useState(false);
+    const [twoFactorToken, setTwoFactorToken] = useState('');
+    const [requires2FA, setRequires2FA] = useState(false);
     const [error, setError] = useState('');
     const { login, register } = useContext(AuthContext);
 
@@ -22,16 +24,24 @@ export default function AuthModal({ onClose, isRegister, setIsRegister }) {
         window.location.href = `${API_BASE}/auth/google/login`;
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
-        const success = isRegister 
-            ? register(username, password, email, dateOfBirth, marketingConsent) 
-            : login(username, password);
-        if (success) {
-            onClose();
-        } else {
-            setError('Invalid credentials');
+        try {
+            if (isRegister) {
+                await register(username, password, email, dateOfBirth, marketingConsent);
+                onClose();
+            } else {
+                const result = await login(username, password, twoFactorToken);
+                if (result && result.requires2FA) {
+                    setRequires2FA(true);
+                    setError('Please enter your 2FA code');
+                } else {
+                    onClose();
+                }
+            }
+        } catch (err) {
+            setError(err.message || 'Authentication failed');
         }
     };
 
@@ -147,6 +157,22 @@ export default function AuthModal({ onClose, isRegister, setIsRegister }) {
                         required
                         style={inputStyle}
                     />
+                    {!isRegister && requires2FA && (
+                        <div>
+                            <input
+                                type="text"
+                                placeholder="2FA Code (6 digits)"
+                                value={twoFactorToken}
+                                onChange={e => setTwoFactorToken(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                required
+                                maxLength={6}
+                                style={{...inputStyle, textAlign: 'center', letterSpacing: '8px', fontSize: '18px', fontFamily: 'monospace'}}
+                            />
+                            <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '8px', textAlign: 'center' }}>
+                                Enter the 6-digit code from your authenticator app
+                            </p>
+                        </div>
+                    )}
                     {isRegister && (
                         <input
                             type="date"

@@ -42,6 +42,9 @@ const userSchema = new mongoose.Schema({
   discordUsername: { type: String, default: '' }, // Discord username for display
   googleId: { type: String, default: '' }, // Google user ID for OAuth login
   googleEmail: { type: String, default: '' }, // Google email for display
+  twoFactorSecret: { type: String, default: '' }, // TOTP secret for 2FA
+  twoFactorEnabled: { type: Boolean, default: false }, // Whether 2FA is enabled
+  twoFactorBackupCodes: [{ type: String }], // Backup codes for 2FA recovery
   createdAt: { type: Date, default: Date.now }
 });
 
