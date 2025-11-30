@@ -105,12 +105,12 @@ export const AuthProvider = ({ children }) => {
                 body: JSON.stringify({ username, password, twoFactorToken }),
             });
             const data = await res.json();
-            
+
             // Check if 2FA is required
             if (data.requires2FA) {
                 return { requires2FA: true };
             }
-            
+
             if (!res.ok) throw new Error(data.error || "Login failed");
 
             setToken(data.token);
@@ -182,16 +182,20 @@ export const AuthProvider = ({ children }) => {
             const res = await fetch(`${API_BASE}/api/me`, { headers: { Authorization: `Bearer ${token}` } });
             if (!res.ok) return null;
             const data = await res.json();
-            setUser((u) => ({ 
-                ...(u || {}), 
-                id: data.id, 
-                username: data.username, 
-                balance: data.balance, 
-                role: data.role || 'user', 
+            setUser({
+                id: data.id,
+                username: data.username,
+                balance: data.balance,
+                role: data.role || 'user',
                 profileImage: data.profileImage || '',
+                wagered: data.wagered || 0,
+                totalWon: data.totalWon || 0,
+                totalDeposited: data.totalDeposited || 0,
+                totalWithdrawn: data.totalWithdrawn || 0,
                 discordId: data.discordId || null,
                 discordUsername: data.discordUsername || null
-            }));
+            });
+            console.log('[Auth] refreshUser completed - user:', data.username);
             return data;
         } catch (err) {
             console.error('refreshUser error', err);

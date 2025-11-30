@@ -27,6 +27,7 @@ import crypto from 'crypto';
 import speakeasy from 'speakeasy';
 import qrcode from 'qrcode';
 import nodemailer from 'nodemailer';
+import rateLimit from 'express-rate-limit';
 import { paytables, configured } from './paytable-data.js';
 import http from 'http';
 import registerRugged from './routes/rugged-pure-rng.js';
@@ -314,7 +315,7 @@ app.post('/api/support/ticket', async (req, res) => {
     let username = 'Guest';
     let userId = null;
     let discordId = null;
-    
+
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
@@ -360,7 +361,7 @@ app.post('/api/support/ticket', async (req, res) => {
       const botToken = process.env.DISCORD_BOT_TOKEN;
       const channelId = process.env.DISCORD_SUPPORT_CHANNEL_ID;
       const adminRoleId = process.env.DISCORD_ADMIN_ROLE_ID;
-      
+
       if (botToken && channelId) {
         try {
           const ticketId = ticket._id.toString().substring(18).toUpperCase();
@@ -369,9 +370,9 @@ app.post('/api/support/ticket', async (req, res) => {
           // Create Discord embed
           const embed = {
             title: `New Support Ticket #${ticketId}`,
-            color: category === 'bug' ? 0xff0000 : 
-                   category === 'complaint' ? 0xff9900 :
-                   category === 'payment' ? 0x00ff00 : 0x3b82f6,
+            color: category === 'bug' ? 0xff0000 :
+              category === 'complaint' ? 0xff9900 :
+                category === 'payment' ? 0x00ff00 : 0x3b82f6,
             fields: [
               {
                 name: '📋 Category',
@@ -427,7 +428,7 @@ app.post('/api/support/ticket', async (req, res) => {
 
           if (threadResponse.ok) {
             const thread = await threadResponse.json();
-            
+
             // Save Discord thread ID to ticket
             ticket.discordThreadId = thread.id;
             await ticket.save();
@@ -462,7 +463,7 @@ app.post('/api/support/ticket', async (req, res) => {
       }
     }
 
-    res.json({ 
+    res.json({
       message: 'Ticket submitted successfully! Our team will review it shortly.',
       ticketId: ticket._id,
       hasDiscord: !!discordId
@@ -481,7 +482,7 @@ app.get('/api/support/tickets', auth, async (req, res) => {
       .sort({ createdAt: -1 })
       .populate('messages.sender', 'username profileImage')
       .lean();
-    
+
     res.json({ tickets });
   } catch (err) {
     console.error('Get tickets error:', err);
@@ -498,7 +499,7 @@ app.get('/api/support/tickets/all', auth, adminOnly, async (req, res) => {
       .populate('messages.sender', 'username profileImage')
       .populate('assignedTo', 'username')
       .lean();
-    
+
     res.json({ tickets });
   } catch (err) {
     console.error('Get all tickets error:', err);
@@ -513,14 +514,14 @@ app.get('/api/admin/marketing-emails', auth, adminOnly, async (req, res) => {
       marketingConsent: true,
       email: { $exists: true, $ne: '' }
     })
-    .select('username email marketingConsentDate createdAt')
-    .sort({ marketingConsentDate: -1 })
-    .lean();
+      .select('username email marketingConsentDate createdAt')
+      .sort({ marketingConsentDate: -1 })
+      .lean();
 
     // Format as CSV
     const csv = [
       'Username,Email,Consent Date,Registered Date',
-      ...users.map(u => 
+      ...users.map(u =>
         `${u.username},${u.email},${u.marketingConsentDate ? new Date(u.marketingConsentDate).toISOString() : ''},${new Date(u.createdAt).toISOString()}`
       )
     ].join('\n');
@@ -542,16 +543,16 @@ app.get('/api/support/tickets/:id', auth, async (req, res) => {
       .populate('messages.sender', 'username profileImage role')
       .populate('assignedTo', 'username')
       .lean();
-    
+
     if (!ticket) {
       return res.status(404).json({ error: 'Ticket not found' });
     }
-    
+
     // Only allow ticket owner or admins to view
     if (ticket.userId._id.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Access denied' });
     }
-    
+
     res.json({ ticket });
   } catch (err) {
     console.error('Get ticket error:', err);
@@ -563,39 +564,39 @@ app.get('/api/support/tickets/:id', auth, async (req, res) => {
 app.post('/api/support/tickets/:id/messages', auth, async (req, res) => {
   try {
     const { message } = req.body;
-    
+
     if (!message || message.trim().length === 0) {
       return res.status(400).json({ error: 'Message is required' });
     }
-    
+
     const ticket = await SupportTicket.findById(req.params.id).populate('userId', 'discordId');
-    
+
     if (!ticket) {
       return res.status(404).json({ error: 'Ticket not found' });
     }
-    
+
     // Only allow ticket owner or admins to add messages
     const isOwner = ticket.userId._id.toString() === req.user._id.toString();
     const isAdmin = req.user.role === 'admin';
-    
+
     if (!isOwner && !isAdmin) {
       return res.status(403).json({ error: 'Access denied' });
     }
-    
+
     // Add message to ticket
     ticket.messages.push({
       sender: req.user._id,
       senderType: isAdmin ? 'admin' : 'user',
       message: message.trim()
     });
-    
+
     // Update status if needed
     if (ticket.status === 'open' && isAdmin) {
       ticket.status = 'in_progress';
     }
-    
+
     await ticket.save();
-    
+
     // Send to Discord thread if it exists
     if (ticket.discordThreadId) {
       const botToken = process.env.DISCORD_BOT_TOKEN;
@@ -616,11 +617,11 @@ app.post('/api/support/tickets/:id/messages', auth, async (req, res) => {
         }
       }
     }
-    
+
     const populatedTicket = await SupportTicket.findById(ticket._id)
       .populate('messages.sender', 'username profileImage role')
       .lean();
-    
+
     res.json({ ticket: populatedTicket });
   } catch (err) {
     console.error('Add message error:', err);
@@ -632,24 +633,24 @@ app.post('/api/support/tickets/:id/messages', auth, async (req, res) => {
 app.patch('/api/support/tickets/:id/status', auth, adminOnly, async (req, res) => {
   try {
     const { status } = req.body;
-    
+
     if (!['open', 'in_progress', 'resolved', 'closed'].includes(status)) {
       return res.status(400).json({ error: 'Invalid status' });
     }
-    
+
     const ticket = await SupportTicket.findById(req.params.id);
-    
+
     if (!ticket) {
       return res.status(404).json({ error: 'Ticket not found' });
     }
-    
+
     ticket.status = status;
     if (status === 'resolved' || status === 'closed') {
       ticket.resolvedAt = new Date();
     }
-    
+
     await ticket.save();
-    
+
     res.json({ ticket });
   } catch (err) {
     console.error('Update status error:', err);
@@ -701,14 +702,14 @@ app.post('/register', async (req, res) => {
     // Hash password with bcrypt (10 salt rounds)
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const u = await User.create({ 
-      username, 
-      password: hashedPassword, 
+    const u = await User.create({
+      username,
+      password: hashedPassword,
       email: email || '',
       dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
       marketingConsent: marketingConsent || false,
       marketingConsentDate: marketingConsent ? new Date() : null,
-      balance: 1000 
+      balance: 1000
     });
     const token = jwt.sign({ userId: u._id }, JWT_SECRET, { expiresIn: '7d' });
     res.json({ token, userId: u._id, balance: toDollars(u.balance), role: u.role });
@@ -718,8 +719,43 @@ app.post('/register', async (req, res) => {
   }
 });
 
+// ──────────────────────────────────────────────
+//  RATE LIMITING CONFIGURATION
+// ──────────────────────────────────────────────
+
+// Login rate limiter - 5 attempts per 15 minutes
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5,
+  message: 'Too many login attempts from this IP, please try again after 15 minutes',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// 2FA rate limiter - 10 attempts per 15 minutes (more lenient for typos)
+const twoFactorLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: 'Too many 2FA attempts, please try again after 15 minutes',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Password reset rate limiter - 3 requests per hour
+const passwordResetLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3,
+  message: 'Too many password reset requests, please try again after an hour',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// ──────────────────────────────────────────────
+//  AUTHENTICATION ENDPOINTS
+// ──────────────────────────────────────────────
+
 // POST /login { username, password } -> { token, userId, balance, role }
-app.post('/login', async (req, res) => {
+app.post('/login', loginLimiter, async (req, res) => {
   try {
     const { username, password, twoFactorToken } = req.body || {};
     if (!username || !password) return res.status(400).json({ error: 'Missing username or password' });
@@ -747,7 +783,7 @@ app.post('/login', async (req, res) => {
 
       if (!isValid) {
         // Check backup codes
-        const backupCodeIndex = u.twoFactorBackupCodes?.findIndex(code => 
+        const backupCodeIndex = u.twoFactorBackupCodes?.findIndex(code =>
           bcrypt.compareSync(twoFactorToken, code)
         );
 
@@ -773,7 +809,7 @@ app.post('/login', async (req, res) => {
 app.post('/api/security/change-password', auth, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body || {};
-    
+
     if (!currentPassword || !newPassword) {
       return res.status(400).json({ error: 'Missing current or new password' });
     }
@@ -803,7 +839,7 @@ app.post('/api/security/change-password', auth, async (req, res) => {
 });
 
 // POST /api/security/2fa/setup - Generate 2FA secret and QR code
-app.post('/api/security/2fa/setup', auth, async (req, res) => {
+app.post('/api/security/2fa/setup', auth, twoFactorLimiter, async (req, res) => {
   try {
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -836,10 +872,10 @@ app.post('/api/security/2fa/setup', auth, async (req, res) => {
 });
 
 // POST /api/security/2fa/enable - Enable 2FA after verifying token
-app.post('/api/security/2fa/enable', auth, async (req, res) => {
+app.post('/api/security/2fa/enable', auth, twoFactorLimiter, async (req, res) => {
   try {
     const { token } = req.body || {};
-    
+
     if (!token) {
       return res.status(400).json({ error: 'Missing verification token' });
     }
@@ -888,10 +924,10 @@ app.post('/api/security/2fa/enable', auth, async (req, res) => {
 });
 
 // POST /api/security/2fa/disable - Disable 2FA
-app.post('/api/security/2fa/disable', auth, async (req, res) => {
+app.post('/api/security/2fa/disable', auth, twoFactorLimiter, async (req, res) => {
   try {
     const { password, token } = req.body || {};
-    
+
     if (!password) {
       return res.status(400).json({ error: 'Password required to disable 2FA' });
     }
@@ -945,16 +981,16 @@ app.get('/api/security/2fa/status', auth, async (req, res) => {
 });
 
 // POST /api/auth/forgot-password - Request password reset email
-app.post('/api/auth/forgot-password', async (req, res) => {
+app.post('/api/auth/forgot-password', passwordResetLimiter, async (req, res) => {
   try {
     const { username } = req.body || {};
-    
+
     if (!username) {
       return res.status(400).json({ error: 'Username is required' });
     }
 
     const user = await User.findOne({ username: username.trim() });
-    
+
     // Always return success to prevent username enumeration
     if (!user) {
       return res.json({ success: true, message: 'If that username exists, a reset link has been sent to the associated email' });
@@ -976,7 +1012,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 
     // Send email
     const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
-    
+
     try {
       await emailTransporter.sendMail({
         from: process.env.SMTP_FROM || process.env.SMTP_USER,
@@ -997,7 +1033,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
           </div>
         `
       });
-      
+
       console.log(`Password reset email sent to ${user.email} for user ${user.username}`);
     } catch (emailError) {
       console.error('Failed to send reset email:', emailError);
@@ -1012,10 +1048,10 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 });
 
 // POST /api/auth/reset-password - Reset password with token
-app.post('/api/auth/reset-password', async (req, res) => {
+app.post('/api/auth/reset-password', passwordResetLimiter, async (req, res) => {
   try {
     const { token, newPassword } = req.body || {};
-    
+
     if (!token || !newPassword) {
       return res.status(400).json({ error: 'Token and new password are required' });
     }
@@ -1059,7 +1095,7 @@ app.get('/auth/discord', (req, res) => {
   const clientId = process.env.DISCORD_CLIENT_ID;
   const redirectUri = encodeURIComponent(process.env.DISCORD_REDIRECT_URI || 'http://localhost:3000/auth/discord/callback');
   const scope = encodeURIComponent('identify');
-  
+
   const discordAuthUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
   res.redirect(discordAuthUrl);
 });
@@ -1067,7 +1103,7 @@ app.get('/auth/discord', (req, res) => {
 // Step 2: Handle Discord OAuth callback
 app.get('/auth/discord/callback', async (req, res) => {
   const { code } = req.query;
-  
+
   if (!code) {
     return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=discord_auth_failed`);
   }
@@ -1112,7 +1148,7 @@ app.get('/auth/discord/callback', async (req, res) => {
     // Create a temporary token to link this Discord account to website account
     // This token will be used by the frontend to complete the linking
     const linkToken = jwt.sign(
-      { 
+      {
         discordId: discordUser.id,
         discordUsername: `${discordUser.username}#${discordUser.discriminator}`,
         type: 'discord_link'
@@ -1183,7 +1219,7 @@ app.get('/auth/discord/login', (req, res) => {
   const clientId = process.env.DISCORD_CLIENT_ID;
   const redirectUri = encodeURIComponent(process.env.DISCORD_REDIRECT_URI_LOGIN || 'https://the-divide.onrender.com/auth/discord/login/callback');
   const scope = encodeURIComponent('identify email');
-  
+
   const discordAuthUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
   res.redirect(discordAuthUrl);
 });
@@ -1191,7 +1227,7 @@ app.get('/auth/discord/login', (req, res) => {
 // Step 2: Handle Discord login callback
 app.get('/auth/discord/login/callback', async (req, res) => {
   const { code } = req.query;
-  
+
   if (!code) {
     return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=discord_login_failed`);
   }
@@ -1270,11 +1306,11 @@ app.get('/auth/google/login', (req, res) => {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const redirectUri = encodeURIComponent(process.env.GOOGLE_REDIRECT_URI || 'https://the-divide.onrender.com/auth/google/login/callback');
   const scope = encodeURIComponent('openid email profile');
-  
+
   console.log('🔵 Google OAuth Login initiated');
   console.log('Client ID:', clientId ? `${clientId.substring(0, 10)}...` : 'MISSING');
   console.log('Redirect URI:', process.env.GOOGLE_REDIRECT_URI);
-  
+
   const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
   res.redirect(googleAuthUrl);
 });
@@ -1282,11 +1318,11 @@ app.get('/auth/google/login', (req, res) => {
 // Step 2: Handle Google login callback
 app.get('/auth/google/login/callback', async (req, res) => {
   const { code, error } = req.query;
-  
+
   console.log('🔵 Google OAuth Callback received');
   console.log('Code present:', !!code);
   console.log('Error:', error);
-  
+
   if (!code) {
     console.error('❌ No authorization code received from Google');
     return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=google_login_failed`);
@@ -1310,7 +1346,7 @@ app.get('/auth/google/login/callback', async (req, res) => {
     });
 
     const tokenData = await tokenResponse.json();
-    
+
     console.log('Token response status:', tokenResponse.status);
     console.log('Token data:', tokenData.error ? tokenData : 'Access token received');
 
@@ -1328,7 +1364,7 @@ app.get('/auth/google/login/callback', async (req, res) => {
     });
 
     const googleUser = await userResponse.json();
-    
+
     console.log('Google user:', googleUser.email || 'No email');
 
     if (!googleUser.id) {
@@ -3261,7 +3297,7 @@ try {
   console.log('startup: initializing wheel game manager');
   const wheelGameManager = new WheelGameManager(wheelNamespace);
   app.locals.wheelGameManager = wheelGameManager;
-  
+
   // Create 4 initial game instances
   (async () => {
     try {
