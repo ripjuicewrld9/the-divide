@@ -8,6 +8,7 @@ import House from './models/House.js';
 import KenoReserve from './models/KenoReserve.js';
 import Ledger from './models/Ledger.js';
 import User from './models/User.js';
+import SupportTicket from './models/SupportTicket.js';
 import KenoRound from './models/KenoRound.js';
 import ChatMessage from './models/ChatMessage.js';
 import PlinkoGame from './models/PlinkoGame.js';
@@ -294,8 +295,9 @@ app.post('/api/support/ticket', async (req, res) => {
     }
 
     // Get user info if authenticated
+    let user = null;
     let username = 'Guest';
-    let userId = 'Not logged in';
+    let userId = null;
     let discordId = null;
     
     const authHeader = req.headers.authorization;
@@ -303,10 +305,10 @@ app.post('/api/support/ticket', async (req, res) => {
       const token = authHeader.substring(7);
       try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-        const user = await User.findById(decoded.userId);
+        user = await User.findById(decoded.userId);
         if (user) {
           username = user.username;
-          userId = user._id.toString();
+          userId = user._id;
           discordId = user.discordId || null;
         }
       } catch (err) {
@@ -314,152 +316,301 @@ app.post('/api/support/ticket', async (req, res) => {
       }
     }
 
-    // Discord bot token and channel ID from environment
-    const botToken = process.env.DISCORD_BOT_TOKEN;
-    const channelId = process.env.DISCORD_SUPPORT_CHANNEL_ID;
-    const adminRoleId = process.env.DISCORD_ADMIN_ROLE_ID;
-    
-    console.log('[Support Ticket] Debug - botToken:', botToken ? 'SET (length:' + botToken.length + ')' : 'NOT SET');
-    console.log('[Support Ticket] Debug - channelId:', channelId || 'NOT SET');
-    console.log('[Support Ticket] Debug - adminRoleId:', adminRoleId || 'NOT SET');
-    
-    if (!botToken || !channelId) {
-      console.warn('⚠️ DISCORD_BOT_TOKEN or DISCORD_SUPPORT_CHANNEL_ID not set in .env - ticket will not be sent to Discord');
-      return res.json({ 
-        message: 'Ticket received (Discord bot not configured)', 
-        ticketId: Date.now().toString(36) 
-      });
+    // Require authentication
+    if (!user) {
+      return res.status(401).json({ error: 'You must be logged in to submit a ticket' });
     }
 
-    const ticketId = Date.now().toString(36).toUpperCase();
-    const threadName = `🎫 ${category.toUpperCase()} - ${username} - ${ticketId}`;
-
-    // Create Discord embed
-    const embed = {
-      title: `New Support Ticket #${ticketId}`,
-      color: category === 'bug' ? 0xff0000 : 
-             category === 'complaint' ? 0xff9900 :
-             category === 'payment' ? 0x00ff00 : 0x3b82f6,
-      fields: [
-        {
-          name: '📋 Category',
-          value: category.charAt(0).toUpperCase() + category.slice(1),
-          inline: true
-        },
-        {
-          name: '👤 User',
-          value: username,
-          inline: true
-        },
-        {
-          name: '🆔 User ID',
-          value: userId,
-          inline: true
-        },
-        {
-          name: '📧 Email',
-          value: email || 'Not provided',
-          inline: true
-        },
-        {
-          name: '📌 Subject',
-          value: subject,
-          inline: false
-        },
-        {
-          name: '📝 Description',
-          value: description.length > 1024 ? description.substring(0, 1021) + '...' : description,
-          inline: false
-        }
-      ],
-      timestamp: new Date().toISOString(),
-      footer: {
-        text: 'Support Ticket System'
-      }
-    };
-
-    // Create a PRIVATE thread in the tickets channel (only visible to invited members)
-    const threadResponse = await fetch(`https://discord.com/api/v10/channels/${channelId}/threads`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bot ${botToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        name: threadName,
-        type: 12, // GUILD_PRIVATE_THREAD - only visible to invited members
-        auto_archive_duration: 10080, // 7 days
-        invitable: false // Only moderators can invite others
-      })
+    // Create ticket in database
+    const ticket = new SupportTicket({
+      userId: user._id,
+      category,
+      subject,
+      description,
+      email: email || user.googleEmail || '',
+      status: 'open',
+      priority: category === 'payment' ? 'high' : 'medium',
+      messages: [{
+        sender: user._id,
+        senderType: 'user',
+        message: description
+      }]
     });
 
-    if (!threadResponse.ok) {
-      const errorText = await threadResponse.text();
-      console.error('Failed to create Discord thread:', errorText);
-      throw new Error('Discord thread creation failed');
-    }
+    await ticket.save();
+    console.log(`✅ Support ticket #${ticket._id} created by ${username} (${userId})`);
 
-    const thread = await threadResponse.json();
-
-    // Add the user to the private thread if they have Discord linked
+    // Only send to Discord if user has Discord linked
     if (discordId) {
-      const addMemberResponse = await fetch(`https://discord.com/api/v10/channels/${thread.id}/thread-members/${discordId}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bot ${botToken}`
-        }
-      });
+      const botToken = process.env.DISCORD_BOT_TOKEN;
+      const channelId = process.env.DISCORD_SUPPORT_CHANNEL_ID;
+      const adminRoleId = process.env.DISCORD_ADMIN_ROLE_ID;
       
-      if (!addMemberResponse.ok) {
-        console.error('Failed to add user to private thread:', await addMemberResponse.text());
-      } else {
-        console.log(`✅ Added user ${discordId} to private thread ${thread.id}`);
+      if (botToken && channelId) {
+        try {
+          const ticketId = ticket._id.toString().substring(18).toUpperCase();
+          const threadName = `🎫 ${category.toUpperCase()} - ${username} - ${ticketId}`;
+
+          // Create Discord embed
+          const embed = {
+            title: `New Support Ticket #${ticketId}`,
+            color: category === 'bug' ? 0xff0000 : 
+                   category === 'complaint' ? 0xff9900 :
+                   category === 'payment' ? 0x00ff00 : 0x3b82f6,
+            fields: [
+              {
+                name: '📋 Category',
+                value: category.charAt(0).toUpperCase() + category.slice(1),
+                inline: true
+              },
+              {
+                name: '👤 User',
+                value: username,
+                inline: true
+              },
+              {
+                name: '🆔 Ticket ID',
+                value: ticketId,
+                inline: true
+              },
+              {
+                name: '📧 Email',
+                value: email || user.googleEmail || 'Not provided',
+                inline: true
+              },
+              {
+                name: '📌 Subject',
+                value: subject,
+                inline: false
+              },
+              {
+                name: '📝 Description',
+                value: description.length > 1024 ? description.substring(0, 1021) + '...' : description,
+                inline: false
+              }
+            ],
+            timestamp: new Date().toISOString(),
+            footer: {
+              text: 'Support Ticket System'
+            }
+          };
+
+          // Create a PRIVATE thread
+          const threadResponse = await fetch(`https://discord.com/api/v10/channels/${channelId}/threads`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bot ${botToken}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              name: threadName,
+              type: 12, // GUILD_PRIVATE_THREAD
+              auto_archive_duration: 10080,
+              invitable: false
+            })
+          });
+
+          if (threadResponse.ok) {
+            const thread = await threadResponse.json();
+            
+            // Save Discord thread ID to ticket
+            ticket.discordThreadId = thread.id;
+            await ticket.save();
+
+            // Add the user to the private thread
+            await fetch(`https://discord.com/api/v10/channels/${thread.id}/thread-members/${discordId}`, {
+              method: 'PUT',
+              headers: {
+                'Authorization': `Bot ${botToken}`
+              }
+            });
+
+            // Send the ticket details
+            await fetch(`https://discord.com/api/v10/channels/${thread.id}/messages`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bot ${botToken}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                content: `${adminRoleId ? `<@&${adminRoleId}>` : '@here'} New support ticket from **${username}** (<@${discordId}>)`,
+                embeds: [embed]
+              })
+            });
+
+            console.log(`✅ Discord thread ${thread.id} created for ticket ${ticket._id}`);
+          }
+        } catch (discordError) {
+          console.error('Discord thread creation failed:', discordError);
+          // Continue - ticket still saved in database
+        }
       }
     }
-
-    // Send the ticket details in the private thread
-    const initialMessageResponse = await fetch(`https://discord.com/api/v10/channels/${thread.id}/messages`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bot ${botToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        content: `${adminRoleId ? `<@&${adminRoleId}>` : '@here'} New support ticket from **${username}** ${discordId ? `(<@${discordId}>)` : ''}`,
-        embeds: [embed]
-      })
-    });
-
-    if (!initialMessageResponse.ok) {
-      console.error('Failed to send initial message to thread:', await initialMessageResponse.text());
-    }
-
-    // Send follow-up message in thread with instructions
-    const followUpResponse = await fetch(`https://discord.com/api/v10/channels/${thread.id}/messages`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bot ${botToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        content: `📨 **Ticket #${ticketId}** created for **${username}**\n\nAdmins can respond here. The ticket creator will be notified of updates.`
-      })
-    });
-
-    if (!followUpResponse.ok) {
-      console.error('Failed to send follow-up message to thread:', await followUpResponse.text());
-    }
-
-    console.log(`✅ Support ticket #${ticketId} submitted by ${username} (${userId}) - Category: ${category} - Thread: ${thread.id}`);
 
     res.json({ 
       message: 'Ticket submitted successfully! Our team will review it shortly.',
-      ticketId: ticketId
+      ticketId: ticket._id,
+      hasDiscord: !!discordId
     });
 
   } catch (err) {
     console.error('Support ticket error:', err);
     res.status(500).json({ error: 'Failed to submit ticket. Please try again.' });
+  }
+});
+
+// Get user's tickets
+app.get('/api/support/tickets', auth, async (req, res) => {
+  try {
+    const tickets = await SupportTicket.find({ userId: req.user._id })
+      .sort({ createdAt: -1 })
+      .populate('messages.sender', 'username profileImage')
+      .lean();
+    
+    res.json({ tickets });
+  } catch (err) {
+    console.error('Get tickets error:', err);
+    res.status(500).json({ error: 'Failed to fetch tickets' });
+  }
+});
+
+// Get all tickets (admin only)
+app.get('/api/support/tickets/all', auth, adminOnly, async (req, res) => {
+  try {
+    const tickets = await SupportTicket.find()
+      .sort({ createdAt: -1 })
+      .populate('userId', 'username profileImage discordId')
+      .populate('messages.sender', 'username profileImage')
+      .populate('assignedTo', 'username')
+      .lean();
+    
+    res.json({ tickets });
+  } catch (err) {
+    console.error('Get all tickets error:', err);
+    res.status(500).json({ error: 'Failed to fetch tickets' });
+  }
+});
+
+// Get single ticket
+app.get('/api/support/tickets/:id', auth, async (req, res) => {
+  try {
+    const ticket = await SupportTicket.findById(req.params.id)
+      .populate('userId', 'username profileImage discordId')
+      .populate('messages.sender', 'username profileImage role')
+      .populate('assignedTo', 'username')
+      .lean();
+    
+    if (!ticket) {
+      return res.status(404).json({ error: 'Ticket not found' });
+    }
+    
+    // Only allow ticket owner or admins to view
+    if (ticket.userId._id.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    
+    res.json({ ticket });
+  } catch (err) {
+    console.error('Get ticket error:', err);
+    res.status(500).json({ error: 'Failed to fetch ticket' });
+  }
+});
+
+// Add message to ticket
+app.post('/api/support/tickets/:id/messages', auth, async (req, res) => {
+  try {
+    const { message } = req.body;
+    
+    if (!message || message.trim().length === 0) {
+      return res.status(400).json({ error: 'Message is required' });
+    }
+    
+    const ticket = await SupportTicket.findById(req.params.id).populate('userId', 'discordId');
+    
+    if (!ticket) {
+      return res.status(404).json({ error: 'Ticket not found' });
+    }
+    
+    // Only allow ticket owner or admins to add messages
+    const isOwner = ticket.userId._id.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === 'admin';
+    
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    
+    // Add message to ticket
+    ticket.messages.push({
+      sender: req.user._id,
+      senderType: isAdmin ? 'admin' : 'user',
+      message: message.trim()
+    });
+    
+    // Update status if needed
+    if (ticket.status === 'open' && isAdmin) {
+      ticket.status = 'in_progress';
+    }
+    
+    await ticket.save();
+    
+    // Send to Discord thread if it exists
+    if (ticket.discordThreadId) {
+      const botToken = process.env.DISCORD_BOT_TOKEN;
+      if (botToken) {
+        try {
+          await fetch(`https://discord.com/api/v10/channels/${ticket.discordThreadId}/messages`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bot ${botToken}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              content: `**${req.user.username}** ${isAdmin ? '(Admin)' : ''}: ${message}`
+            })
+          });
+        } catch (discordErr) {
+          console.error('Failed to send message to Discord:', discordErr);
+        }
+      }
+    }
+    
+    const populatedTicket = await SupportTicket.findById(ticket._id)
+      .populate('messages.sender', 'username profileImage role')
+      .lean();
+    
+    res.json({ ticket: populatedTicket });
+  } catch (err) {
+    console.error('Add message error:', err);
+    res.status(500).json({ error: 'Failed to add message' });
+  }
+});
+
+// Update ticket status (admin only)
+app.patch('/api/support/tickets/:id/status', auth, adminOnly, async (req, res) => {
+  try {
+    const { status } = req.body;
+    
+    if (!['open', 'in_progress', 'resolved', 'closed'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+    
+    const ticket = await SupportTicket.findById(req.params.id);
+    
+    if (!ticket) {
+      return res.status(404).json({ error: 'Ticket not found' });
+    }
+    
+    ticket.status = status;
+    if (status === 'resolved' || status === 'closed') {
+      ticket.resolvedAt = new Date();
+    }
+    
+    await ticket.save();
+    
+    res.json({ ticket });
+  } catch (err) {
+    console.error('Update status error:', err);
+    res.status(500).json({ error: 'Failed to update status' });
   }
 });
 
