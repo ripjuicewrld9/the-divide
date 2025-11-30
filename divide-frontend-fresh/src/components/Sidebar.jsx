@@ -37,6 +37,7 @@ export default function Sidebar() {
         { name: 'Divides', path: '/divides', icon: '/elections-poll-svgrepo-com.svg' },
         { name: 'Battles', path: '/case-battles', icon: '/swords-power-svgrepo-com.svg' },
         { name: 'Pump', path: '/rugged', icon: '/trend-down-svgrepo-com.svg' },
+        { name: 'Support', path: '/support', icon: '/home-alt-svgrepo-com.svg' },
     ];
 
     return (

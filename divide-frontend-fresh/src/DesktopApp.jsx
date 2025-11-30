@@ -22,6 +22,8 @@ import PlinkoPage from "./games/plinko/index.tsx";
 import WheelPage from "./games/wheel/index.tsx";
 import WheelLobby from "./games/wheel/WheelLobby.tsx";
 import ProfilePage from "./pages/ProfileNew.jsx";
+import Support from "./pages/Support.jsx";
+import TicketDetail from "./pages/TicketDetail.jsx";
 import CaseBattlesPage from "./components/CaseBattlesPage.jsx";
 import DiscordLinkHandler from "./components/DiscordLinkHandler.jsx";
 import OAuthLoginHandler from "./components/OAuthLoginHandler.jsx";
@@ -79,6 +81,8 @@ export default function DesktopApp() {
             <Route path="/battles/create" element={<CreateBattlePage />} />
             <Route path="/battles/:id" element={<CaseBattleDetail />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/support" element={<Support />} />
+            <Route path="/support/:id" element={<TicketDetail />} />
             <Route path="/link-discord" element={<DiscordLinkHandler />} />
 
             {/* Admin routes */}
