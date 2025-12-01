@@ -22,7 +22,7 @@ export default function registerWheelRoutes(app, io, { auth }) {
         roundNumber: game.roundNumber,
         status: game.status,
         occupiedSeats: game.seats.filter(s => s.userId).length,
-        totalSeats: 12,
+        totalSeats: 8,
         timeRemaining: Math.max(0, game.roundEndTime.getTime() - now.getTime()),
         bettingTimeRemaining: Math.max(0, game.bettingEndTime.getTime() - now.getTime()),
       }));
@@ -71,7 +71,7 @@ export default function registerWheelRoutes(app, io, { auth }) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    if (seatNumber < 0 || seatNumber > 11) {
+    if (seatNumber < 0 || seatNumber > 7) {
       return res.status(400).json({ error: 'Invalid seat number' });
     }
 

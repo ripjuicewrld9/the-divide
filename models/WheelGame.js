@@ -23,7 +23,7 @@ const wheelGameSchema = new mongoose.Schema({
       type: Number,
       required: true,
       min: 0,
-      max: 11,
+      max: 7,
     },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -58,20 +58,28 @@ const wheelGameSchema = new mongoose.Schema({
     max: 53,
     default: null,
   },
-  globalMultiplier: {
-    type: Number,
-    default: 1,
-    min: 1,
-  },
-  globalMultiplierSeed: String,
-  winningSeats: [{
+  
+  // Boosted segments for this round
+  boostedSegments: [{
+    segmentIndex: Number,
+    baseMultiplier: Number,
+    boostMultiplier: Number,
+    finalMultiplier: Number,
+  }],
+  boostSeed: String,
+  
+  // Outcomes for all 8 seats
+  seatOutcomes: [{
     seatNumber: Number,
+    segmentUnderFlapper: Number,
+    baseMultiplier: Number,
+    boostMultiplier: Number,
+    finalMultiplier: Number,
+    isOccupied: Boolean,
     userId: mongoose.Schema.Types.ObjectId,
     betAmount: Number,
-    baseMultiplier: Number,
-    globalMultiplier: Number,
-    basePayout: Number,
-    finalPayout: Number,
+    payout: Number,
+    isBoosted: Boolean,
   }],
   
   // Timing

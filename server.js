@@ -3299,16 +3299,13 @@ try {
   const wheelGameManager = new WheelGameManager(wheelNamespace);
   app.locals.wheelGameManager = wheelGameManager;
 
-  // Create 4 initial game instances
+  // Initialize 4 permanent lobbies
   (async () => {
     try {
-      await wheelGameManager.createGameInstance();
-      await wheelGameManager.createGameInstance();
-      await wheelGameManager.createGameInstance();
-      await wheelGameManager.createGameInstance();
-      console.log('startup: wheel game manager initialized with 4 games');
+      await wheelGameManager.initializeLobbies();
+      console.log('startup: wheel game manager initialized with 4 permanent lobbies');
     } catch (e) {
-      console.error('Failed to create initial wheel game instances', e);
+      console.error('Failed to initialize wheel lobbies', e);
     }
   })();
 } catch (e) { console.error('Failed to initialize wheel game manager', e); }

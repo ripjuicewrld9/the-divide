@@ -10,73 +10,110 @@ import {
   generateSegmentIndex,
 } from './wheelProofOfFair.js';
 
-// Wheel configuration: 54 segments total
-// Seat assignments (each seat covers specific segments)
-const SEAT_SEGMENTS = [
-  [0, 9, 18, 27, 36, 45], // Seat 0 - every 9th segment starting from 0
-  [1, 10, 19, 28, 37, 46], // Seat 1
-  [2, 11, 20, 29, 38, 47], // Seat 2
-  [3, 12, 21, 30, 39, 48], // Seat 3
-  [4, 13, 22, 31, 40, 49], // Seat 4
-  [5, 14, 23, 32, 41, 50], // Seat 5
-  [6, 15, 24, 33, 42, 51], // Seat 6
-  [7, 16, 25, 34, 43, 52], // Seat 7
-  [8, 17, 26, 35, 44, 53], // Seat 8
-  [0, 6, 12, 18, 24, 30, 36, 42, 48], // Seat 9 - every 6th segment (higher probability)
-  [3, 9, 15, 21, 27, 33, 39, 45, 51], // Seat 10 - every 6th segment offset
-  [1, 7, 13, 19, 25, 31, 37, 43, 49, 2, 8, 14], // Seat 11 - mixed pattern (highest probability)
+// Wheel configuration: 54 segments total with base multipliers
+// Distribution as specified:
+// -0.75x: 15 segments
+// -0.5x: 10 segments
+// -0.25x: 5 segments
+// 0.25x: 4 segments
+// 0.5x: 4 segments
+// 0.75x: 2 segments
+// 1x: 2 segments
+// 1.5x: 3 segments
+// 2x: 3 segments
+// 3x: 2 segments
+// 5x: 2 segments
+// 7.5x: 1 segment
+// 25x: 1 segment
+const WHEEL_SEGMENTS = [
+  // -0.75x (15 segments)
+  -0.75, -0.75, -0.75, -0.75, -0.75, -0.75, -0.75, -0.75, -0.75, -0.75, -0.75, -0.75, -0.75, -0.75, -0.75,
+  // -0.5x (10 segments)
+  -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5,
+  // -0.25x (5 segments)
+  -0.25, -0.25, -0.25, -0.25, -0.25,
+  // 0.25x (4 segments)
+  0.25, 0.25, 0.25, 0.25,
+  // 0.5x (4 segments)
+  0.5, 0.5, 0.5, 0.5,
+  // 0.75x (2 segments)
+  0.75, 0.75,
+  // 1x (2 segments)
+  1, 1,
+  // 1.5x (3 segments)
+  1.5, 1.5, 1.5,
+  // 2x (3 segments)
+  2, 2, 2,
+  // 3x (2 segments)
+  3, 3,
+  // 5x (2 segments)
+  5, 5,
+  // 7.5x (1 segment)
+  7.5,
+  // 25x (1 segment)
+  25
 ];
+
+// 8 Fixed flapper positions (evenly spaced around the wheel)
+// Each flapper is positioned at (360 / 8) degrees apart
+const FLAPPER_POSITIONS = [0, 1, 2, 3, 4, 5, 6, 7];
 
 const ROUND_DURATION_MS = 30000; // 30 seconds
 const BETTING_DURATION_MS = 25000; // 25 seconds for betting
 const SPIN_DURATION_MS = 5000; // 5 seconds for spin
 
-// Base payout multipliers per seat (Evolution-style lower bases for global boost)
-const SEAT_MULTIPLIERS = [
-  2.0, // Seat 0 - 6/54 segments = 11.1% chance (safe)
-  2.0, // Seat 1
-  2.0, // Seat 2
-  3.0, // Seat 3 (balanced)
-  3.0, // Seat 4
-  3.0, // Seat 5
-  5.0, // Seat 6 (aggressive)
-  5.0, // Seat 7
-  5.0, // Seat 8
-  10.0, // Seat 9 - 9/54 segments = 16.7% chance (jackpot)
-  10.0, // Seat 10
-  10.0, // Seat 11 - 12/54 segments = 22.2% chance (jackpot)
-];
-
-// Global multiplier distribution (Crazy Time style "Top Slot")
-const GLOBAL_MULTIPLIER_DISTRIBUTION = [
-  { multiplier: 2, weight: 40 },    // 40% chance for 2x
-  { multiplier: 5, weight: 25 },    // 25% chance for 5x
-  { multiplier: 10, weight: 15 },   // 15% chance for 10x
-  { multiplier: 25, weight: 10 },   // 10% chance for 25x
-  { multiplier: 50, weight: 7 },    // 7% chance for 50x
-  { multiplier: 100, weight: 3 }    // 3% chance for 100x
+// Segment boost multiplier distribution
+const BOOST_MULTIPLIER_DISTRIBUTION = [
+  { multiplier: 10, weight: 40 },    // 40% chance for 10x
+  { multiplier: 25, weight: 25 },    // 25% chance for 25x
+  { multiplier: 50, weight: 20 },    // 20% chance for 50x
+  { multiplier: 100, weight: 15 }    // 15% chance for 100x
 ];
 
 /**
- * Generate global multiplier using weighted distribution
+ * Generate boost multiplier using weighted distribution
  */
-function generateGlobalMultiplier(seed) {
-  // Use seed to generate deterministic random value
+function generateBoostMultiplier(seed) {
   const hash = crypto.createHash('sha256').update(seed).digest('hex');
   const randomValue = parseInt(hash.slice(0, 8), 16) / 0xffffffff; // 0-1
   
-  const totalWeight = GLOBAL_MULTIPLIER_DISTRIBUTION.reduce((sum, item) => sum + item.weight, 0);
+  const totalWeight = BOOST_MULTIPLIER_DISTRIBUTION.reduce((sum, item) => sum + item.weight, 0);
   let threshold = 0;
   
-  for (const item of GLOBAL_MULTIPLIER_DISTRIBUTION) {
+  for (const item of BOOST_MULTIPLIER_DISTRIBUTION) {
     threshold += item.weight / totalWeight;
     if (randomValue < threshold) {
       return item.multiplier;
     }
   }
   
-  // Fallback (shouldn't happen)
-  return GLOBAL_MULTIPLIER_DISTRIBUTION[0].multiplier;
+  return BOOST_MULTIPLIER_DISTRIBUTION[0].multiplier;
+}
+
+/**
+ * Generate number of segments to boost (3-5)
+ */
+function generateBoostCount(seed) {
+  const hash = crypto.createHash('sha256').update(seed + 'count').digest('hex');
+  const randomValue = parseInt(hash.slice(0, 8), 16) % 3; // 0, 1, or 2
+  return 3 + randomValue; // 3, 4, or 5
+}
+
+/**
+ * Select random segments to boost
+ */
+function selectBoostedSegments(seed, count) {
+  const boosted = [];
+  const available = Array.from({ length: 54 }, (_, i) => i);
+  
+  for (let i = 0; i < count; i++) {
+    const hash = crypto.createHash('sha256').update(seed + i).digest('hex');
+    const randomIndex = parseInt(hash.slice(0, 8), 16) % available.length;
+    boosted.push(available[randomIndex]);
+    available.splice(randomIndex, 1);
+  }
+  
+  return boosted;
 }
 
 class WheelGameManager {
@@ -84,6 +121,57 @@ class WheelGameManager {
     this.io = io;
     this.activeGames = new Map();
     this.roundTimers = new Map();
+    // Fixed lobby IDs
+    this.LOBBY_IDS = ['lobby-1', 'lobby-2', 'lobby-3', 'lobby-4'];
+  }
+
+  /**
+   * Initialize the 4 permanent lobbies on server startup
+   */
+  async initializeLobbies() {
+    console.log('[WheelGame] Initializing 4 permanent lobbies...');
+    
+    for (const lobbyId of this.LOBBY_IDS) {
+      try {
+        // Check if lobby already exists
+        let game = await WheelGame.findOne({ gameId: lobbyId });
+        
+        if (!game) {
+          // Create new lobby
+          console.log(`[WheelGame] Creating new lobby: ${lobbyId}`);
+          await this.createGameInstance(lobbyId);
+        } else {
+          // Resume existing lobby
+          console.log(`[WheelGame] Resuming existing lobby: ${lobbyId}`);
+          this.activeGames.set(lobbyId, game);
+          
+          // If the game is in progress, schedule appropriate timers
+          if (game.status === 'betting' || game.status === 'spinning') {
+            const now = new Date();
+            
+            // Only schedule if times are in the future
+            if (game.bettingEndTime > now) {
+              this.scheduleBettingEnd(lobbyId, game.bettingEndTime);
+            }
+            
+            if (game.roundEndTime > now) {
+              this.scheduleRoundEnd(lobbyId, game.roundEndTime);
+            } else {
+              // Round should have ended, start a new one
+              console.log(`[WheelGame] ${lobbyId} round expired, starting new round`);
+              await this.startNextRound(lobbyId);
+            }
+          } else if (game.status === 'completed') {
+            // Start a new round
+            await this.startNextRound(lobbyId);
+          }
+        }
+      } catch (error) {
+        console.error(`[WheelGame] Error initializing lobby ${lobbyId}:`, error);
+      }
+    }
+    
+    console.log('[WheelGame] All 4 lobbies initialized');
   }
 
   /**
@@ -100,12 +188,12 @@ class WheelGameManager {
       const roundEndTime = new Date(now.getTime() + ROUND_DURATION_MS);
       const bettingEndTime = new Date(now.getTime() + BETTING_DURATION_MS);
 
-      // Initialize seats
-      const seats = SEAT_SEGMENTS.map((segments, index) => ({
-        seatNumber: index,
+      // Initialize seats (8 flappers)
+      const seats = FLAPPER_POSITIONS.map((flapperPosition) => ({
+        seatNumber: flapperPosition,
         userId: null,
         betAmount: 0,
-        segments,
+        segments: [], // Not used in new system, kept for schema compatibility
         reservedAt: null,
       }));
 
@@ -246,30 +334,44 @@ class WheelGameManager {
    */
   scheduleRoundEnd(gameId, roundEndTime) {
     const delay = roundEndTime.getTime() - Date.now();
-    const bettingEndDelay = delay - SPIN_DURATION_MS; // Betting ends 5s before spin completes
+    const bettingEndDelay = delay - SPIN_DURATION_MS;
     
-    // Schedule betting close and global multiplier reveal
+    // Schedule betting close and boost reveal
     if (bettingEndDelay > 0) {
       setTimeout(async () => {
         try {
           const game = await WheelGame.findOne({ gameId });
           if (game && game.status === 'betting') {
-            // Generate and reveal global multiplier BEFORE spin
-            const globalMultiplierSeed = crypto.randomBytes(16).toString('hex');
-            const globalMultiplier = generateGlobalMultiplier(game.gameSeed + globalMultiplierSeed);
+            // Generate boosted segments BEFORE spin
+            const boostSeed = crypto.randomBytes(16).toString('hex');
+            const boostCount = generateBoostCount(boostSeed);
+            const boostedSegmentIndices = selectBoostedSegments(boostSeed, boostCount);
             
-            game.globalMultiplier = globalMultiplier;
-            game.globalMultiplierSeed = globalMultiplierSeed;
+            // Generate boost multipliers for each selected segment
+            const boostedSegments = boostedSegmentIndices.map((segmentIndex, i) => ({
+              segmentIndex,
+              baseMultiplier: WHEEL_SEGMENTS[segmentIndex],
+              boostMultiplier: generateBoostMultiplier(boostSeed + i + 'boost'),
+              finalMultiplier: WHEEL_SEGMENTS[segmentIndex] * generateBoostMultiplier(boostSeed + i + 'boost')
+            }));
+            
+            game.boostedSegments = boostedSegments;
+            game.boostSeed = boostSeed;
             game.status = 'spinning';
             await game.save();
             
-            // Broadcast "Top Slot" reveal
+            // Broadcast boosted segments reveal
             this.io.to(`wheel-${gameId}`).emit('wheel:bettingClosed', {
-              globalMultiplier,
-              message: `GLOBAL MULTIPLIER: ${globalMultiplier}x!`
+              boostedSegments: boostedSegments.map(b => ({
+                segmentIndex: b.segmentIndex,
+                baseMultiplier: b.baseMultiplier,
+                boostMultiplier: b.boostMultiplier,
+                finalMultiplier: b.finalMultiplier
+              })),
+              message: `${boostCount} segments boosted!`
             });
             
-            console.log(`[WheelGame] Betting closed for game ${gameId}, global multiplier: ${globalMultiplier}x`);
+            console.log(`[WheelGame] Betting closed for game ${gameId}, ${boostCount} segments boosted`);
           }
         } catch (error) {
           console.error(`[WheelGame] Error closing betting:`, error);
@@ -310,89 +412,137 @@ class WheelGameManager {
         return;
       }
 
-      // Generate provably fair result
+      // Generate provably fair result for wheel stopping position
       const serverSeed = await generateServerSeedFromRandomOrg();
       const serverHash = hashServerSeed(serverSeed);
       const blockHash = await getEOSBlockHash();
       const gameSeed = createGameSeed(serverSeed, blockHash);
-      const winningSegment = generateSegmentIndex(gameSeed);
-
-      // Use pre-generated global multiplier (already set in bettingClosed event)
-      const globalMultiplier = game.globalMultiplier || 1;
+      
+      // Determine wheel stopping position (0-53)
+      const wheelStopPosition = generateSegmentIndex(gameSeed);
 
       game.serverSeed = serverSeed;
       game.serverHash = serverHash;
       game.blockHash = blockHash;
       game.gameSeed = gameSeed;
-      game.winningSegment = winningSegment;
+      game.winningSegment = wheelStopPosition; // Stores the segment at position 0
       game.nonce = game.roundNumber;
       game.status = 'completed';
 
-      // Determine winning seats
-      const winningSeats = [];
-      
-      for (const seat of game.seats) {
-        if (seat.userId && seat.segments.includes(winningSegment)) {
-          const baseMultiplier = SEAT_MULTIPLIERS[seat.seatNumber];
-          const basePayout = Math.round(seat.betAmount * baseMultiplier);
-          const finalPayout = Math.round(basePayout * globalMultiplier);
-          
-          winningSeats.push({
-            seatNumber: seat.seatNumber,
-            userId: seat.userId,
-            betAmount: seat.betAmount,
-            baseMultiplier,
-            globalMultiplier,
-            basePayout,
-            finalPayout,
-          });
+      // Get boosted segments from game (set during betting close)
+      const boostedSegments = game.boostedSegments || [];
+      const boostMap = new Map();
+      boostedSegments.forEach(b => {
+        boostMap.set(b.segmentIndex, {
+          boostMultiplier: b.boostMultiplier,
+          finalMultiplier: b.finalMultiplier
+        });
+      });
 
-          // Credit winner with final payout
+      // Calculate outcomes for ALL 8 seats based on flapper positions
+      const seatOutcomes = [];
+      
+      for (let seatNumber = 0; seatNumber < 8; seatNumber++) {
+        // Calculate which segment is under this flapper
+        // Flappers are evenly spaced: 54/8 = 6.75 segments apart
+        // For simplicity, use: (wheelStopPosition + seatNumber * 7) % 54
+        const segmentUnderFlapper = (wheelStopPosition + (seatNumber * 7)) % 54;
+        
+        // Get base multiplier for this segment
+        const baseMultiplier = WHEEL_SEGMENTS[segmentUnderFlapper];
+        
+        // Check if this segment has a boost
+        const boost = boostMap.get(segmentUnderFlapper);
+        const finalMultiplier = boost ? boost.finalMultiplier : baseMultiplier;
+        const boostMultiplier = boost ? boost.boostMultiplier : 1;
+        
+        // Find if this seat is occupied
+        const seat = game.seats.find(s => s.seatNumber === seatNumber);
+        const isOccupied = seat && seat.userId;
+        
+        // Calculate payout if seat is occupied
+        let payout = 0;
+        if (isOccupied && seat.betAmount > 0) {
+          payout = Math.round(seat.betAmount * finalMultiplier);
+        }
+        
+        seatOutcomes.push({
+          seatNumber,
+          segmentUnderFlapper,
+          baseMultiplier,
+          boostMultiplier,
+          finalMultiplier,
+          isOccupied,
+          userId: isOccupied ? seat.userId : null,
+          betAmount: isOccupied ? seat.betAmount : 0,
+          payout,
+          isBoosted: boost !== undefined
+        });
+        
+        // Process payout/loss for occupied seats
+        if (isOccupied && seat.userId) {
           const user = await User.findById(seat.userId);
           if (user) {
-            user.balance += finalPayout;
-            user.totalWins = (user.totalWins || 0) + 1;
-            user.totalWon = (user.totalWon || 0) + finalPayout;
+            // Apply payout (can be positive or negative)
+            user.balance += payout;
+            
+            // Update stats
+            user.totalBets = (user.totalBets || 0) + 1;
+            user.wagered = (user.wagered || 0) + seat.betAmount;
+            
+            if (finalMultiplier > 0) {
+              user.totalWins = (user.totalWins || 0) + 1;
+              user.totalWon = (user.totalWon || 0) + payout;
+            } else {
+              user.totalLosses = (user.totalLosses || 0) + 1;
+            }
+            
             await user.save();
 
             // Create ledger entry
             await Ledger.create({
               userId: seat.userId,
-              type: 'wheel_win',
-              amount: finalPayout / 100,
+              type: finalMultiplier > 0 ? 'wheel_win' : 'wheel_loss',
+              amount: payout / 100,
               details: {
                 gameId,
                 roundNumber: game.roundNumber,
-                seatNumber: seat.seatNumber,
-                winningSegment,
+                seatNumber,
+                wheelStopPosition,
+                segmentUnderFlapper,
                 baseMultiplier,
-                globalMultiplier,
-                basePayout: basePayout / 100,
-                finalPayout: finalPayout / 100,
+                boostMultiplier,
+                finalMultiplier,
+                betAmount: seat.betAmount / 100,
+                payout: payout / 100,
+                isBoosted: boost !== undefined
               },
             });
           }
         }
       }
 
-      game.winningSeats = winningSeats;
+      game.seatOutcomes = seatOutcomes;
       await game.save();
 
-      // Broadcast results
+      // Broadcast results with all seat outcomes
       this.io.to(`wheel-${gameId}`).emit('wheel:roundComplete', {
-        winningSegment,
-        globalMultiplier,
-        winningSeats: winningSeats.map(s => ({
-          seatNumber: s.seatNumber,
-          userId: s.userId.toString(),
-          baseMultiplier: s.baseMultiplier,
-          globalMultiplier: s.globalMultiplier,
-          basePayout: s.basePayout / 100,
-          finalPayout: s.finalPayout / 100,
+        wheelStopPosition,
+        seatOutcomes: seatOutcomes.map(outcome => ({
+          seatNumber: outcome.seatNumber,
+          segmentUnderFlapper: outcome.segmentUnderFlapper,
+          baseMultiplier: outcome.baseMultiplier,
+          boostMultiplier: outcome.boostMultiplier,
+          finalMultiplier: outcome.finalMultiplier,
+          isOccupied: outcome.isOccupied,
+          userId: outcome.userId ? outcome.userId.toString() : null,
+          betAmount: outcome.betAmount / 100,
+          payout: outcome.payout / 100,
+          isBoosted: outcome.isBoosted
         })),
       });
 
-      console.log(`[WheelGame] Round ${game.roundNumber} completed for game ${gameId}, segment: ${winningSegment}, global: ${globalMultiplier}x`);
+      console.log(`[WheelGame] Round ${game.roundNumber} completed for game ${gameId}, wheelStopPosition: ${wheelStopPosition}`);
 
       // Start next round
       setTimeout(() => {
@@ -413,12 +563,12 @@ class WheelGameManager {
       const roundEndTime = new Date(now.getTime() + ROUND_DURATION_MS);
       const bettingEndTime = new Date(now.getTime() + BETTING_DURATION_MS);
 
-      // Reset seats
-      const seats = SEAT_SEGMENTS.map((segments, index) => ({
-        seatNumber: index,
+      // Reset seats (8 flappers)
+      const seats = FLAPPER_POSITIONS.map((flapperPosition) => ({
+        seatNumber: flapperPosition,
         userId: null,
         betAmount: 0,
-        segments,
+        segments: [],
         reservedAt: null,
       }));
 
@@ -435,7 +585,9 @@ class WheelGameManager {
       game.roundEndTime = roundEndTime;
       game.bettingEndTime = bettingEndTime;
       game.winningSegment = null;
-      game.winningSeats = [];
+      game.seatOutcomes = [];
+      game.boostedSegments = [];
+      game.boostSeed = undefined;
       game.serverSeed = undefined;
       game.serverHash = undefined;
       game.blockHash = undefined;
@@ -478,18 +630,19 @@ class WheelGameManager {
         gameId: game.gameId,
         roundNumber: game.roundNumber,
         status: game.status,
+        wheelSegments: WHEEL_SEGMENTS, // All 54 segment base multipliers
         seats: game.seats.map(s => ({
           seatNumber: s.seatNumber,
           occupied: !!s.userId,
           userId: s.userId?.toString(),
           betAmount: s.betAmount / 100,
-          segments: s.segments,
-          multiplier: SEAT_MULTIPLIERS[s.seatNumber],
+          flapperPosition: s.seatNumber, // Flapper is fixed to seat number
         })),
+        boostedSegments: game.boostedSegments || [],
+        seatOutcomes: game.seatOutcomes || [],
         timeRemaining,
         bettingTimeRemaining,
-        winningSegment: game.winningSegment,
-        winningSeats: game.winningSeats,
+        wheelStopPosition: game.winningSegment,
       };
     } catch (error) {
       console.error(`[WheelGame] Error getting game state:`, error);
