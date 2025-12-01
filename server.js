@@ -481,7 +481,11 @@ app.post('/api/support/ticket', async (req, res) => {
 // Get user's tickets
 app.get('/api/support/tickets', auth, async (req, res) => {
   try {
-    const tickets = await SupportTicket.find({ userId: req.user._id })
+    if (!req.userId) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    const tickets = await SupportTicket.find({ userId: req.userId })
       .sort({ createdAt: -1 })
       .populate('messages.sender', 'username profileImage')
       .lean();
