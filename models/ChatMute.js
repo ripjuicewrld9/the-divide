@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const chatMuteSchema = new mongoose.Schema({
   username: { type: String, required: true, index: true },
@@ -14,4 +14,4 @@ const chatMuteSchema = new mongoose.Schema({
 chatMuteSchema.index({ username: 1, active: 1 });
 chatMuteSchema.index({ mutedUntil: 1, active: 1 });
 
-module.exports = mongoose.model('ChatMute', chatMuteSchema);
+export default mongoose.model('ChatMute', chatMuteSchema);

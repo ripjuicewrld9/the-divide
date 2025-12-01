@@ -4010,7 +4010,7 @@ app.get('/api/wheel/lobbies', (req, res) => {
     const lobbyIds = ['lobby-1', 'lobby-2', 'lobby-3', 'lobby-4'];
     const lobbies = lobbyIds.map(lobbyId => {
       const gameState = wheelGameManager.getGameState(lobbyId);
-      if (!gameState) {
+      if (!gameState || !gameState.seats) {
         return {
           lobbyId,
           roundNumber: 0,

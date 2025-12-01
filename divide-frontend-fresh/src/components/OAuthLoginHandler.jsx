@@ -17,11 +17,14 @@ export default function OAuthLoginHandler() {
         const googleToken = searchParams.get('google_login');
         const error = searchParams.get('error');
 
-        console.log('🔵 OAuthLoginHandler - Query params:', {
-            discordToken: !!discordToken,
-            googleToken: !!googleToken,
-            error: error
-        });
+        // Only log if there are relevant OAuth params
+        if (discordToken || googleToken || error) {
+            console.log('🔵 OAuthLoginHandler - Query params:', {
+                discordToken: !!discordToken,
+                googleToken: !!googleToken,
+                error: error
+            });
+        }
 
         if (error) {
             console.error('❌ OAuth error:', error);
