@@ -263,10 +263,10 @@ export const NewWheelGame: React.FC<NewWheelGameProps> = ({ gameId, onOpenChat }
         {/* Main Game Container */}
         <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-180px)]">
           {/* Left: Wheel Game Area (takes most space) */}
-          <div className="flex-1 flex items-center justify-center min-h-0">
-            <div className="bg-[#1a1a2e] border border-white/10 rounded-xl p-4 w-full h-full flex flex-col items-center justify-center relative">
+          <div className="flex-1 flex items-center justify-center min-h-0 p-4">
+            <div className="bg-[#1a1a2e] border border-white/10 rounded-xl p-8 flex items-center justify-center relative" style={{ width: 'min(85vh, 85vw)', height: 'min(85vh, 85vw)' }}>
               {/* Wheel and Seats Container */}
-              <div className="relative w-full mx-auto flex-shrink-0" style={{ paddingBottom: '100%', maxWidth: 'min(85vh, 90vw)' }}>
+              <div className="relative w-full h-full">
                 {/* 8 Seats positioned around the wheel */}
                 {gameState.seats.map((seat, index) => {
                   const angle = (index * 360) / 8;
@@ -290,7 +290,7 @@ export const NewWheelGame: React.FC<NewWheelGameProps> = ({ gameId, onOpenChat }
                 })}
 
                 {/* Wheel in the center */}
-                <div className="absolute inset-0 flex items-center justify-center p-16">
+                <div className="absolute inset-0 flex items-center justify-center" style={{ padding: '15%' }}>
                   <div className="relative w-full h-full">
                     {/* Glow effect */}
                     <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 blur-3xl opacity-20 animate-pulse" />

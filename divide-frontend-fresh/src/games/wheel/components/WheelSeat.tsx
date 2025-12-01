@@ -38,19 +38,25 @@ const WheelSeat: React.FC<WheelSeatProps> = ({
 
   return (
     <motion.div
-      className="absolute"
+      className="absolute z-20"
       style={{
         left: `${x}%`,
         top: `${y}%`,
         transform: 'translate(-50%, -50%)',
+        pointerEvents: 'auto',
       }}
       whileHover={!occupied && canBet ? { scale: 1.1 } : {}}
       whileTap={!occupied && canBet ? { scale: 0.95 } : {}}
     >
       <button
-        onClick={onSelect}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log('Seat clicked:', seatNumber);
+          onSelect();
+        }}
         disabled={occupied || !canBet}
-        className={`relative w-24 h-28 rounded-2xl transition-all ${
+        className={`relative w-24 h-28 rounded-2xl transition-all pointer-events-auto ${
           isMySeat
             ? 'bg-gradient-to-br from-green-500 to-emerald-600 border-4 border-green-300 shadow-xl shadow-green-500/50'
             : isSelected

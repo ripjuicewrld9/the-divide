@@ -96,6 +96,31 @@ const WheelCanvas: React.FC<WheelCanvasProps> = ({ winningSegment, isSpinning, o
       ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
       ctx.stroke();
 
+      // Draw 8 flappers around the wheel (at seat positions)
+      const numFlappers = 8;
+      for (let i = 0; i < numFlappers; i++) {
+        const flapperAngle = (i * 2 * Math.PI) / numFlappers;
+        
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.rotate(flapperAngle);
+        
+        // Flapper triangle pointing inward
+        ctx.fillStyle = '#ef4444'; // Red color
+        ctx.strokeStyle = '#dc2626';
+        ctx.lineWidth = 2;
+        
+        ctx.beginPath();
+        ctx.moveTo(radius + 5, 0); // Outer point
+        ctx.lineTo(radius - 15, -12); // Left inner point
+        ctx.lineTo(radius - 15, 12); // Right inner point
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        
+        ctx.restore();
+      }
+
       // Draw center circle
       ctx.fillStyle = '#1a1a2e';
       ctx.beginPath();

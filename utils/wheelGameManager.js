@@ -80,17 +80,36 @@ function generateBoostCount(seed) {
 }
 
 /**
- * Select random segments to boost
+ * Select random segments to boost - ensures diversity by picking different base multipliers
  */
 function selectBoostedSegments(seed, count) {
   const boosted = [];
-  const available = Array.from({ length: 54 }, (_, i) => i);
+  const segmentsByMultiplier = {};
   
-  for (let i = 0; i < count; i++) {
-    const hash = crypto.createHash('sha256').update(seed + i).digest('hex');
-    const randomIndex = parseInt(hash.slice(0, 8), 16) % available.length;
-    boosted.push(available[randomIndex]);
-    available.splice(randomIndex, 1);
+  // Group segments by their base multiplier
+  WHEEL_SEGMENTS.forEach((mult, index) => {
+    if (!segmentsByMultiplier[mult]) {
+      segmentsByMultiplier[mult] = [];
+    }
+    segmentsByMultiplier[mult].push(index);
+  });
+  
+  const uniqueMultipliers = Object.keys(segmentsByMultiplier).map(Number);
+  const availableMultipliers = [...uniqueMultipliers];
+  
+  // Select 'count' different multipliers to boost (one segment per multiplier)
+  for (let i = 0; i < count && availableMultipliers.length > 0; i++) {
+    const hash = crypto.createHash('sha256').update(seed + i + 'mult').digest('hex');
+    const multIndex = parseInt(hash.slice(0, 8), 16) % availableMultipliers.length;
+    const selectedMultiplier = availableMultipliers[multIndex];
+    availableMultipliers.splice(multIndex, 1);
+    
+    // Pick one random segment with this multiplier
+    const segmentsWithMult = segmentsByMultiplier[selectedMultiplier];
+    const segHash = crypto.createHash('sha256').update(seed + i + 'seg').digest('hex');
+    const segIndex = parseInt(segHash.slice(0, 8), 16) % segmentsWithMult.length;
+    
+    boosted.push(segmentsWithMult[segIndex]);
   }
   
   return boosted;
