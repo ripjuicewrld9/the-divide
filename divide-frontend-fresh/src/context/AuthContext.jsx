@@ -32,6 +32,10 @@ export const AuthProvider = ({ children }) => {
                     totalWon: data.totalWon || 0,
                     totalDeposited: data.totalDeposited || 0,
                     totalWithdrawn: data.totalWithdrawn || 0,
+                    totalBets: data.totalBets || 0,
+                    totalWins: data.totalWins || 0,
+                    totalLosses: data.totalLosses || 0,
+                    createdAt: data.createdAt,
                     discordId: data.discordId || null,
                     discordUsername: data.discordUsername || null
                 });

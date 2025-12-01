@@ -11,6 +11,7 @@ export default function ProfilePage({ onOpenChat }) {
     const { user, logout, updateUser } = useAuth();
     const [showAvatarModal, setShowAvatarModal] = useState(false);
     const [showSecurityModal, setShowSecurityModal] = useState(false);
+    const [showEmailPrefsModal, setShowEmailPrefsModal] = useState(false);
 
     const presetAvatars = [
         '/profilesvg/account-avatar-profile-user-svgrepo-com.svg',
@@ -107,7 +108,10 @@ export default function ProfilePage({ onOpenChat }) {
                                 <span>Change Password</span>
                                 <span className="text-gray-500 group-hover:text-white transition">→</span>
                             </button>
-                            <button className="w-full text-left p-3 rounded-lg bg-white/5 hover:bg-white/10 transition flex justify-between items-center group">
+                            <button 
+                                onClick={() => setShowEmailPrefsModal(true)}
+                                className="w-full text-left p-3 rounded-lg bg-white/5 hover:bg-white/10 transition flex justify-between items-center group"
+                            >
                                 <span>Email Preferences</span>
                                 <span className="text-gray-500 group-hover:text-white transition">→</span>
                             </button>
@@ -181,6 +185,24 @@ export default function ProfilePage({ onOpenChat }) {
                 isOpen={showSecurityModal} 
                 onClose={() => setShowSecurityModal(false)} 
             />
+
+            {/* Email Preferences Modal */}
+            {showEmailPrefsModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" onClick={() => setShowEmailPrefsModal(false)}>
+                    <div className="bg-[#1a1a2e] border border-white/10 rounded-2xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-xl font-bold">Email Preferences</h2>
+                            <button onClick={() => setShowEmailPrefsModal(false)} className="text-gray-400 hover:text-white">✕</button>
+                        </div>
+                        <div className="space-y-4">
+                            <div className="bg-black/30 p-4 rounded-lg border border-white/10">
+                                <p className="text-sm text-gray-400 mb-2">Email notifications and preferences will be available soon.</p>
+                                <p className="text-xs text-gray-500">You can manage your marketing consent and notification settings here.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

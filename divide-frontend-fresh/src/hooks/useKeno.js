@@ -24,7 +24,7 @@ export default function useKeno() {
   const [drawnNumbers, setDrawnNumbers] = useState([]);
   const [matches, setMatches] = useState([]);
   const [isDrawing, setIsDrawing] = useState(false);
-  const { user, refreshUser, setBalance: setGlobalBalance } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [balance, setBalance] = useState(() => (user ? Number(user.balance || 0) : 0));
   const [message, setMessage] = useState('Select numbers and bet');
   const [pendingResult, setPendingResult] = useState(null); // server result held until animations finish
@@ -401,10 +401,7 @@ export default function useKeno() {
         if (typeof data.balanceAfterBet !== 'undefined') {
           const serverBalance = Number(data.balanceAfterBet);
           setBalance(serverBalance);
-          // Update global balance with server's authoritative value
-          if (setGlobalBalance) {
-            setGlobalBalance(serverBalance);
-          }
+          // Don't update global balance here - it will sync via refreshUser() after animation
         }
       } catch { /* ignore */ }
       // store server result but don't apply payout yet — wait for animations to finish

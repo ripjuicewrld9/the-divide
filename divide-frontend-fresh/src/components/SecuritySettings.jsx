@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 export default function SecuritySettings({ isOpen, onClose }) {
-  const { user } = useAuth();
+
   const [activeTab, setActiveTab] = useState('password');
   
   // Password change state
@@ -658,3 +657,5 @@ export default function SecuritySettings({ isOpen, onClose }) {
     </div>
   );
 }
+
+

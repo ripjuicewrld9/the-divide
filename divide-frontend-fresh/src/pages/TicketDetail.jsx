@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import UserAvatar from '../components/UserAvatar';
@@ -14,13 +14,7 @@ export default function TicketDetail() {
     const [message, setMessage] = useState('');
     const [sending, setSending] = useState(false);
 
-    useEffect(() => {
-        if (user) {
-            fetchTicket();
-        }
-    }, [id, user]);
-
-    const fetchTicket = async () => {
+    const fetchTicket = useCallback(async () => {
         try {
             const res = await fetch(`${API_BASE}/api/support/tickets/${id}`, {
                 headers: {
@@ -45,7 +39,13 @@ export default function TicketDetail() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [id, token, navigate]);
+
+    useEffect(() => {
+        if (user) {
+            fetchTicket();
+        }
+    }, [user, fetchTicket]);
 
     const handleSendMessage = async (e) => {
         e.preventDefault();

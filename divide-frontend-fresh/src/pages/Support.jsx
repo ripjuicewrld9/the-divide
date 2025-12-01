@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -17,13 +17,7 @@ export default function Support() {
     });
     const [submitting, setSubmitting] = useState(false);
 
-    useEffect(() => {
-        if (user) {
-            fetchTickets();
-        }
-    }, [user]);
-
-    const fetchTickets = async () => {
+    const fetchTickets = useCallback(async () => {
         try {
             const res = await fetch(`${API_BASE}/api/support/tickets`, {
                 headers: {
@@ -37,7 +31,13 @@ export default function Support() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [token]);
+
+    useEffect(() => {
+        if (user) {
+            fetchTickets();
+        }
+    }, [user, fetchTickets]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();

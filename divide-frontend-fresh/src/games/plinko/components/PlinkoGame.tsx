@@ -62,12 +62,13 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({ onOpenChat }) => {
   const [showProvablyFair, setShowProvablyFair] = useState(false);
   const [showLiveChart, setShowLiveChart] = useState(false);
 
-  // Sync balance from AuthContext (like Keno does)
+  // Sync balance from AuthContext on mount and when user.balance changes
   useEffect(() => {
-    if (user && typeof user.balance === 'number') {
+    if (user?.balance !== undefined && user.balance !== null) {
+      console.log('[Plinko] Syncing balance from AuthContext:', user.balance);
       setBalance(user.balance);
     }
-  }, [user, setBalance]);
+  }, [user?.balance, setBalance]);
 
   // Initialize engine
   useEffect(() => {
@@ -231,6 +232,12 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({ onOpenChat }) => {
     // Update throttle tracking
     lastDropTimeRef.current = now;
 
+    // Optimistic UI: deduct bet immediately (like Keno does)
+    const prevBalance = currentBalance;
+    const optimisticBalance = Number((currentBalance - betAmount).toFixed(2));
+    setBalance(optimisticBalance);
+    console.log('[Plinko] Optimistic deduction:', currentBalance, '->', optimisticBalance);
+
     try {
       lastBetAmountRef.current = betAmount;
 
@@ -238,6 +245,8 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({ onOpenChat }) => {
       const token = localStorage.getItem('token');
       if (!token) {
         console.error('No token found');
+        // Restore balance on error
+        setBalance(prevBalance);
         return;
       }
 
@@ -258,6 +267,8 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({ onOpenChat }) => {
       if (!response.ok) {
         const errorData = await response.json();
         console.error('Error from backend:', errorData);
+        // Restore balance on API error
+        setBalance(prevBalance);
         return;
       }
 
@@ -280,12 +291,14 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({ onOpenChat }) => {
       }
 
       // Drop ball with the result from backend
-      // The ball callback will update balance to balanceAfter when it lands
+      // The ball callback will update balance to balanceAfter when it lands (after animation)
       if (engineRef.current) {
         engineRef.current.dropBall(betAmount, result.binIndex, result);
       }
     } catch (error) {
       console.error('Error playing round:', error);
+      // Restore balance on error
+      setBalance(prevBalance);
     }
   };
 

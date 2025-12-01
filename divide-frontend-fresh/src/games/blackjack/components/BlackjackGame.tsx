@@ -116,7 +116,7 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
   // Device detection
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 600;
   const gameState = useGameStore();
-  const { balance: userBalance, token, refreshUser, updateUser } = useAuth();
+  const { user, token, refreshUser, updateUser } = useAuth();
   const [showRules, setShowRules] = useState(false);
   const [showVerification, setShowVerification] = useState(false);
   const [verificationResult, setVerificationResult] = useState<any>(null);
@@ -132,16 +132,17 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
     setShowVerification(true);
   };
 
-  // Sync game balance with AuthContext balance (like Keno does)
+  // Sync game balance with AuthContext balance on mount and when user.balance changes
   useEffect(() => {
-    if (userBalance !== undefined && userBalance !== null) {
+    if (user?.balance !== undefined && user.balance !== null) {
+      console.log('[Blackjack] Syncing balance from AuthContext:', user.balance);
       // Only sync if not in middle of a hand to avoid disrupting visual feedback
       const hasActiveBets = gameState.playerHands.length > 0 && gameState.playerHands[0].bet > 0;
       if (!hasActiveBets || gameState.gamePhase === 'betting') {
-        gameState.setInitialBalance(userBalance);
+        gameState.setInitialBalance(user.balance);
       }
     }
-  }, [userBalance, gameState.gamePhase]);
+  }, [user?.balance, gameState.gamePhase]);
 
   // Save game when round ends and refresh user balance from server
   useEffect(() => {
