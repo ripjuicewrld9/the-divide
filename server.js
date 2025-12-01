@@ -4511,10 +4511,13 @@ setTimeout(() => {
 
 // Catch-all route: serve index.html for client-side routing (must be LAST)
 app.use((req, res, next) => {
-  // Only serve index.html for non-API routes and non-static files
-  if (!req.path.startsWith('/api') && !req.path.startsWith('/sounds') && !req.path.match(/\.\w+$/)) {
-    res.sendFile(path.join(__dirname, 'divide-frontend-fresh', 'dist', 'index.html'));
-  } else {
-    next();
+  // Skip catch-all for API routes, static assets, and files with extensions
+  if (req.path.startsWith('/api') || 
+      req.path.startsWith('/sounds') || 
+      req.path.startsWith('/assets') ||
+      req.path.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|json|map)$/)) {
+    return next();
   }
+  // Serve index.html for all other routes (React Router)
+  res.sendFile(path.join(__dirname, 'divide-frontend-fresh', 'dist', 'index.html'));
 });
