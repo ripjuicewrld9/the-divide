@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const moderatorChatMessageSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -11,4 +11,4 @@ const moderatorChatMessageSchema = new mongoose.Schema({
 
 moderatorChatMessageSchema.index({ timestamp: -1 });
 
-module.exports = mongoose.model('ModeratorChatMessage', moderatorChatMessageSchema);
+export default mongoose.model('ModeratorChatMessage', moderatorChatMessageSchema);
