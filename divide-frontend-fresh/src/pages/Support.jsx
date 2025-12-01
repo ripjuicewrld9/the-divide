@@ -17,6 +17,9 @@ export default function Support() {
     });
     const [submitting, setSubmitting] = useState(false);
 
+    // Check if user is moderator or admin
+    const isModerator = user && (user.role === 'moderator' || user.role === 'admin');
+
     const fetchTickets = useCallback(async () => {
         try {
             const res = await fetch(`${API_BASE}/api/support/tickets`, {
@@ -104,6 +107,29 @@ export default function Support() {
         );
     }
 
+    // Hide support page from regular users who haven't created any tickets
+    // Moderators and admins can always access it
+    if (!loading && !isModerator && tickets.length === 0) {
+        return (
+            <div className="min-h-screen bg-[#0b0b0b] text-white flex items-center justify-center p-4">
+                <div className="text-center max-w-md">
+                    <div className="mb-6">
+                        <svg className="w-24 h-24 mx-auto text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                    </div>
+                    <h1 className="text-3xl font-bold mb-4">No Tickets Yet</h1>
+                    <p className="text-gray-400 mb-6">
+                        You haven't created any support tickets yet. Use the Support button in the header to submit your first ticket.
+                    </p>
+                    <p className="text-sm text-gray-500">
+                        Once you create a ticket, you'll be able to view and track all your support requests here.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-[#0b0b0b] text-white p-4 md:p-8">
             <div className="max-w-6xl mx-auto">
@@ -111,18 +137,23 @@ export default function Support() {
                 <div className="flex items-center justify-between mb-8">
                     <div>
                         <h1 className="text-3xl font-bold mb-2">Support Tickets</h1>
-                        <p className="text-gray-400">View and manage your support requests</p>
+                        <p className="text-gray-400">
+                            {isModerator ? 'View and manage all support requests' : 'View and track your support requests'}
+                        </p>
                     </div>
-                    <button
-                        onClick={() => setShowCreateModal(true)}
-                        className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-lg font-semibold hover:opacity-90 transition"
-                    >
-                        + New Ticket
-                    </button>
+                    {/* Only show New Ticket button for moderators/admins */}
+                    {isModerator && (
+                        <button
+                            onClick={() => setShowCreateModal(true)}
+                            className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-lg font-semibold hover:opacity-90 transition"
+                        >
+                            + New Ticket
+                        </button>
+                    )}
                 </div>
 
-                {/* Discord Status */}
-                {!user.discordId && (
+                {/* Discord Status - Only show to non-moderators */}
+                {!isModerator && !user.discordId && (
                     <div className="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
                         <div className="flex items-start gap-3">
                             <span className="text-2xl">⚠️</span>
@@ -144,12 +175,18 @@ export default function Support() {
                 ) : tickets.length === 0 ? (
                     <div className="text-center py-12 bg-white/5 rounded-lg border border-white/10">
                         <p className="text-gray-400 text-lg mb-4">No support tickets yet</p>
-                        <button
-                            onClick={() => setShowCreateModal(true)}
-                            className="px-6 py-2 bg-cyan-500 rounded-lg font-semibold hover:bg-cyan-600 transition"
-                        >
-                            Create Your First Ticket
-                        </button>
+                        {isModerator ? (
+                            <button
+                                onClick={() => setShowCreateModal(true)}
+                                className="px-6 py-2 bg-cyan-500 rounded-lg font-semibold hover:bg-cyan-600 transition"
+                            >
+                                Create Your First Ticket
+                            </button>
+                        ) : (
+                            <p className="text-sm text-gray-500">
+                                Use the Support button in the header to create a ticket
+                            </p>
+                        )}
                     </div>
                 ) : (
                     <div className="space-y-4">
