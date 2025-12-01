@@ -2,13 +2,17 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import useWheelSocket from '../../hooks/useWheelSocket';
-import NewWheelCanvas from './components/NewWheelCanvas.tsx';
+import WheelCanvas from './components/WheelCanvas';
+import WheelSeat from './components/WheelSeat';
+import UserAvatar from '../../components/UserAvatar';
 import MobileGameHeader from '../../components/MobileGameHeader';
 
 interface Seat {
   seatNumber: number;
   occupied: boolean;
   userId?: string;
+  username?: string;
+  profileImage?: string;
   betAmount: number;
   flapperPosition: number;
 }
@@ -354,23 +358,53 @@ export const NewWheelGame: React.FC<NewWheelGameProps> = ({ gameId, onOpenChat }
             </div>
           </div>
 
-          {/* Center: Wheel */}
+          {/* Center: Wheel with Seats Around It */}
           <div className="lg:col-span-1">
             <div className="bg-[#1a1a2e] border border-white/10 rounded-xl p-6">
-              <div className="relative w-full" style={{ paddingBottom: '100%' }}>
-                <div className="absolute inset-0">
-                  <NewWheelCanvas
-                    wheelSegments={gameState.wheelSegments}
-                    boostedSegments={gameState.boostedSegments}
-                    wheelStopPosition={gameState.wheelStopPosition}
-                    seatOutcomes={gameState.seatOutcomes}
-                    isSpinning={isSpinning}
-                  />
+              {/* Wheel and Seats Container */}
+              <div className="relative w-full mx-auto" style={{ paddingBottom: '100%', maxWidth: '600px' }}>
+                {/* 8 Seats positioned around the wheel */}
+                {gameState.seats.map((seat, index) => {
+                  const angle = (index * 360) / 8;
+                  return (
+                    <WheelSeat
+                      key={seat.seatNumber}
+                      seatNumber={seat.seatNumber}
+                      multiplier={0} // Not used - outcome determined by wheel segment
+                      occupied={seat.occupied}
+                      userId={seat.userId}
+                      username={seat.username}
+                      profileImage={seat.profileImage}
+                      betAmount={seat.betAmount}
+                      isSelected={selectedSeat === seat.seatNumber}
+                      isMySeat={seat.userId === user?.id}
+                      canBet={canBet}
+                      angle={angle}
+                      onSelect={() => !seat.occupied && canBet && setSelectedSeat(seat.seatNumber)}
+                    />
+                  );
+                })}
+
+                {/* Wheel in the center */}
+                <div className="absolute inset-0 flex items-center justify-center p-16">
+                  <div className="relative w-full h-full">
+                    {/* Glow effect */}
+                    <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 blur-3xl opacity-20 animate-pulse" />
+                    
+                    {/* Wheel */}
+                    <div className="absolute inset-0">
+                      <WheelCanvas
+                        winningSegment={gameState.wheelStopPosition}
+                        isSpinning={isSpinning}
+                        onSpinComplete={() => {}}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
               {/* Boost Legend (when boosted segments are active) */}
-              {gameState.boostedSegments.length > 0 && (
+              {gameState.boostedSegments && gameState.boostedSegments.length > 0 && (
                 <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
                   <div className="text-yellow-400 font-bold text-sm mb-2">🎰 Boosted Segments</div>
                   <div className="space-y-1 text-xs">
@@ -392,98 +426,76 @@ export const NewWheelGame: React.FC<NewWheelGameProps> = ({ gameId, onOpenChat }
             </div>
           </div>
 
-          {/* Right: Seats Grid */}
+          {/* Right: Game Info */}
           <div className="space-y-4">
+            {/* How to Play */}
             <div className="bg-[#1a1a2e] border border-white/10 rounded-xl p-4">
-              <h3 className="text-white font-bold mb-4 text-center flex items-center justify-center gap-2">
-                <span>🎯</span>
-                SEATS (8 Flappers)
-              </h3>
-              <div className="grid grid-cols-2 gap-3">
-                {gameState.seats.map((seat, index) => {
-                  const isSelected = selectedSeat === index;
-                  const isOccupied = seat.occupied;
-                  const isMySeat = seat.userId === user?.id;
-
-                  return (
-                    <motion.button
-                      key={index}
-                      onClick={() => !isOccupied && canBet && setSelectedSeat(index)}
-                      disabled={isOccupied || !canBet}
-                      whileHover={!isOccupied && canBet ? { scale: 1.05 } : {}}
-                      whileTap={!isOccupied && canBet ? { scale: 0.95 } : {}}
-                      className={`relative aspect-square rounded-xl border-2 transition-all ${
-                        isMySeat
-                          ? 'bg-gradient-to-br from-green-500/20 to-emerald-600/20 border-green-400 shadow-lg shadow-green-500/30'
-                          : isSelected
-                          ? 'bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border-cyan-400 shadow-lg shadow-cyan-500/30'
-                          : isOccupied
-                          ? 'bg-gradient-to-br from-gray-700/20 to-gray-800/20 border-gray-600 opacity-50 cursor-not-allowed'
-                          : 'bg-gradient-to-br from-purple-600/20 to-blue-600/20 border-purple-400/30 hover:border-cyan-400 cursor-pointer'
-                      }`}
-                    >
-                      {/* Seat number badge */}
-                      <div className="absolute -top-2 -right-2 w-6 h-6 bg-black rounded-full border-2 border-white flex items-center justify-center z-10">
-                        <span className="text-white text-xs font-bold">{index + 1}</span>
-                      </div>
-
-                      {/* Seat content */}
-                      <div className="absolute inset-0 flex flex-col items-center justify-center p-2">
-                        <div className="text-2xl mb-1">📍</div>
-                        <div className="text-xs text-gray-400">Flapper</div>
-                        {isOccupied && seat.betAmount && (
-                          <div className="text-sm text-cyan-400 mt-1 font-bold">
-                            ${seat.betAmount.toFixed(0)}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Selection pulse */}
-                      {isSelected && (
-                        <motion.div
-                          className="absolute inset-0 rounded-xl border-2 border-cyan-300"
-                          animate={{ scale: [1, 1.1, 1], opacity: [1, 0.5, 1] }}
-                          transition={{ duration: 1.5, repeat: Infinity }}
-                        />
-                      )}
-
-                      {/* My seat indicator */}
-                      {isMySeat && (
-                        <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2">
-                          <div className="bg-green-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">
-                            YOU
-                          </div>
-                        </div>
-                      )}
-                    </motion.button>
-                  );
-                })}
+              <h3 className="text-white font-bold mb-3 text-sm">How to Play</h3>
+              <div className="space-y-2 text-xs text-gray-400">
+                <div className="flex items-start gap-2">
+                  <span className="text-cyan-400 font-bold">1.</span>
+                  <span>Select an empty seat (chair around the wheel)</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-cyan-400 font-bold">2.</span>
+                  <span>Choose your bet amount</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-cyan-400 font-bold">3.</span>
+                  <span>Reserve the seat before betting closes</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-cyan-400 font-bold">4.</span>
+                  <span>You can occupy up to 2 seats per game!</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-cyan-400 font-bold">5.</span>
+                  <span>Watch where your flapper lands when the wheel stops!</span>
+                </div>
               </div>
             </div>
 
-            {/* Multiplier Distribution Info */}
+            {/* Wheel Segments Info */}
             <div className="bg-[#1a1a2e] border border-white/10 rounded-xl p-4">
-              <h3 className="text-white font-bold mb-3 text-sm">Wheel Segments</h3>
+              <h3 className="text-white font-bold mb-3 text-sm">Wheel Segments (54 total)</h3>
               <div className="space-y-1.5 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-red-400">-0.75x</span>
+                  <span className="text-red-400">Loss: -0.75x</span>
                   <span className="text-gray-500">15 segments</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-red-300">-0.5x</span>
+                  <span className="text-red-300">Loss: -0.5x</span>
                   <span className="text-gray-500">10 segments</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-orange-400">-0.25x</span>
+                  <span className="text-orange-400">Loss: -0.25x</span>
                   <span className="text-gray-500">5 segments</span>
                 </div>
                 <div className="border-t border-white/10 my-2"></div>
                 <div className="flex justify-between">
-                  <span className="text-green-400">+0.25x to +1x</span>
+                  <span className="text-green-400">Win: +0.25x to +1x</span>
                   <span className="text-gray-500">12 segments</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-cyan-400">+1.5x to +5x</span>
+                  <span className="text-cyan-400">Win: +1.5x to +5x</span>
+                  <span className="text-gray-500">10 segments</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-purple-400">Jackpot: +7.5x</span>
+                  <span className="text-gray-500">1 segment</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-yellow-400 font-bold">MEGA: +25x</span>
+                  <span className="text-gray-500">1 segment</span>
+                </div>
+              </div>
+              <div className="mt-3 pt-3 border-t border-white/10">
+                <div className="text-center text-yellow-400 text-xs">
+                  ⚡ 3-5 segments get random boost multipliers (10x to 100x)!
+                </div>
+              </div>
+            </div>
+          </div>
                   <span className="text-gray-500">8 segments</span>
                 </div>
                 <div className="flex justify-between">

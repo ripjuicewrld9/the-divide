@@ -168,10 +168,12 @@ class WheelGameManager {
       const roundEndTime = new Date(now.getTime() + ROUND_DURATION_MS);
       const bettingEndTime = new Date(now.getTime() + BETTING_DURATION_MS);
 
-      // Initialize seats (8 flappers)
+      // Initialize seats (8 flappers) - no multipliers, just positions
       const seats = FLAPPER_POSITIONS.map((flapperPosition) => ({
         seatNumber: flapperPosition,
         userId: null,
+        username: null,
+        profileImage: null,
         betAmount: 0,
         segments: [], // Not used in new system, kept for schema compatibility
         reservedAt: null,

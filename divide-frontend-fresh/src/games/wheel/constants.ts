@@ -1,16 +1,12 @@
 export const SEAT_MULTIPLIERS = [
-  9.0, // Seat 0 - 6 segments
-  9.0, // Seat 1 - 6 segments
-  9.0, // Seat 2 - 6 segments
-  9.0, // Seat 3 - 6 segments
-  9.0, // Seat 4 - 6 segments
-  9.0, // Seat 5 - 6 segments
-  9.0, // Seat 6 - 6 segments
-  9.0, // Seat 7 - 6 segments
-  9.0, // Seat 8 - 6 segments
-  6.0, // Seat 9 - 9 segments
-  6.0, // Seat 10 - 9 segments
-  4.5, // Seat 11 - 12 segments
+  2.0, // Seat 0
+  2.0, // Seat 1
+  2.0, // Seat 2
+  3.0, // Seat 3
+  3.0, // Seat 4
+  3.0, // Seat 5
+  5.0, // Seat 6
+  5.0, // Seat 7
 ];
 
 export const SEAT_COLORS = [
