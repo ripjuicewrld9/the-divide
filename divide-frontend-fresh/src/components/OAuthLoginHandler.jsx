@@ -6,7 +6,7 @@ import { AuthContext } from '../context/AuthContext';
 export default function OAuthLoginHandler() {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
-    const { refreshUser } = useContext(AuthContext);
+    const { setToken } = useContext(AuthContext);
     const [processed, setProcessed] = useState(false);
 
     useEffect(() => {
@@ -33,13 +33,11 @@ export default function OAuthLoginHandler() {
 
         const handleLogin = async (token, provider) => {
             console.log(`✅ ${provider} token received, logging in...`);
-            // Store token
-            localStorage.setItem('token', token);
-            // Wait for user refresh to complete
-            await refreshUser();
-            console.log('✅ User refreshed, navigating to home');
+            // Update token state in AuthContext - this will trigger user load automatically
+            setToken(token);
             setProcessed(true);
-            // Small delay to ensure state updates
+            console.log('✅ Token state updated, user will load automatically');
+            // Small delay to ensure state updates, then navigate
             setTimeout(() => {
                 navigate('/', { replace: true });
             }, 100);
@@ -50,7 +48,7 @@ export default function OAuthLoginHandler() {
         } else if (googleToken) {
             handleLogin(googleToken, 'Google');
         }
-    }, [searchParams, navigate, refreshUser, processed]);
+    }, [searchParams, navigate, setToken, processed]);
 
     return null; // This component doesn't render anything
 }

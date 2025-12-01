@@ -247,7 +247,7 @@ export const AuthProvider = ({ children }) => {
 
     return (
         <AuthContext.Provider
-            value={{ user, balance: user?.balance ?? 0, token, login, register, logout, addFunds, deductForVote, refreshUser, updateUser, setBalance }}
+            value={{ user, balance: user?.balance ?? 0, token, setToken, login, register, logout, addFunds, deductForVote, refreshUser, updateUser, setBalance }}
         >
             {children}
         </AuthContext.Provider>
