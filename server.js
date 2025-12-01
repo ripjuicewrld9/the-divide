@@ -476,11 +476,13 @@ app.get('/api/support/tickets/all', auth, moderatorOnly, async (req, res) => {
   try {
     const tickets = await SupportTicket.find()
       .sort({ createdAt: -1 })
-      .populate('userId', 'username profileImage discordId')
+      .populate('userId', 'username profileImage discordId email googleEmail')
       .populate('messages.sender', 'username profileImage')
       .populate('assignedTo', 'username')
+      .populate('escalatedBy', 'username')
       .lean();
 
+    console.log(`📋 Moderator ${req.userId} fetched ${tickets.length} tickets`);
     res.json({ tickets });
   } catch (err) {
     console.error('Get all tickets error:', err);

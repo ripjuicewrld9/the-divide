@@ -22,19 +22,21 @@ export default function Support() {
         try {
             // Moderators fetch all tickets, users fetch only their own
             const endpoint = isModerator ? '/api/support/tickets/all' : '/api/support/tickets';
+            console.log(`🔍 Fetching tickets from ${endpoint}, isModerator: ${isModerator}, user role: ${user?.role}`);
             const res = await fetch(`${API_BASE}${endpoint}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
             });
             const data = await res.json();
+            console.log(`📋 Received ${data.tickets?.length || 0} tickets:`, data);
             setTickets(data.tickets || []);
         } catch (err) {
             console.error('Failed to fetch tickets:', err);
         } finally {
             setLoading(false);
         }
-    }, [token, isModerator]);
+    }, [token, isModerator, user]);
 
     useEffect(() => {
         if (user) {
