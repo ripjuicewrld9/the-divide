@@ -8,7 +8,6 @@ import UserAvatar from './UserAvatar.jsx';
 import UserSettingsModal from './UserSettingsModal.jsx';
 import DepositWithdrawModal from './DepositWithdrawModal.jsx';
 import SupportTicket from './SupportTicket.jsx';
-import NotificationBell from './NotificationBell.jsx';
 
 export default function Header() {
   const { user, logout, addFunds } = useAuth();
@@ -93,9 +92,6 @@ export default function Header() {
 
         {/* User Area */}
         <div className="flex items-center gap-4">
-          {/* Notification Bell */}
-          {user && <NotificationBell />}
-          
           {/* Support Button - Always visible */}
           <button
             onClick={() => setShowSupportModal(true)}

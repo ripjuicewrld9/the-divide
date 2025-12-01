@@ -1,14 +1,40 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import UserAvatar from './UserAvatar';
 
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 export default function SupportLayout({ children }) {
-    const { user } = useAuth();
+    const { user, token } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
+    const [supportNotificationCount, setSupportNotificationCount] = useState(0);
 
     const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + '/');
+
+    useEffect(() => {
+        if (user && token) {
+            fetchSupportNotifications();
+            // Refresh every 30 seconds
+            const interval = setInterval(fetchSupportNotifications, 30000);
+            return () => clearInterval(interval);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user]);
+
+    const fetchSupportNotifications = async () => {
+        try {
+            const res = await fetch(`${API_BASE}/api/notifications`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            const supportUnread = data.notifications?.filter(n => n.type === 'support' && !n.read).length || 0;
+            setSupportNotificationCount(supportUnread);
+        } catch (err) {
+            console.error('Failed to fetch support notifications:', err);
+        }
+    };
 
     const navItems = [
         {
@@ -28,6 +54,7 @@ export default function SupportLayout({ children }) {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
             ),
+            showNotificationBadge: true,
         },
         {
             path: '/support/inbox',
@@ -111,7 +138,14 @@ export default function SupportLayout({ children }) {
                                     }
                                 `}
                             >
-                                {item.icon}
+                                <div className="relative">
+                                    {item.icon}
+                                    {item.showNotificationBadge && supportNotificationCount > 0 && (
+                                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center ring-2 ring-[#1a1a1a]">
+                                            {supportNotificationCount > 9 ? '9+' : supportNotificationCount}
+                                        </span>
+                                    )}
+                                </div>
                                 <span className="flex-1 text-left">{item.label}</span>
                                 {item.badge && (
                                     <span className="text-xs">{item.badge}</span>
