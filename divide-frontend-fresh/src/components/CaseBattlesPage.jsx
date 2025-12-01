@@ -20,7 +20,7 @@ export default function CaseBattlesPage() {
   const fetchBattles = async () => {
     setLoading(true);
     try {
-      const res = await fetch(import.meta.env.VITE_API_URL + '/case-battles' || 'http://localhost:3000/case-battles');
+      const res = await fetch((import.meta.env.VITE_API_URL || '') + '/case-battles');
       const data = await res.json();
       setBattles(data.battles || []);
       // setError(null); // Removed, not needed

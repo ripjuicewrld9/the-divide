@@ -14,7 +14,7 @@ export default function DiscordLinkSettings() {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/me`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/me`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

@@ -12,9 +12,9 @@ export default function CaseBrowser({ onSelectCase, selectedCaseIds, onRemoveCas
     try {
       let url;
       if (filterType === 'my') {
-        url = import.meta.env.VITE_API_URL + '/cases' || 'http://localhost:3000/cases';
+        url = (import.meta.env.VITE_API_URL || '') + '/cases';
       } else {
-        url = import.meta.env.VITE_API_URL + '/cases/public' || 'http://localhost:3000/cases/public';
+        url = (import.meta.env.VITE_API_URL || '') + '/cases/public';
       }
 
       const res = await fetch(url, {

@@ -9,7 +9,7 @@ export default function DiscordOAuthButton() {
     setIsLoading(true);
     
     // Get backend URL
-    const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    const backendUrl = import.meta.env.VITE_API_URL || '';
     
     // Store current token so we can link it after OAuth
     const token = localStorage.getItem('token');
@@ -26,7 +26,7 @@ export default function DiscordOAuthButton() {
     
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/me`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/me`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

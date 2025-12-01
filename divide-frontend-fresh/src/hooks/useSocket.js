@@ -2,8 +2,8 @@
 import { useEffect, useRef } from "react";
 import { io } from "socket.io-client";
 
-// In production, connect to same domain. In dev, use VITE_API_URL or localhost:3000
-const SOCKET_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'production' ? '' : "http://localhost:3000");
+// Use VITE_API_URL if set, otherwise use same domain (production)
+const SOCKET_URL = import.meta.env.VITE_API_URL || '';
 const socket = io(SOCKET_URL);
 const chatSocket = io(SOCKET_URL + '/chat');
 

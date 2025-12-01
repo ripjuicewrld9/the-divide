@@ -2,7 +2,7 @@
 import { useEffect, useRef } from "react";
 import { io, Socket } from "socket.io-client";
 
-const SOCKET_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'production' ? '' : "http://localhost:3000");
+const SOCKET_URL = import.meta.env.VITE_API_URL || '';
 
 export default function useWheelSocket(gameId: string): Socket | null {
   const socketRef = useRef<Socket | null>(null);

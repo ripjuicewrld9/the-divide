@@ -60,7 +60,7 @@ export async function saveRecordingsToDatabase(rowCount: number, recordings: Map
   
   try {
     const token = localStorage.getItem('token');
-    const response = await fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'production' ? '' : 'http://localhost:3000')}/api/plinko/recordings`, {
+    const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/plinko/recordings`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -91,7 +91,7 @@ export async function loadRecordingsFromDatabase(rowCount: number): Promise<Map<
   console.log(`📥 Attempting to load recordings for ${rowCount} rows from database...`);
   
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'production' ? '' : 'http://localhost:3000')}/api/plinko/recordings/${rowCount}`);
+    const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/plinko/recordings/${rowCount}`);
     
     if (response.ok) {
       const obj = await response.json();

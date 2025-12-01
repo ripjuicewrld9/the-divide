@@ -73,7 +73,7 @@ export const NewWheelGame: React.FC<NewWheelGameProps> = ({ gameId, onOpenChat }
   // Fetch game state
   const fetchGameState = useCallback(async () => {
     try {
-      const apiUrl = (import.meta as any).env.VITE_API_URL || ((import.meta as any).env.MODE === 'production' ? '' : 'http://localhost:3000');
+      const apiUrl = (import.meta as any).env.VITE_API_URL || '';
       const response = await fetch(`${apiUrl}/api/wheel/state/${gameId}`);
       
       if (response.ok) {
@@ -174,7 +174,7 @@ export const NewWheelGame: React.FC<NewWheelGameProps> = ({ gameId, onOpenChat }
 
     try {
       setIsReservingSeat(true);
-      const apiUrl = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000';
+      const apiUrl = (import.meta as any).env.VITE_API_URL || '';
       
       const response = await fetch(`${apiUrl}/api/wheel/reserve-seat`, {
         method: 'POST',

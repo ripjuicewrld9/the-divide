@@ -35,7 +35,7 @@ export default function DiscordLinkHandler() {
           setTimeout(() => reject(new Error('Request timeout')), 10000)
         );
         
-        const fetchPromise = fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/link-discord`, {
+        const fetchPromise = fetch(`${import.meta.env.VITE_API_URL || ''}/api/link-discord`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

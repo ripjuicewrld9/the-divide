@@ -2,7 +2,7 @@ import React, { useContext, useState } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import '../styles/CreateDivideModal.css';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 export default function CreateDivideModal({ isOpen, onClose, onDivideCreated }) {
   const { user, refreshUser } = useContext(AuthContext);

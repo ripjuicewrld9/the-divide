@@ -1,6 +1,6 @@
 // src/services/api.js
-// In production (when built), use same domain. In dev, use VITE_API_URL or localhost:3000
-const API = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'production' ? '' : 'http://localhost:3000');
+// Use VITE_API_URL if set, otherwise use same domain (production)
+const API = import.meta.env.VITE_API_URL || '';
 
 async function parseResponse(res) {
   const contentType = res.headers.get('content-type') || '';

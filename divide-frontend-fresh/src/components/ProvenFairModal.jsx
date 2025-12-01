@@ -16,7 +16,7 @@ export default function ProvenFairModal({ isOpen, onClose, game, gameData }) {
     setIsVerifying(true);
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/rugged/reveal`
+        `${import.meta.env.VITE_API_URL || ''}/rugged/reveal`
       );
       const data = await response.json();
       setRuggedReveals(data);
@@ -40,7 +40,7 @@ export default function ProvenFairModal({ isOpen, onClose, game, gameData }) {
     setIsVerifying(true);
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/verify-game`,
+        `${import.meta.env.VITE_API_URL || ''}/api/verify-game`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

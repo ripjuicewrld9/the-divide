@@ -18,7 +18,7 @@ export default function GlobalLeaderboard() {
 
   const fetchTopWins = useCallback(async () => {
     try {
-      const url = (import.meta.env.VITE_API_URL || 'http://localhost:3000') + '/api/top-wins';
+      const url = (import.meta.env.VITE_API_URL || '') + '/api/top-wins';
       const response = await fetch(url);
       const data = await response.json();
       setTopWins(data.topWins || []);

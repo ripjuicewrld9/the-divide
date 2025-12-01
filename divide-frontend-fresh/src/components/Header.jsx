@@ -51,7 +51,7 @@ export default function Header() {
     if (!adminCode) return;
 
     try {
-      const response = await fetch('http://localhost:3000/api/promote-to-admin', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/promote-to-admin`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

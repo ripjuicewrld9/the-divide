@@ -134,10 +134,10 @@ export default function LiveGamesFeed({ maxGames = 20 }) {
   const fetchRecentGames = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
-      let url = (import.meta.env.VITE_API_URL || 'http://localhost:3000') + `/api/recent-games?limit=${effectiveMaxGames}`;
+      let url = (import.meta.env.VITE_API_URL || '') + `/api/recent-games?limit=${effectiveMaxGames}`;
 
       if (activeTab === 'my' && token) {
-        url = (import.meta.env.VITE_API_URL || 'http://localhost:3000') + `/api/my-games?limit=${effectiveMaxGames}`;
+        url = (import.meta.env.VITE_API_URL || '') + `/api/my-games?limit=${effectiveMaxGames}`;
       }
 
       const headers = {};

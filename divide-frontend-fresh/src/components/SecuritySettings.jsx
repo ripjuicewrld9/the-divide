@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const API_BASE = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'production' ? '' : 'http://localhost:3000');
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 export default function SecuritySettings({ isOpen, onClose }) {
 

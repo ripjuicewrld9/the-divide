@@ -24,7 +24,7 @@ export default function CaseBattleDetail({ onOpenChat }) {
     try {
       const url = import.meta.env.VITE_API_URL
         ? `${import.meta.env.VITE_API_URL}/case-battles/${battleId}`
-        : `http://localhost:3000/case-battles/${battleId}`;
+        : `${import.meta.env.VITE_API_URL || ''}/case-battles/${battleId}`;
       const res = await fetch(url);
       const data = await res.json();
       if (data.battle) {

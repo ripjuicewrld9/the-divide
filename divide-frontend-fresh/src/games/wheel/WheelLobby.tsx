@@ -26,7 +26,7 @@ export const WheelLobby: React.FC = () => {
 
   const fetchLobbies = async () => {
     try {
-      const apiUrl = (import.meta as any).env.VITE_API_URL || ((import.meta as any).env.MODE === 'production' ? '' : 'http://localhost:3000');
+      const apiUrl = (import.meta as any).env.VITE_API_URL || '';
       const response = await fetch(`${apiUrl}/api/wheel/lobbies`);
       
       if (response.ok) {

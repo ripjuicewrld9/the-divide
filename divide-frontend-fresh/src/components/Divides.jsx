@@ -14,7 +14,7 @@ import MobileGameHeader from "./MobileGameHeader";
 import "../styles/Divides.css";
 import { useAuth } from '../context/AuthContext';
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000"; // use VITE_API_URL when available, fallback to dev server port 3000
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 // 🎨 Randomize 2 colors for each Divide
 // Fixed red/blue neon color scheme: A = red, B = blue

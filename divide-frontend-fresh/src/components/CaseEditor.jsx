@@ -45,7 +45,7 @@ export default function CaseEditor({ caseId, onSave, onClose }) {
 
   const loadCase = async (id) => {
     try {
-      const res = await fetch(import.meta.env.VITE_API_URL + `/cases/${id}` || `http://localhost:3000/cases/${id}`);
+      const res = await fetch((import.meta.env.VITE_API_URL || '') + `/cases/${id}`);
       const data = await res.json();
       if (data.case) {
         setName(data.case.name);
@@ -140,7 +140,7 @@ export default function CaseEditor({ caseId, onSave, onClose }) {
       setUploading(true);
       setUploadError(null);
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:3000/upload', {
+      const res = await fetch((import.meta.env.VITE_API_URL || '') + '/upload', {
         method: 'POST',
         credentials: 'include',
         headers: token ? { 'Authorization': `Bearer ${token}` } : {},
