@@ -51,8 +51,8 @@ export const WheelGame: React.FC<WheelGameProps> = ({ gameId, onOpenChat }) => {
   // Fetch game state
   const fetchGameState = useCallback(async () => {
     try {
-      const apiUrl = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000';
-      const response = await fetch(`${apiUrl}/api/wheel/game/${gameId}`);
+      const apiUrl = (import.meta as any).env.VITE_API_URL || ((import.meta as any).env.MODE === 'production' ? '' : 'http://localhost:3000');
+      const response = await fetch(`${apiUrl}/api/wheel/state/${gameId}`);
       
       if (response.ok) {
         const data = await response.json();
