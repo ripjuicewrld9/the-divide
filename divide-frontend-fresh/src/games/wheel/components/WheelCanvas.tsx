@@ -1,18 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 
-interface BoostedSegment {
-  segmentIndex: number;
-  baseMultiplier: number;
-  boostMultiplier: number;
-  finalMultiplier: number;
-}
-
 interface WheelCanvasProps {
   winningSegment: number | null;
   isSpinning: boolean;
   onSpinComplete?: () => void;
-  boostedSegments?: BoostedSegment[];
 }
 
 // Wheel segments distributed evenly (like Crazy Time)
@@ -38,7 +30,7 @@ const getSegmentColor = (multiplier: number): string => {
   return '#f59e0b'; // gold for 25x
 };
 
-const WheelCanvas: React.FC<WheelCanvasProps> = ({ winningSegment, isSpinning, onSpinComplete, boostedSegments = [] }) => {
+const WheelCanvas: React.FC<WheelCanvasProps> = ({ winningSegment, isSpinning, onSpinComplete }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rotationRef = useRef(0);
   const animationFrameRef = useRef<number | null>(null);
@@ -54,9 +46,6 @@ const WheelCanvas: React.FC<WheelCanvasProps> = ({ winningSegment, isSpinning, o
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
     const radius = Math.min(centerX, centerY) - 30;
-    
-    // Create a Set of boosted segment indices for quick lookup
-    const boostedIndices = new Set(boostedSegments.map(b => b.segmentIndex));
 
     const drawWheel = (rotation: number) => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -66,8 +55,6 @@ const WheelCanvas: React.FC<WheelCanvasProps> = ({ winningSegment, isSpinning, o
       const segmentAngle = (2 * Math.PI) / totalSegments;
 
       for (let i = 0; i < totalSegments; i++) {
-        const isBoosted = boostedIndices.has(i);
-        
         ctx.save();
         ctx.translate(centerX, centerY);
         ctx.rotate(rotation + i * segmentAngle);
@@ -76,23 +63,15 @@ const WheelCanvas: React.FC<WheelCanvasProps> = ({ winningSegment, isSpinning, o
         const multiplier = WHEEL_SEGMENTS[i];
         ctx.fillStyle = getSegmentColor(multiplier);
         
-        // Add glow effect for boosted segments
-        if (isBoosted) {
-          ctx.shadowColor = '#fbbf24';
-          ctx.shadowBlur = 20;
-        }
-        
         ctx.beginPath();
         ctx.moveTo(0, 0);
         ctx.arc(0, 0, radius, 0, segmentAngle);
         ctx.lineTo(0, 0);
         ctx.fill();
-        
-        ctx.shadowBlur = 0;
 
         // Draw border between segments
-        ctx.strokeStyle = isBoosted ? '#fbbf24' : '#000000';
-        ctx.lineWidth = isBoosted ? 4 : 3;
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 3;
         ctx.stroke();
 
         // Draw multiplier text
@@ -100,27 +79,11 @@ const WheelCanvas: React.FC<WheelCanvasProps> = ({ winningSegment, isSpinning, o
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillStyle = '#ffffff';
-        ctx.font = isBoosted ? 'bold 16px Arial' : 'bold 14px Arial';
+        ctx.font = 'bold 14px Arial';
         ctx.shadowColor = 'rgba(0,0,0,0.5)';
         ctx.shadowBlur = 4;
-        
-        // Show boosted multiplier if this segment is boosted
-        let displayText = multiplier > 0 ? `${multiplier}x` : `${multiplier}x`;
-        if (isBoosted) {
-          const boosted = boostedSegments.find(b => b.segmentIndex === i);
-          if (boosted) {
-            displayText = `${boosted.finalMultiplier.toFixed(1)}x`;
-          }
-        }
-        
+        const displayText = multiplier > 0 ? `${multiplier}x` : `${multiplier}x`;
         ctx.fillText(displayText, radius * 0.7, 0);
-        
-        // Add star icon for boosted segments
-        if (isBoosted) {
-          ctx.font = '16px Arial';
-          ctx.fillText('⭐', radius * 0.7, -15);
-        }
-        
         ctx.shadowBlur = 0;
 
         ctx.restore();
@@ -133,32 +96,6 @@ const WheelCanvas: React.FC<WheelCanvasProps> = ({ winningSegment, isSpinning, o
       ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
       ctx.stroke();
 
-      // Draw 8 flappers pointing DOWN into the wheel (like a real lucky wheel)
-      const numFlappers = 8;
-      for (let i = 0; i < numFlappers; i++) {
-        const flapperAngle = (i * 2 * Math.PI) / numFlappers;
-        
-        ctx.save();
-        ctx.translate(centerX, centerY);
-        ctx.rotate(flapperAngle);
-        
-        // Flapper pointing downward toward the wheel segments
-        ctx.fillStyle = '#ef4444'; // Red color
-        ctx.strokeStyle = '#dc2626';
-        ctx.lineWidth = 3;
-        
-        ctx.beginPath();
-        // Triangle pointing down (from outer rim toward center)
-        ctx.moveTo(0, -(radius + 25)); // Top point (outside wheel)
-        ctx.lineTo(-10, -(radius + 5)); // Left base (at rim)
-        ctx.lineTo(10, -(radius + 5)); // Right base (at rim)
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-        
-        ctx.restore();
-      }
-
       // Draw center circle
       ctx.fillStyle = '#1a1a2e';
       ctx.beginPath();
@@ -168,25 +105,6 @@ const WheelCanvas: React.FC<WheelCanvasProps> = ({ winningSegment, isSpinning, o
       ctx.strokeStyle = '#fbbf24';
       ctx.lineWidth = 4;
       ctx.stroke();
-
-      // Draw pointer at top (triangle)
-      ctx.save();
-      ctx.translate(centerX, centerY);
-      ctx.rotate(-Math.PI / 2); // Point to the right (will be at top after rotation)
-      
-      ctx.fillStyle = '#fbbf24';
-      ctx.beginPath();
-      ctx.moveTo(radius + 15, 0);
-      ctx.lineTo(radius - 10, -20);
-      ctx.lineTo(radius - 10, 20);
-      ctx.closePath();
-      ctx.fill();
-      
-      ctx.strokeStyle = '#f59e0b';
-      ctx.lineWidth = 3;
-      ctx.stroke();
-      
-      ctx.restore();
     };
 
     const animate = () => {

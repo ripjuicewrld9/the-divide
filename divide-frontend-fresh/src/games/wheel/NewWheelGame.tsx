@@ -290,20 +290,53 @@ export const NewWheelGame: React.FC<NewWheelGameProps> = ({ gameId, onOpenChat }
                 })}
 
                 {/* Wheel in the center */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ padding: '15%', zIndex: 10 }}>
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ padding: '10%' }}>
                   <div className="relative w-full h-full">
                     {/* Glow effect */}
                     <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 blur-3xl opacity-20 animate-pulse" />
                     
                     {/* Wheel */}
-                    <div className="absolute inset-0">
+                    <div className="absolute inset-0 z-10">
                       <WheelCanvas
                         winningSegment={gameState.wheelStopPosition}
                         isSpinning={isSpinning}
                         onSpinComplete={() => {}}
-                        boostedSegments={gameState.boostedSegments}
                       />
                     </div>
+
+                    {/* 8 Stationary Flappers - positioned around wheel pointing inward */}
+                    {[0, 1, 2, 3, 4, 5, 6, 7].map((flapperIndex) => {
+                      const angle = (flapperIndex * 360) / 8;
+                      const radians = ((angle - 90) * Math.PI) / 180;
+                      const flapperRadius = 48; // Adjusted for bigger wheel
+                      const x = 50 + flapperRadius * Math.cos(radians);
+                      const y = 50 + flapperRadius * Math.sin(radians);
+                      
+                      return (
+                        <div
+                          key={flapperIndex}
+                          className="absolute w-0 h-0"
+                          style={{
+                            left: `${x}%`,
+                            top: `${y}%`,
+                            transform: `translate(-50%, -50%) rotate(${angle}deg)`,
+                          }}
+                        >
+                          {/* Flapper arrow pointing toward wheel center */}
+                          <div
+                            className="absolute bg-red-600 border-2 border-red-700 shadow-lg"
+                            style={{
+                              width: '0',
+                              height: '0',
+                              borderLeft: '10px solid transparent',
+                              borderRight: '10px solid transparent',
+                              borderTop: '25px solid #dc2626',
+                              transform: 'translateY(-12px)',
+                            }}
+                          />
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>

@@ -42,12 +42,12 @@ const ROUND_DURATION_MS = 30000; // 30 seconds
 const BETTING_DURATION_MS = 25000; // 25 seconds for betting
 const SPIN_DURATION_MS = 5000; // 5 seconds for spin
 
-// Segment boost multiplier distribution (lower multipliers more common)
+// Segment boost multiplier distribution
 const BOOST_MULTIPLIER_DISTRIBUTION = [
-  { multiplier: 10, weight: 50 },    // 50% chance for 10x
-  { multiplier: 25, weight: 30 },    // 30% chance for 25x
-  { multiplier: 50, weight: 15 },    // 15% chance for 50x
-  { multiplier: 100, weight: 5 }     // 5% chance for 100x
+  { multiplier: 10, weight: 40 },    // 40% chance for 10x
+  { multiplier: 25, weight: 25 },    // 25% chance for 25x
+  { multiplier: 50, weight: 20 },    // 20% chance for 50x
+  { multiplier: 100, weight: 15 }    // 15% chance for 100x
 ];
 
 /**

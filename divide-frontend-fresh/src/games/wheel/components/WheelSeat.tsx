@@ -32,7 +32,7 @@ const WheelSeat: React.FC<WheelSeatProps> = ({
   onSelect,
 }) => {
   // Calculate position using polar coordinates
-  const radius = 42; // percentage from center
+  const radius = 48; // percentage from center - increased to move seats further out
   const x = 50 + radius * Math.cos((angle - 90) * (Math.PI / 180));
   const y = 50 + radius * Math.sin((angle - 90) * (Math.PI / 180));
 
@@ -49,14 +49,18 @@ const WheelSeat: React.FC<WheelSeatProps> = ({
       whileTap={!occupied && canBet ? { scale: 0.95 } : {}}
     >
       <button
+        type="button"
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          console.log('Seat clicked:', seatNumber);
-          onSelect();
+          if (!occupied && canBet) {
+            console.log('Seat clicked:', seatNumber, 'occupied:', occupied, 'canBet:', canBet);
+            onSelect();
+          }
         }}
         disabled={occupied || !canBet}
-        className={`relative w-24 h-28 rounded-2xl transition-all pointer-events-auto ${
+        style={{ cursor: (!occupied && canBet) ? 'pointer' : 'not-allowed' }}
+        className={`relative w-16 h-20 rounded-xl transition-all ${
           isMySeat
             ? 'bg-gradient-to-br from-green-500 to-emerald-600 border-4 border-green-300 shadow-xl shadow-green-500/50'
             : isSelected
@@ -67,33 +71,33 @@ const WheelSeat: React.FC<WheelSeatProps> = ({
         }`}
       >
         {/* Seat number */}
-        <div className="absolute -top-3 -right-3 w-8 h-8 bg-black rounded-full border-3 border-white flex items-center justify-center z-10 shadow-lg">
-          <span className="text-white text-sm font-black">{seatNumber + 1}</span>
+        <div className="absolute -top-2 -right-2 w-6 h-6 bg-black rounded-full border-2 border-white flex items-center justify-center z-10 shadow-lg">
+          <span className="text-white text-xs font-black">{seatNumber + 1}</span>
         </div>
 
         {/* Chair back */}
-        <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-20 h-6 bg-gradient-to-b from-gray-800 to-gray-900 rounded-t-xl border-2 border-gray-700" />
+        <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-14 h-4 bg-gradient-to-b from-gray-800 to-gray-900 rounded-t-lg border-2 border-gray-700" />
 
         {/* Content */}
-        <div className="flex flex-col items-center justify-center h-full p-2">
+        <div className="flex flex-col items-center justify-center h-full p-1">
           {occupied && username ? (
             <>
               {/* Player avatar */}
               <div className="mb-1">
-                <UserAvatar user={{ username, profileImage, _id: userId }} size={40} />
+                <UserAvatar user={{ username, profileImage, _id: userId }} size={28} />
               </div>
               {/* Bet amount */}
-              <div className="text-white text-xs font-bold bg-black/50 px-2 py-0.5 rounded">
+              <div className="text-white text-[10px] font-bold bg-black/50 px-1.5 py-0.5 rounded">
                 ${betAmount?.toFixed(0)}
               </div>
             </>
           ) : (
             <>
               {/* Empty seat - show multiplier */}
-              <div className="text-white text-3xl font-black mb-1">
+              <div className="text-white text-xl font-black mb-1">
                 {multiplier}x
               </div>
-              <div className="text-xs text-white/60">Empty</div>
+              <div className="text-[10px] text-white/60">Empty</div>
             </>
           )}
         </div>
