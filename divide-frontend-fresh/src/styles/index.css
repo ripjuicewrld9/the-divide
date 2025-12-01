@@ -9,6 +9,30 @@ body {
   padding: 0;
 }
 
+/* Global dark scrollbar styling */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2a2a3e #0a0a0a;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #2a2a3e;
+  border-radius: 4px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #3a3a4e;
+}
+
 .divides-container {
   padding: 20px;
 }
