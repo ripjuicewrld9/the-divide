@@ -15,6 +15,7 @@ export default function TicketDetail() {
     const [sending, setSending] = useState(false);
     const [escalating, setEscalating] = useState(false);
     const [savingTranscript, setSavingTranscript] = useState(false);
+    const [changingStatus, setChangingStatus] = useState(false);
 
     const fetchTicket = useCallback(async () => {
         try {
@@ -138,6 +139,45 @@ export default function TicketDetail() {
         }
     };
 
+    const handleChangeStatus = async (newStatus) => {
+        const statusLabels = {
+            'open': 'Open',
+            'in_progress': 'In Progress',
+            'resolved': 'Resolved',
+            'closed': 'Closed'
+        };
+
+        if (!confirm(`Change ticket status to "${statusLabels[newStatus]}"?`)) {
+            return;
+        }
+
+        setChangingStatus(true);
+        try {
+            const res = await fetch(`${API_BASE}/api/support/tickets/${id}/status`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ status: newStatus })
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                setTicket(data.ticket);
+                alert('Ticket status updated successfully');
+            } else {
+                const data = await res.json();
+                alert(data.error || 'Failed to update status');
+            }
+        } catch (err) {
+            console.error('Change status error:', err);
+            alert('Failed to update status');
+        } finally {
+            setChangingStatus(false);
+        }
+    };
+
     const getStatusColor = (status) => {
         switch (status) {
             case 'open': return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
@@ -226,7 +266,7 @@ export default function TicketDetail() {
                             <h3 className="text-lg font-bold text-purple-400">Moderator Controls</h3>
                         </div>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
                             <button
                                 onClick={handleEscalate}
                                 disabled={escalating || ticket.escalated}
@@ -264,6 +304,68 @@ export default function TicketDetail() {
                                     </>
                                 )}
                             </button>
+
+                            <button
+                                onClick={() => handleChangeStatus('closed')}
+                                disabled={changingStatus || ticket.status === 'closed'}
+                                className="px-4 py-3 bg-gray-500/20 border border-gray-500/30 text-gray-400 rounded-lg font-semibold hover:bg-gray-500/30 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                {ticket.status === 'closed' ? (
+                                    <>
+                                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                        </svg>
+                                        Ticket Closed
+                                    </>
+                                ) : (
+                                    <>
+                                        🔒 {changingStatus ? 'Closing...' : 'Close Ticket'}
+                                    </>
+                                )}
+                            </button>
+                        </div>
+
+                        {/* Quick Status Change Buttons */}
+                        {ticket.status !== 'closed' && (
+                            <div className="flex gap-2">
+                                <span className="text-sm text-gray-400 self-center mr-2">Quick Status:</span>
+                                <button
+                                    onClick={() => handleChangeStatus('open')}
+                                    disabled={changingStatus || ticket.status === 'open'}
+                                    className={`px-3 py-1.5 text-xs rounded ${
+                                        ticket.status === 'open'
+                                            ? 'bg-blue-500/30 text-blue-400 border border-blue-500/50'
+                                            : 'bg-blue-500/10 text-blue-400 border border-blue-500/30 hover:bg-blue-500/20'
+                                    } transition disabled:opacity-50 disabled:cursor-not-allowed`}
+                                >
+                                    Open
+                                </button>
+                                <button
+                                    onClick={() => handleChangeStatus('in_progress')}
+                                    disabled={changingStatus || ticket.status === 'in_progress'}
+                                    className={`px-3 py-1.5 text-xs rounded ${
+                                        ticket.status === 'in_progress'
+                                            ? 'bg-yellow-500/30 text-yellow-400 border border-yellow-500/50'
+                                            : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/30 hover:bg-yellow-500/20'
+                                    } transition disabled:opacity-50 disabled:cursor-not-allowed`}
+                                >
+                                    In Progress
+                                </button>
+                                <button
+                                    onClick={() => handleChangeStatus('resolved')}
+                                    disabled={changingStatus || ticket.status === 'resolved'}
+                                    className={`px-3 py-1.5 text-xs rounded ${
+                                        ticket.status === 'resolved'
+                                            ? 'bg-green-500/30 text-green-400 border border-green-500/50'
+                                            : 'bg-green-500/10 text-green-400 border border-green-500/30 hover:bg-green-500/20'
+                                    } transition disabled:opacity-50 disabled:cursor-not-allowed`}
+                                >
+                                    Resolved
+                                </button>
+                            </div>
+                        )}
+
+                        <div className="grid grid-cols-1 gap-3">
                         </div>
 
                         {ticket.escalated && (

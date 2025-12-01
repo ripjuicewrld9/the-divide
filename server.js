@@ -635,8 +635,8 @@ app.post('/api/support/tickets/:id/messages', auth, async (req, res) => {
   }
 });
 
-// Update ticket status (admin only)
-app.patch('/api/support/tickets/:id/status', auth, adminOnly, async (req, res) => {
+// Update ticket status (moderator+ only)
+app.patch('/api/support/tickets/:id/status', auth, moderatorOnly, async (req, res) => {
   try {
     const { status } = req.body;
 
@@ -657,7 +657,15 @@ app.patch('/api/support/tickets/:id/status', auth, adminOnly, async (req, res) =
 
     await ticket.save();
 
-    res.json({ ticket });
+    // Populate and return the updated ticket
+    const populatedTicket = await SupportTicket.findById(ticket._id)
+      .populate('userId', 'username profileImage')
+      .populate('messages.sender', 'username profileImage role')
+      .populate('assignedTo', 'username')
+      .populate('escalatedBy', 'username')
+      .lean();
+
+    res.json({ ticket: populatedTicket });
   } catch (err) {
     console.error('Update status error:', err);
     res.status(500).json({ error: 'Failed to update status' });
