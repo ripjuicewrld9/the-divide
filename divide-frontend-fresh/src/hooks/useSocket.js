@@ -6,13 +6,18 @@ import { io } from "socket.io-client";
 const SOCKET_URL = import.meta.env.VITE_API_URL || '';
 const socket = io(SOCKET_URL);
 const chatSocket = io(SOCKET_URL + '/chat');
+const moderatorChatSocket = io(SOCKET_URL + '/moderator-chat');
 
 export default function useSocket(roomId) {
-  const socketRef = useRef(roomId === 'chat' ? chatSocket : socket);
+  const socketRef = useRef(
+    roomId === 'chat' ? chatSocket : 
+    roomId === 'moderator-chat' ? moderatorChatSocket : 
+    socket
+  );
 
   useEffect(() => {
-    // Skip room join/leave for chat namespace
-    if (roomId === 'chat') return;
+    // Skip room join/leave for chat and moderator-chat namespaces
+    if (roomId === 'chat' || roomId === 'moderator-chat') return;
     
     try {
       socketRef.current.emit("joinDivide", roomId);

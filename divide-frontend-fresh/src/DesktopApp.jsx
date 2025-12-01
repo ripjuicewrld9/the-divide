@@ -29,6 +29,7 @@ import SupportInbox from "./pages/SupportInbox.jsx";
 import SupportTeams from "./pages/SupportTeams.jsx";
 import SupportAnalytics from "./pages/SupportAnalytics.jsx";
 import SupportSettings from "./pages/SupportSettings.jsx";
+import ModeratorPanel from "./pages/ModeratorPanel.jsx";
 import TicketDetail from "./pages/TicketDetail.jsx";
 import ForgotPassword from "./pages/ForgotPassword.jsx";
 import ResetPassword from "./pages/ResetPassword.jsx";
@@ -98,6 +99,7 @@ export default function DesktopApp() {
             <Route path="/support/tickets" element={<SupportTickets />} />
             <Route path="/support/tickets/:id" element={<TicketDetail />} />
             <Route path="/support/inbox" element={<SupportInbox />} />
+            <Route path="/support/moderation" element={<ModeratorPanel />} />
             <Route path="/support/teams" element={<SupportTeams />} />
             <Route path="/support/analytics" element={<SupportAnalytics />} />
             <Route path="/support/settings" element={<SupportSettings />} />

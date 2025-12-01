@@ -3,13 +3,16 @@ import { useAuth } from '../context/AuthContext';
 import useSocket from '../hooks/useSocket';
 import UserAvatar from '../components/UserAvatar';
 import SupportLayout from '../components/SupportLayout';
+import { encryptMessage, decryptMessage, isEncryptionSupported } from '../utils/encryption';
 
 export default function SupportInbox() {
     const { user } = useAuth();
     const socket = useSocket('moderator-chat');
     const [messages, setMessages] = useState([]);
     const [inputMessage, setInputMessage] = useState('');
+    const [decryptedMessages, setDecryptedMessages] = useState({});
     const messagesEndRef = useRef(null);
+    const encryptionSupported = isEncryptionSupported();
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -18,6 +21,30 @@ export default function SupportInbox() {
     useEffect(() => {
         scrollToBottom();
     }, [messages]);
+
+    // Decrypt messages as they come in
+    useEffect(() => {
+        const decryptAllMessages = async () => {
+            const newDecrypted = {};
+            for (const msg of messages) {
+                if (msg.encrypted && encryptionSupported) {
+                    const key = `${msg.timestamp}-${msg.userId}`;
+                    if (!decryptedMessages[key]) {
+                        try {
+                            newDecrypted[key] = await decryptMessage(msg.message);
+                        } catch {
+                            newDecrypted[key] = '[Decryption failed]';
+                        }
+                    }
+                }
+            }
+            if (Object.keys(newDecrypted).length > 0) {
+                setDecryptedMessages(prev => ({ ...prev, ...newDecrypted }));
+            }
+        };
+        decryptAllMessages();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [messages, encryptionSupported]);
 
     useEffect(() => {
         if (!socket) return;
@@ -38,14 +65,29 @@ export default function SupportInbox() {
         };
     }, [socket]);
 
-    const handleSendMessage = (e) => {
+    const handleSendMessage = async (e) => {
         e.preventDefault();
         if (!inputMessage.trim() || !socket || !user) return;
+
+        const messageText = inputMessage.trim();
+        let encryptedText = messageText;
+        let isEncrypted = false;
+
+        // Encrypt if supported
+        if (encryptionSupported) {
+            try {
+                encryptedText = await encryptMessage(messageText);
+                isEncrypted = true;
+            } catch (err) {
+                console.error('Encryption failed, sending plaintext:', err);
+            }
+        }
 
         socket.emit('moderator-chat:sendMessage', {
             userId: user._id,
             username: user.username,
-            message: inputMessage.trim(),
+            message: encryptedText,
+            encrypted: isEncrypted,
             role: user.role,
         });
 
@@ -70,8 +112,17 @@ export default function SupportInbox() {
                         <span>💬</span>
                         <span>Inbox / Moderator Chat</span>
                     </div>
-                    <h1 className="text-3xl font-bold mb-2">Team Communication</h1>
-                    <p className="text-gray-400">Private chat for moderators and administrators</p>
+                    <h1 className="text-3xl font-bold mb-2 flex items-center gap-3">
+                        Team Communication
+                        {encryptionSupported && (
+                            <span className="text-xs px-2 py-1 bg-green-500/20 text-green-400 border border-green-500/30 rounded-full font-semibold flex items-center gap-1">
+                                🔒 Encrypted
+                            </span>
+                        )}
+                    </h1>
+                    <p className="text-gray-400">
+                        Private {encryptionSupported ? 'encrypted ' : ''}chat for moderators and administrators
+                    </p>
                 </div>
 
                 {/* Messages Container */}
@@ -91,6 +142,10 @@ export default function SupportInbox() {
                             messages.map((msg, idx) => {
                                 const isMe = msg.userId === user?._id;
                                 const showAvatar = idx === 0 || messages[idx - 1].userId !== msg.userId;
+                                const messageKey = `${msg.timestamp}-${msg.userId}`;
+                                const displayMessage = msg.encrypted && encryptionSupported 
+                                    ? (decryptedMessages[messageKey] || '🔒 Decrypting...')
+                                    : msg.message;
                                 
                                 return (
                                     <div
@@ -139,7 +194,10 @@ export default function SupportInbox() {
                                                     }
                                                 `}
                                             >
-                                                <div className="whitespace-pre-wrap">{msg.message}</div>
+                                                <div className="whitespace-pre-wrap flex items-start gap-2">
+                                                    {msg.encrypted && <span className="text-green-400 text-xs">🔒</span>}
+                                                    <span className="flex-1">{displayMessage}</span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -181,8 +239,15 @@ export default function SupportInbox() {
                                 </svg>
                             </button>
                         </form>
-                        <div className="mt-2 text-xs text-gray-500">
-                            This is a private channel for moderators and administrators only
+                        <div className="mt-2 flex items-center justify-between text-xs">
+                            <span className="text-gray-500">
+                                This is a private {encryptionSupported ? 'encrypted ' : ''}channel for moderators and administrators only
+                            </span>
+                            {encryptionSupported && (
+                                <span className="text-green-400 flex items-center gap-1">
+                                    🔒 End-to-end encrypted
+                                </span>
+                            )}
                         </div>
                     </div>
                 </div>

@@ -11,6 +11,8 @@ import User from './models/User.js';
 import SupportTicket from './models/SupportTicket.js';
 import KenoRound from './models/KenoRound.js';
 import ChatMessage from './models/ChatMessage.js';
+import ChatMute from './models/ChatMute.js';
+import Notification from './models/Notification.js';
 import PlinkoGame from './models/PlinkoGame.js';
 import PlinkoRecording from './models/PlinkoRecording.js';
 import BlackjackGame from './models/BlackjackGame.js';
@@ -982,6 +984,244 @@ app.post('/api/support/tickets/:id/transcript', auth, moderatorOnly, async (req,
   } catch (err) {
     console.error('Save transcript error:', err);
     res.status(500).json({ error: 'Failed to save transcript' });
+  }
+});
+
+// Assign ticket to moderator
+app.post('/api/support/tickets/:id/assign', auth, moderatorOnly, async (req, res) => {
+  try {
+    const { moderatorId } = req.body;
+    const ticket = await SupportTicket.findById(req.params.id);
+
+    if (!ticket) {
+      return res.status(404).json({ error: 'Ticket not found' });
+    }
+
+    // Verify the moderatorId is the current user (moderators can only assign to themselves)
+    if (moderatorId !== req.userId) {
+      return res.status(403).json({ error: 'You can only assign tickets to yourself' });
+    }
+
+    // Update ticket assignment
+    ticket.assignedTo = moderatorId;
+    
+    // If ticket is still open, move it to in_progress
+    if (ticket.status === 'open') {
+      ticket.status = 'in_progress';
+    }
+
+    await ticket.save();
+
+    console.log(`✅ Ticket ${ticket._id} assigned to moderator ${moderatorId}`);
+    res.json({ message: 'Ticket assigned successfully', ticket });
+  } catch (err) {
+    console.error('Assign ticket error:', err);
+    res.status(500).json({ error: 'Failed to assign ticket' });
+  }
+});
+
+// ========================================
+// MODERATOR PANEL - CHAT MODERATION
+// ========================================
+
+// Get recent chat messages for moderation
+app.get('/api/moderator/chat-messages', auth, moderatorOnly, async (req, res) => {
+  try {
+    const messages = await ChatMessage.find()
+      .sort({ timestamp: -1 })
+      .limit(100)
+      .lean();
+    res.json({ messages: messages.reverse() });
+  } catch (err) {
+    console.error('Error fetching chat messages:', err);
+    res.status(500).json({ error: 'Failed to fetch messages' });
+  }
+});
+
+// Get currently muted users
+app.get('/api/moderator/muted-users', auth, moderatorOnly, async (req, res) => {
+  try {
+    const now = new Date();
+    const mutedUsers = await ChatMute.find({
+      active: true,
+      mutedUntil: { $gt: now }
+    })
+    .sort({ mutedAt: -1 })
+    .lean();
+    res.json({ mutedUsers });
+  } catch (err) {
+    console.error('Error fetching muted users:', err);
+    res.status(500).json({ error: 'Failed to fetch muted users' });
+  }
+});
+
+// Mute a user from chat
+app.post('/api/moderator/mute-user', auth, moderatorOnly, async (req, res) => {
+  try {
+    const { username, duration, reason } = req.body; // duration in minutes
+
+    if (!username || !duration) {
+      return res.status(400).json({ error: 'Username and duration required' });
+    }
+
+    const moderator = await User.findById(req.userId);
+    if (!moderator) {
+      return res.status(404).json({ error: 'Moderator not found' });
+    }
+
+    const targetUser = await User.findOne({ username });
+    const mutedUntil = new Date(Date.now() + duration * 60 * 1000);
+
+    // Deactivate any existing active mutes for this user
+    await ChatMute.updateMany(
+      { username, active: true },
+      { active: false }
+    );
+
+    // Create new mute
+    const mute = await ChatMute.create({
+      username,
+      userId: targetUser?._id,
+      mutedBy: moderator.username,
+      mutedById: moderator._id,
+      mutedUntil,
+      reason: reason || 'No reason provided',
+      active: true
+    });
+
+    // Notify user they've been muted
+    if (targetUser) {
+      await Notification.create({
+        userId: targetUser._id,
+        type: 'system',
+        title: 'Chat Timeout',
+        message: `You have been muted from chat until ${mutedUntil.toLocaleString()}. Reason: ${reason || 'No reason provided'}`,
+        icon: '🔇'
+      });
+    }
+
+    console.log(`🔇 ${username} muted by ${moderator.username} for ${duration} minutes`);
+    res.json({ message: 'User muted successfully', mute });
+  } catch (err) {
+    console.error('Error muting user:', err);
+    res.status(500).json({ error: 'Failed to mute user' });
+  }
+});
+
+// Unmute a user
+app.post('/api/moderator/unmute-user', auth, moderatorOnly, async (req, res) => {
+  try {
+    const { username } = req.body;
+
+    if (!username) {
+      return res.status(400).json({ error: 'Username required' });
+    }
+
+    // Deactivate all active mutes for this user
+    const result = await ChatMute.updateMany(
+      { username, active: true },
+      { active: false }
+    );
+
+    const targetUser = await User.findOne({ username });
+    if (targetUser) {
+      await Notification.create({
+        userId: targetUser._id,
+        type: 'system',
+        title: 'Chat Unmuted',
+        message: 'You have been unmuted and can chat again.',
+        icon: '🔊'
+      });
+    }
+
+    console.log(`🔊 ${username} unmuted (${result.modifiedCount} mutes deactivated)`);
+    res.json({ message: 'User unmuted successfully' });
+  } catch (err) {
+    console.error('Error unmuting user:', err);
+    res.status(500).json({ error: 'Failed to unmute user' });
+  }
+});
+
+// Delete a chat message
+app.delete('/api/moderator/delete-message', auth, moderatorOnly, async (req, res) => {
+  try {
+    const { messageId } = req.body;
+
+    if (!messageId) {
+      return res.status(400).json({ error: 'Message ID required' });
+    }
+
+    const message = await ChatMessage.findByIdAndDelete(messageId);
+    if (!message) {
+      return res.status(404).json({ error: 'Message not found' });
+    }
+
+    // Broadcast message deletion to all connected clients
+    io.of('/chat').emit('chat:messageDeleted', { messageId });
+
+    console.log(`🗑️ Message ${messageId} deleted by moderator ${req.userId}`);
+    res.json({ message: 'Message deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting message:', err);
+    res.status(500).json({ error: 'Failed to delete message' });
+  }
+});
+
+// ========================================
+// NOTIFICATION SYSTEM
+// ========================================
+
+// Get user notifications
+app.get('/api/notifications', auth, async (req, res) => {
+  try {
+    const notifications = await Notification.find({ userId: req.userId })
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .lean();
+    res.json({ notifications });
+  } catch (err) {
+    console.error('Error fetching notifications:', err);
+    res.status(500).json({ error: 'Failed to fetch notifications' });
+  }
+});
+
+// Mark notifications as read
+app.post('/api/notifications/mark-read', auth, async (req, res) => {
+  try {
+    const { notificationIds } = req.body;
+
+    if (!notificationIds || !Array.isArray(notificationIds)) {
+      return res.status(400).json({ error: 'Notification IDs array required' });
+    }
+
+    await Notification.updateMany(
+      { _id: { $in: notificationIds }, userId: req.userId },
+      { read: true }
+    );
+
+    res.json({ message: 'Notifications marked as read' });
+  } catch (err) {
+    console.error('Error marking notifications as read:', err);
+    res.status(500).json({ error: 'Failed to mark notifications as read' });
+  }
+});
+
+// Delete a notification
+app.delete('/api/notifications/:id', auth, async (req, res) => {
+  try {
+    const notification = await Notification.findOneAndDelete({
+      _id: req.params.id,
+      userId: req.userId
+    });
+
+    if (!notification) {
+      return res.status(404).json({ error: 'Notification not found' });
+    }
+
+    res.json({ message: 'Notification deleted' });
+  } catch (err) {
+    console.error('Error deleting notification:', err);
+    res.status(500).json({ error: 'Failed to delete notification' });
   }
 });
 
@@ -3543,9 +3783,28 @@ chatNamespace.on('connection', (socket) => {
   // Handle new messages
   socket.on('chat:sendMessage', async (data) => {
     try {
-      const { username, message } = data;
+      const { username, message, userId } = data;
 
       if (!username || !message || message.trim().length === 0) {
+        return;
+      }
+
+      // Check if user is muted
+      const now = new Date();
+      const activeMute = await ChatMute.findOne({
+        username,
+        active: true,
+        mutedUntil: { $gt: now }
+      });
+
+      if (activeMute) {
+        // User is muted - send error back to them
+        socket.emit('chat:muted', {
+          message: 'You are currently muted from chat',
+          mutedUntil: activeMute.mutedUntil,
+          reason: activeMute.reason
+        });
+        console.log(`[Chat] Blocked muted user ${username} from sending message`);
         return;
       }
 
@@ -3561,6 +3820,7 @@ chatNamespace.on('connection', (socket) => {
 
       // Broadcast to all connected clients
       chatNamespace.emit('chat:message', {
+        _id: chatMessage._id,
         username: chatMessage.username,
         message: chatMessage.message,
         timestamp: chatMessage.timestamp
@@ -3595,6 +3855,103 @@ setInterval(async () => {
     console.error('[Chat] Error cleaning up messages:', err);
   }
 }, 60000); // Run every minute
+
+// ========================================
+// MODERATOR CHAT SYSTEM
+// ========================================
+
+const ModeratorChatMessage = require('./models/ModeratorChatMessage');
+
+const moderatorChatNamespace = io.of('/moderator-chat');
+
+moderatorChatNamespace.on('connection', (socket) => {
+  console.log('[ModChat] Moderator connected:', socket.id);
+
+  // Send chat history to new moderator
+  socket.on('moderator-chat:requestHistory', async () => {
+    try {
+      const messages = await ModeratorChatMessage.find()
+        .sort({ timestamp: -1 })
+        .limit(100)
+        .lean();
+      socket.emit('moderator-chat:history', messages.reverse());
+      console.log(`[ModChat] Sent ${messages.length} messages to ${socket.id}`);
+    } catch (err) {
+      console.error('[ModChat] Error fetching history:', err);
+      socket.emit('moderator-chat:history', []);
+    }
+  });
+
+  // Handle new messages
+  socket.on('moderator-chat:sendMessage', async (data) => {
+    try {
+      const { userId, username, message, role, encrypted } = data;
+
+      if (!userId || !username || !message || !role || message.trim().length === 0) {
+        console.log('[ModChat] Invalid message data:', data);
+        return;
+      }
+
+      // Verify role is moderator or admin
+      if (role !== 'moderator' && role !== 'admin') {
+        console.log('[ModChat] Unauthorized role:', role);
+        return;
+      }
+
+      // Limit message length (3000 for encrypted, 2000 for plaintext)
+      const maxLength = encrypted ? 3000 : 2000;
+      const trimmedMessage = message.trim().slice(0, maxLength);
+
+      // Save to database
+      const chatMessage = await ModeratorChatMessage.create({
+        userId,
+        username,
+        role,
+        message: trimmedMessage,
+        encrypted: encrypted || false,
+        timestamp: new Date()
+      });
+
+      // Broadcast to all connected moderators
+      moderatorChatNamespace.emit('moderator-chat:message', {
+        userId: chatMessage.userId,
+        username: chatMessage.username,
+        role: chatMessage.role,
+        message: chatMessage.message,
+        encrypted: chatMessage.encrypted,
+        timestamp: chatMessage.timestamp
+      });
+
+      const msgPreview = encrypted ? '[Encrypted]' : trimmedMessage.substring(0, 50);
+      console.log(`[ModChat] ${username} (${role}): ${msgPreview}`);
+    } catch (err) {
+      console.error('[ModChat] Error sending message:', err);
+    }
+  });
+
+  socket.on('disconnect', () => {
+    console.log('[ModChat] Moderator disconnected:', socket.id);
+  });
+});
+
+// Cleanup old moderator chat messages (keep last 200)
+setInterval(async () => {
+  try {
+    const count = await ModeratorChatMessage.countDocuments();
+    if (count > 200) {
+      const toDelete = count - 200;
+      const oldMessages = await ModeratorChatMessage.find()
+        .sort({ timestamp: 1 })
+        .limit(toDelete)
+        .select('_id');
+      const ids = oldMessages.map(m => m._id);
+      await ModeratorChatMessage.deleteMany({ _id: { $in: ids } });
+      console.log(`[ModChat] Cleaned up ${toDelete} old messages`);
+    }
+  } catch (err) {
+    console.error('[ModChat] Error cleaning up messages:', err);
+  }
+}, 300000); // Run every 5 minutes
 
 // ========================================
 // END CHAT SYSTEM

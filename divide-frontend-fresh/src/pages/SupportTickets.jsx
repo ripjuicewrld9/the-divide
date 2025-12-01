@@ -33,6 +33,29 @@ export default function SupportTickets() {
         }
     }, [token, isModerator]);
 
+    const handleAssignToMe = async (e, ticketId) => {
+        e.stopPropagation(); // Prevent navigation to ticket detail
+        try {
+            const res = await fetch(`${API_BASE}/api/support/tickets/${ticketId}/assign`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ moderatorId: user._id })
+            });
+
+            if (res.ok) {
+                // Refresh tickets to show updated assignment
+                fetchTickets();
+            } else {
+                console.error('Failed to assign ticket');
+            }
+        } catch (err) {
+            console.error('Error assigning ticket:', err);
+        }
+    };
+
     useEffect(() => {
         if (user) {
             fetchTickets();
@@ -307,7 +330,13 @@ export default function SupportTickets() {
                                             ) : ticket.escalated ? (
                                                 <span className="text-xs text-red-400">🚨</span>
                                             ) : (
-                                                <span className="text-xs text-gray-500">-</span>
+                                                <button
+                                                    onClick={(e) => handleAssignToMe(e, ticket._id)}
+                                                    className="w-7 h-7 rounded-full bg-white/5 hover:bg-gradient-to-r hover:from-cyan-500/20 hover:to-blue-500/20 border border-white/10 hover:border-cyan-500/50 flex items-center justify-center transition group"
+                                                    title="Assign to me"
+                                                >
+                                                    <span className="text-gray-400 group-hover:text-cyan-400 font-semibold">+</span>
+                                                </button>
                                             )}
                                         </div>
 
