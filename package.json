@@ -25,7 +25,9 @@
   "scripts": {
     "test": "node node_modules/mocha/bin/_mocha --exit tests/integration/**/*.js",
     "test:trace": "node --trace-warnings node_modules/mocha/bin/_mocha --exit tests/integration/**/*.js",
-    "start": "node server.js"
+    "start": "node server.js",
+    "build": "cd divide-frontend-fresh && npm install && npm run build",
+    "postinstall": "cd divide-frontend-fresh && npm install"
   },
   "keywords": [],
   "author": "",

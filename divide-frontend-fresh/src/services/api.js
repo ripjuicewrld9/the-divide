@@ -1,6 +1,6 @@
 // src/services/api.js
-// default to backend at port 3000 when VITE_API_URL is not configured (dev fallback)
-const API = import.meta.env.VITE_API_URL || "http://localhost:3000";
+// In production (when built), use same domain. In dev, use VITE_API_URL or localhost:3000
+const API = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'production' ? '' : 'http://localhost:3000');
 
 async function parseResponse(res) {
   const contentType = res.headers.get('content-type') || '';

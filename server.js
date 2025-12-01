@@ -664,6 +664,9 @@ app.patch('/api/support/tickets/:id/status', auth, adminOnly, async (req, res) =
 // in dev and production when serving the built frontend.
 app.use(express.static(path.join(__dirname, 'divide-frontend-fresh', 'public')));
 
+// Serve the built frontend files (production)
+app.use(express.static(path.join(__dirname, 'divide-frontend-fresh', 'dist')));
+
 // Serve raw sound files from the repo-level /sounds directory at the
 // `/sounds/*` path so audio requests like `/sounds/click.wav` succeed.
 app.use('/sounds', express.static(path.join(__dirname, 'sounds')));
@@ -3310,6 +3313,45 @@ try {
   })();
 } catch (e) { console.error('Failed to initialize wheel game manager', e); }
 
+// API endpoint to get lobby information
+app.get('/api/wheel/lobbies', (req, res) => {
+  try {
+    const wheelGameManager = req.app.locals.wheelGameManager;
+    if (!wheelGameManager) {
+      return res.status(503).json({ error: 'Wheel game manager not initialized' });
+    }
+
+    const lobbyIds = ['lobby-1', 'lobby-2', 'lobby-3', 'lobby-4'];
+    const lobbies = lobbyIds.map(lobbyId => {
+      const gameState = wheelGameManager.getGameState(lobbyId);
+      if (!gameState) {
+        return {
+          lobbyId,
+          roundNumber: 0,
+          status: 'initializing',
+          occupiedSeats: 0,
+          totalSeats: 8,
+          timeRemaining: 0
+        };
+      }
+
+      return {
+        lobbyId,
+        roundNumber: gameState.roundNumber || 0,
+        status: gameState.status || 'betting',
+        occupiedSeats: gameState.seats.filter(s => s.occupied).length,
+        totalSeats: 8,
+        timeRemaining: gameState.timeRemaining || 0
+      };
+    });
+
+    res.json({ lobbies });
+  } catch (error) {
+    console.error('[Wheel API] Error fetching lobbies:', error);
+    res.status(500).json({ error: 'Failed to fetch lobbies' });
+  }
+});
+
 // ========================================
 // END WHEEL GAME SYSTEM
 // ========================================
@@ -4467,4 +4509,7 @@ setTimeout(() => {
   }
 }, 5000);
 
-
+// Catch-all route: serve index.html for client-side routing (must be LAST)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'divide-frontend-fresh', 'dist', 'index.html'));
+});
