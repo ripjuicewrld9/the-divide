@@ -3076,7 +3076,9 @@ const io = new Server(server, {
     },
     methods: ["GET", "POST"],
     credentials: true
-  }
+  },
+  transports: ['websocket', 'polling'],
+  allowEIO3: true
 });
 
 // Register authoritative Rugged routes (uses auth/adminOnly defined below)
