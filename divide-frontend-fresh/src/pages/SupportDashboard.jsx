@@ -79,7 +79,10 @@ export default function SupportDashboard() {
         // Overall team stats
         const openTickets = allTickets.filter(t => t.status === 'open');
         const inProgressTickets = allTickets.filter(t => t.status === 'in_progress');
-        const urgentTickets = allTickets.filter(t => t.priority === 'urgent' && t.status !== 'closed');
+        const urgentTickets = allTickets.filter(t => 
+            t.priority === 'urgent' && 
+            (t.status === 'open' || t.status === 'in_progress')
+        );
         const todayTickets = allTickets.filter(t => new Date(t.createdAt) >= today);
         const weekTickets = allTickets.filter(t => new Date(t.createdAt) >= thisWeekStart);
 
