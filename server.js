@@ -1279,11 +1279,12 @@ app.get('/auth/discord/login/callback', async (req, res) => {
         username,
         password: crypto.randomBytes(32).toString('hex'), // Random password (they'll use Discord login)
         balance: 0,
+        email: discordUser.email || null, // Collect email from Discord
         discordId: discordUser.id,
         discordUsername: `${discordUser.username}#${discordUser.discriminator}`
       });
       await user.save();
-      console.log(`✅ New user created via Discord: ${username} (${discordUser.id})`);
+      console.log(`✅ New user created via Discord: ${username} (${discordUser.email || 'no email'})`);
     }
 
     // Create JWT token

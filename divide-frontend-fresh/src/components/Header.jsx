@@ -151,14 +151,6 @@ export default function Header() {
                         >
                           👤 Profile
                         </Link>
-                        {!isAdmin && (
-                          <button
-                            onClick={handlePromoteToAdmin}
-                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-300 transition-colors hover:bg-white/5 hover:text-white"
-                          >
-                            👑 Promote to Admin
-                          </button>
-                        )}
                         {isAdmin && (
                           <Link
                             to="/admin"
