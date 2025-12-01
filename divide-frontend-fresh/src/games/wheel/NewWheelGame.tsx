@@ -56,7 +56,7 @@ interface NewWheelGameProps {
 }
 
 export const NewWheelGame: React.FC<NewWheelGameProps> = ({ gameId, onOpenChat }) => {
-  const { user, token } = useAuth();
+  const { user, token, setBalance } = useAuth();
   const socket = useWheelSocket(gameId);
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [selectedSeat, setSelectedSeat] = useState<number | null>(null);
@@ -132,6 +132,22 @@ export const NewWheelGame: React.FC<NewWheelGameProps> = ({ gameId, onOpenChat }
         if (userOutcomes.length > 0) {
           setMyOutcomes(userOutcomes);
           setShowWinAnimation(true);
+          
+          // Calculate net change: -bet + payout for all user seats
+          const totalNetChange = userOutcomes.reduce((sum, outcome) => {
+            return sum + (outcome.payout - outcome.betAmount);
+          }, 0);
+          
+          // Immediately update balance in UI (optimistic update)
+          if (setBalance && user.balance !== undefined) {
+            const newBalance = user.balance + totalNetChange;
+            console.log('[NewWheelGame] Updating balance:', {
+              current: user.balance,
+              netChange: totalNetChange,
+              newBalance
+            });
+            setBalance(newBalance);
+          }
           
           setTimeout(() => {
             setShowWinAnimation(false);
@@ -237,7 +253,20 @@ export const NewWheelGame: React.FC<NewWheelGameProps> = ({ gameId, onOpenChat }
     );
   }
 
-  const canBet = gameState.status === 'betting' && bettingTimeLeft > 0;
+  // Can bet if status is betting AND (no timer set yet OR betting time remaining)
+  // Game with no timer means it's idle and waiting for first player
+  const canBet = gameState.status === 'betting' && (gameState.bettingTimeRemaining === 0 || bettingTimeLeft > 0);
+  
+  // Debug logging for canBet
+  console.log('[NewWheelGame] canBet calculation:', {
+    canBet,
+    status: gameState.status,
+    bettingTimeLeft,
+    bettingTimeRemaining: gameState.bettingTimeRemaining,
+    statusIsBetting: gameState.status === 'betting',
+    timeIsPositive: bettingTimeLeft > 0,
+    isIdle: gameState.bettingTimeRemaining === 0
+  });
   const bettingProgress = (bettingTimeLeft / BETTING_DURATION_MS) * 100;
 
   // Get user's reserved seats

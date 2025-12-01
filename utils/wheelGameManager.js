@@ -183,10 +183,6 @@ class WheelGameManager {
         gameId = crypto.randomBytes(8).toString('hex');
       }
 
-      const now = new Date();
-      const roundEndTime = new Date(now.getTime() + ROUND_DURATION_MS);
-      const bettingEndTime = new Date(now.getTime() + BETTING_DURATION_MS);
-
       // Initialize seats (8 flappers) - no multipliers, just positions
       const seats = FLAPPER_POSITIONS.map((flapperPosition) => ({
         seatNumber: flapperPosition,
@@ -198,24 +194,21 @@ class WheelGameManager {
         reservedAt: null,
       }));
 
+      // Create game in IDLE state - will start when first player joins
       const game = new WheelGame({
         gameId,
         roundNumber: 0,
-        status: 'betting',
+        status: 'betting', // Status is betting but no timers - ready for players
         seats,
-        roundStartTime: now,
-        roundEndTime,
-        bettingEndTime,
+        roundStartTime: null,
+        roundEndTime: null,
+        bettingEndTime: null,
       });
 
       await game.save();
       this.activeGames.set(gameId, game);
 
-      // Start round timer
-      this.scheduleRoundEnd(gameId, roundEndTime);
-      this.scheduleBettingEnd(gameId, bettingEndTime);
-
-      console.log(`[WheelGame] Created game instance: ${gameId}`);
+      console.log(`[WheelGame] Created game instance in idle state: ${gameId}`);
       return game;
     } catch (error) {
       console.error(`[WheelGame] Error creating game instance:`, error);
@@ -607,6 +600,57 @@ class WheelGameManager {
    */
   async startNextRound(gameId) {
     try {
+      const game = await WheelGame.findOne({ gameId });
+      
+      if (!game) {
+        return;
+      }
+
+      // Check if there are any players before starting new round
+      const hasPlayers = game.seats.some(seat => seat.userId !== null);
+      
+      if (!hasPlayers) {
+        console.log(`[WheelGame] No players for next round in game ${gameId}, entering idle state`);
+        
+        // Set game to idle/waiting state
+        game.status = 'betting'; // Keep as betting so UI shows it's ready
+        game.seats = FLAPPER_POSITIONS.map((flapperPosition) => ({
+          seatNumber: flapperPosition,
+          userId: null,
+          username: null,
+          profileImage: null,
+          betAmount: 0,
+          segments: [],
+          reservedAt: null,
+        }));
+        game.roundStartTime = null;
+        game.roundEndTime = null;
+        game.bettingEndTime = null;
+        game.winningSegment = null;
+        game.seatOutcomes = [];
+        game.boostedSegments = [];
+        
+        await game.save();
+        
+        // Clear any existing timers
+        if (this.roundTimers.has(gameId)) {
+          clearTimeout(this.roundTimers.get(gameId));
+          this.roundTimers.delete(gameId);
+        }
+        if (this.bettingTimers.has(gameId)) {
+          clearTimeout(this.bettingTimers.get(gameId));
+          this.bettingTimers.delete(gameId);
+        }
+        
+        // Broadcast game is waiting for players
+        this.io.to(`wheel-${gameId}`).emit('wheel:waitingForPlayers', {
+          gameId,
+          message: 'Waiting for players to join...',
+        });
+        
+        return;
+      }
+
       const now = new Date();
       const roundEndTime = new Date(now.getTime() + ROUND_DURATION_MS);
       const bettingEndTime = new Date(now.getTime() + BETTING_DURATION_MS);
@@ -615,16 +659,12 @@ class WheelGameManager {
       const seats = FLAPPER_POSITIONS.map((flapperPosition) => ({
         seatNumber: flapperPosition,
         userId: null,
+        username: null,
+        profileImage: null,
         betAmount: 0,
         segments: [],
         reservedAt: null,
       }));
-
-      const game = await WheelGame.findOne({ gameId });
-      
-      if (!game) {
-        return;
-      }
 
       game.roundNumber += 1;
       game.status = 'betting';
@@ -669,10 +709,10 @@ class WheelGameManager {
         return null;
       }
 
-      // Calculate time remaining
+      // Calculate time remaining (handle null times when game is idle)
       const now = new Date();
-      const timeRemaining = Math.max(0, game.roundEndTime.getTime() - now.getTime());
-      const bettingTimeRemaining = Math.max(0, game.bettingEndTime.getTime() - now.getTime());
+      const timeRemaining = game.roundEndTime ? Math.max(0, game.roundEndTime.getTime() - now.getTime()) : 0;
+      const bettingTimeRemaining = game.bettingEndTime ? Math.max(0, game.bettingEndTime.getTime() - now.getTime()) : 0;
 
       return {
         gameId: game.gameId,
@@ -683,6 +723,8 @@ class WheelGameManager {
           seatNumber: s.seatNumber,
           occupied: !!s.userId,
           userId: s.userId?.toString(),
+          username: s.username,
+          profileImage: s.profileImage,
           betAmount: s.betAmount / 100,
           flapperPosition: s.seatNumber, // Flapper is fixed to seat number
         })),

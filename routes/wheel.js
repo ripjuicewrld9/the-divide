@@ -23,8 +23,8 @@ export default function registerWheelRoutes(app, io, { auth }) {
         status: game.status,
         occupiedSeats: game.seats.filter(s => s.userId).length,
         totalSeats: 8,
-        timeRemaining: Math.max(0, game.roundEndTime.getTime() - now.getTime()),
-        bettingTimeRemaining: Math.max(0, game.bettingEndTime.getTime() - now.getTime()),
+        timeRemaining: game.roundEndTime ? Math.max(0, game.roundEndTime.getTime() - now.getTime()) : 0,
+        bettingTimeRemaining: game.bettingEndTime ? Math.max(0, game.bettingEndTime.getTime() - now.getTime()) : 0,
       }));
 
       res.json({ games: gameStates });
