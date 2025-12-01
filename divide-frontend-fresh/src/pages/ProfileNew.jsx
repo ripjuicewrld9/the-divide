@@ -12,6 +12,10 @@ export default function ProfilePage({ onOpenChat }) {
     const [showAvatarModal, setShowAvatarModal] = useState(false);
     const [showSecurityModal, setShowSecurityModal] = useState(false);
     const [showEmailPrefsModal, setShowEmailPrefsModal] = useState(false);
+    const [showUsernameModal, setShowUsernameModal] = useState(false);
+    const [newUsername, setNewUsername] = useState('');
+    const [usernameError, setUsernameError] = useState('');
+    const [isChangingUsername, setIsChangingUsername] = useState(false);
 
     const presetAvatars = [
         '/profilesvg/account-avatar-profile-user-svgrepo-com.svg',
@@ -37,6 +41,55 @@ export default function ProfilePage({ onOpenChat }) {
         } catch (error) {
             console.error('Failed to update avatar:', error);
         }
+    };
+
+    const handleUsernameChange = async () => {
+        setUsernameError('');
+        setIsChangingUsername(true);
+        
+        try {
+            const API_BASE = import.meta.env.VITE_API_URL || '';
+            const token = localStorage.getItem('token');
+            
+            const response = await fetch(`${API_BASE}/api/change-username`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ newUsername })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                setUsernameError(data.error || 'Failed to change username');
+                setIsChangingUsername(false);
+                return;
+            }
+
+            // Update user context
+            await updateUser({ username: data.username });
+            setShowUsernameModal(false);
+            setNewUsername('');
+        } catch (error) {
+            console.error('Failed to change username:', error);
+            setUsernameError('Server error. Please try again.');
+        } finally {
+            setIsChangingUsername(false);
+        }
+    };
+
+    const canChangeUsername = () => {
+        if (!user?.lastUsernameChange) return true;
+        const daysSinceLastChange = (Date.now() - new Date(user.lastUsernameChange).getTime()) / (1000 * 60 * 60 * 24);
+        return daysSinceLastChange >= 30;
+    };
+
+    const getDaysUntilUsernameChange = () => {
+        if (!user?.lastUsernameChange) return 0;
+        const daysSinceLastChange = (Date.now() - new Date(user.lastUsernameChange).getTime()) / (1000 * 60 * 60 * 24);
+        return Math.ceil(30 - daysSinceLastChange);
     };
 
     if (!user) {
@@ -76,7 +129,23 @@ export default function ProfilePage({ onOpenChat }) {
                         </div>
 
                         <div className="text-center md:text-left flex-1">
-                            <h1 className="text-3xl font-bold mb-1">{user.username}</h1>
+                            <div className="flex items-center justify-center md:justify-start gap-2 mb-1">
+                                <h1 className="text-3xl font-bold">{user.username}</h1>
+                                <button
+                                    onClick={() => canChangeUsername() ? setShowUsernameModal(true) : null}
+                                    disabled={!canChangeUsername()}
+                                    className={`p-2 rounded-lg transition-all ${
+                                        canChangeUsername() 
+                                            ? 'bg-white/5 hover:bg-white/10 cursor-pointer' 
+                                            : 'bg-white/5 opacity-50 cursor-not-allowed'
+                                    }`}
+                                    title={canChangeUsername() ? 'Change username' : `Change username in ${getDaysUntilUsernameChange()} days`}
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                                    </svg>
+                                </button>
+                            </div>
                             <p className="text-gray-400 text-sm mb-4">Member since {new Date(user.createdAt || Date.now()).toLocaleDateString()}</p>
 
                             <div className="flex flex-wrap justify-center md:justify-start gap-3">
@@ -185,6 +254,51 @@ export default function ProfilePage({ onOpenChat }) {
                 isOpen={showSecurityModal} 
                 onClose={() => setShowSecurityModal(false)} 
             />
+
+            {/* Username Change Modal */}
+            {showUsernameModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" onClick={() => setShowUsernameModal(false)}>
+                    <div className="bg-[#1a1a2e] border border-white/10 rounded-2xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-xl font-bold">Change Username</h2>
+                            <button onClick={() => setShowUsernameModal(false)} className="text-gray-400 hover:text-white">✕</button>
+                        </div>
+
+                        <div className="mb-6">
+                            <p className="text-sm text-gray-400 mb-4">
+                                You can change your username once every 30 days.
+                            </p>
+                            <input
+                                type="text"
+                                value={newUsername}
+                                onChange={(e) => setNewUsername(e.target.value)}
+                                placeholder="Enter new username"
+                                className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-cyan-400 transition"
+                                maxLength={20}
+                            />
+                            {usernameError && (
+                                <p className="text-red-400 text-sm mt-2">{usernameError}</p>
+                            )}
+                        </div>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowUsernameModal(false)}
+                                className="flex-1 bg-white/5 hover:bg-white/10 text-white font-bold py-3 rounded-lg transition"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleUsernameChange}
+                                disabled={isChangingUsername || !newUsername.trim() || newUsername.trim().length < 3}
+                                className="flex-1 bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 rounded-lg transition"
+                            >
+                                {isChangingUsername ? 'Changing...' : 'Change Username'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Email Preferences Modal */}
             {showEmailPrefsModal && (

@@ -47,6 +47,7 @@ const userSchema = new mongoose.Schema({
   twoFactorBackupCodes: [{ type: String }], // Backup codes for 2FA recovery
   resetPasswordToken: { type: String }, // Password reset token
   resetPasswordExpires: { type: Date }, // Token expiration time
+  lastUsernameChange: { type: Date }, // Last time username was changed
   createdAt: { type: Date, default: Date.now }
 });
 
