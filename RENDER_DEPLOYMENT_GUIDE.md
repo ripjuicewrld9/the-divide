@@ -5,6 +5,7 @@ This guide explains how to deploy both the backend and frontend to Render.com as
 ## Overview
 
 Your application is now configured to:
+
 - Build the frontend during deployment
 - Serve the frontend from the Express backend
 - Use the same domain for both frontend and API calls (no CORS issues)
@@ -13,11 +14,13 @@ Your application is now configured to:
 ## Configuration Changes Made
 
 ### 1. Backend (server.js)
+
 - Added static file serving for frontend dist folder
 - Added catch-all route to serve index.html for client-side routing
 - Serves built files from `divide-frontend-fresh/dist`
 
 ### 2. Frontend
+
 - Updated API calls to use same domain in production
 - Socket.IO connections now use same domain in production
 - Files updated:
@@ -28,6 +31,7 @@ Your application is now configured to:
   - All component-level API_BASE constants
 
 ### 3. Package.json
+
 - Added `build` script: builds the frontend
 - Added `postinstall` script: installs frontend dependencies automatically
 
@@ -45,15 +49,18 @@ git push origin master
 ### Step 2: Configure Render.com
 
 1. **Log in to Render.com**
+
    - Go to https://render.com
    - Sign in with your GitHub account
 
 2. **Create a New Web Service**
+
    - Click "New +" → "Web Service"
    - Connect your GitHub repository: `ripjuicewrld9/the-divide`
    - Select the `master` branch
 
 3. **Configure the Service**
+
    ```
    Name: the-divide
    Region: Choose closest to your users
@@ -66,6 +73,7 @@ git push origin master
 
 4. **Add Environment Variables**
    Click "Advanced" → "Add Environment Variable" and add:
+
    ```
    MONGODB_URI=<your-mongodb-connection-string>
    JWT_SECRET=<your-jwt-secret>
@@ -78,6 +86,7 @@ git push origin master
    ```
 
 5. **Set Instance Type**
+
    - Free tier is fine for testing
    - Upgrade to paid tier for production (more memory/CPU)
 
@@ -93,6 +102,7 @@ git push origin master
 ### Step 3: Verify Deployment
 
 1. **Check Build Logs**
+
    - Monitor the deployment in Render dashboard
    - Look for:
      - ✅ Backend dependencies installed
@@ -113,25 +123,30 @@ git push origin master
 ## Important Notes
 
 ### Build Time
+
 - First deployment takes 5-10 minutes (installing all dependencies + building)
 - Subsequent deployments are faster (cached dependencies)
 
 ### Free Tier Limitations
+
 - Services spin down after 15 minutes of inactivity
 - First request after spin-down takes ~30 seconds
 - Upgrade to paid tier ($7/month) for always-on service
 
 ### Environment Variables
+
 - Never commit secrets to GitHub
 - All sensitive data should be in Render environment variables
 - Update environment variables in Render dashboard as needed
 
 ### MongoDB Connection
+
 - Use MongoDB Atlas (free tier available)
 - Whitelist Render's IP addresses (or use 0.0.0.0/0 for simplicity)
 - Get connection string from Atlas dashboard
 
 ### Custom Domain (Optional)
+
 1. Go to your Render service → Settings → Custom Domains
 2. Add your domain from Namecheap
 3. Update DNS records in Namecheap:
@@ -144,6 +159,7 @@ git push origin master
 ## Troubleshooting
 
 ### Build Fails
+
 - Check build logs for specific errors
 - Common issues:
   - Missing environment variables
@@ -151,16 +167,19 @@ git push origin master
   - Dependency installation errors
 
 ### Frontend Shows Blank Page
+
 - Check browser console for errors
 - Verify `dist` folder was created during build
 - Check server logs for 404 errors
 
 ### API Calls Fail
+
 - Verify environment variables are set
 - Check MongoDB connection string
 - Look for CORS errors (shouldn't happen with unified deployment)
 
 ### Socket.IO Doesn't Connect
+
 - Check browser console for connection errors
 - Verify WebSocket support is enabled (it is by default on Render)
 - Check server logs for socket connection messages
@@ -176,6 +195,7 @@ git push origin master
 ```
 
 Render will automatically:
+
 1. Detect the push
 2. Rebuild the frontend
 3. Restart the server
@@ -184,6 +204,7 @@ Render will automatically:
 ## Rolling Back
 
 If deployment fails or has issues:
+
 1. Go to Render dashboard → Deploys
 2. Find a previous successful deployment
 3. Click "Redeploy"
@@ -191,16 +212,19 @@ If deployment fails or has issues:
 ## Cost Estimation
 
 **Free Tier:**
+
 - 750 hours/month free
 - Spins down after inactivity
 - Good for testing
 
 **Starter ($7/month per service):**
+
 - Always on
 - No spin-down
 - Better for production
 
 **Pro ($25/month per service):**
+
 - More CPU/memory
 - Better performance
 - Recommended for high traffic

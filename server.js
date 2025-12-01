@@ -12,6 +12,7 @@ import SupportTicket from './models/SupportTicket.js';
 import KenoRound from './models/KenoRound.js';
 import ChatMessage from './models/ChatMessage.js';
 import ChatMute from './models/ChatMute.js';
+import ModeratorChatMessage from './models/ModeratorChatMessage.js';
 import Notification from './models/Notification.js';
 import PlinkoGame from './models/PlinkoGame.js';
 import PlinkoRecording from './models/PlinkoRecording.js';
@@ -3859,8 +3860,6 @@ setInterval(async () => {
 // ========================================
 // MODERATOR CHAT SYSTEM
 // ========================================
-
-const ModeratorChatMessage = require('./models/ModeratorChatMessage');
 
 const moderatorChatNamespace = io.of('/moderator-chat');
 
