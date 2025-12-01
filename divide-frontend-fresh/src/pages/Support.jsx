@@ -25,6 +25,7 @@ export default function Support() {
                 }
             });
             const data = await res.json();
+            console.log('📋 Fetched tickets:', data);
             setTickets(data.tickets || []);
         } catch (err) {
             console.error('Failed to fetch tickets:', err);
@@ -59,7 +60,8 @@ export default function Support() {
                 alert(data.message);
                 setShowCreateModal(false);
                 setFormData({ category: 'general', subject: '', description: '', email: '' });
-                fetchTickets();
+                // Refresh tickets list
+                await fetchTickets();
             } else {
                 alert(data.error || 'Failed to submit ticket');
             }
