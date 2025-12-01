@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import useWheelSocket from '../../hooks/useWheelSocket';
 import WheelCanvas from './components/WheelCanvas';
+import WheelSeat from './components/WheelSeat';
 import UserAvatar from '../../components/UserAvatar';
 import { ROUND_DURATION_MS, BETTING_DURATION_MS } from './constants';
 import MobileGameHeader from '../../components/MobileGameHeader';
@@ -223,6 +224,9 @@ export const WheelGame: React.FC<WheelGameProps> = ({ gameId, onOpenChat }) => {
   // Get user's reserved seats
   const mySeats = gameState.seats.filter(s => s.userId === user?._id);
 
+  // Calculate angles for 8 seats evenly distributed around the wheel
+  const seatAngles = Array.from({ length: 8 }, (_, i) => (i * 360) / 8);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0a0a14] via-[#1a1a2e] to-[#0a0a14]">
       {isMobile && <MobileGameHeader />}
@@ -233,7 +237,7 @@ export const WheelGame: React.FC<WheelGameProps> = ({ gameId, onOpenChat }) => {
           <h1 className="text-4xl md:text-5xl font-black bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent mb-2">
             LUCKY WHEEL
           </h1>
-          <div className="flex items-center justify-center gap-4 text-sm md:text-base">
+          <div className="flex items-center justify-center gap-4 text-sm md:text-base flex-wrap">
             <span className="text-gray-400">Round #{gameState.roundNumber}</span>
             <div className="w-px h-4 bg-white/20" />
             <div className="flex items-center gap-2">
@@ -244,31 +248,21 @@ export const WheelGame: React.FC<WheelGameProps> = ({ gameId, onOpenChat }) => {
             <span className="text-cyan-400 font-mono text-xl font-bold">
               {(canBet ? bettingTimeLeft / 1000 : timeLeft / 1000).toFixed(1)}s
             </span>
+            <div className="w-px h-4 bg-white/20" />
+            <div className="flex items-center gap-2">
+              <span className="text-yellow-400 text-sm">Global Multiplier:</span>
+              <span className="text-yellow-400 font-black text-2xl">{globalMultiplier}x</span>
+            </div>
           </div>
         </div>
 
-        {/* Main Game Container */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left: Seat Info & Controls */}
+        {/* Main Game Area */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Left Sidebar - Bet Controls */}
           <div className="space-y-4">
-            {/* Global Multiplier Display */}
-            <div className="bg-gradient-to-br from-yellow-500/20 to-orange-500/20 border-2 border-yellow-400 rounded-xl p-4">
-              <div className="text-center">
-                <div className="text-yellow-400 text-sm font-bold mb-1">GLOBAL MULTIPLIER</div>
-                <motion.div
-                  className="text-5xl font-black text-white"
-                  animate={{ scale: [1, 1.1, 1] }}
-                  transition={{ duration: 1, repeat: Infinity }}
-                >
-                  {globalMultiplier}x
-                </motion.div>
-                <div className="text-xs text-gray-400 mt-1">Applied to ALL wins!</div>
-              </div>
-            </div>
-
-            {/* Bet Controls */}
+            {/* Bet Amount */}
             <div className="bg-black/60 backdrop-blur-sm border border-white/20 rounded-xl p-4">
-              <h3 className="text-white font-bold mb-3">Bet Amount</h3>
+              <h3 className="text-white font-bold mb-3">Place Your Bet</h3>
               <input
                 type="number"
                 value={betAmount}
@@ -278,12 +272,12 @@ export const WheelGame: React.FC<WheelGameProps> = ({ gameId, onOpenChat }) => {
                 className="w-full bg-black/60 border border-white/20 rounded-lg px-4 py-3 text-white text-xl font-bold focus:border-cyan-400 focus:outline-none mb-3"
                 disabled={!canBet}
               />
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 {[5, 10, 25, 50].map(amount => (
                   <button
                     key={amount}
                     onClick={() => setBetAmount(amount)}
-                    className="bg-white/10 hover:bg-white/20 text-white rounded-lg py-2 text-sm font-semibold transition-colors"
+                    className="bg-white/10 hover:bg-white/20 text-white rounded-lg py-2 text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled={!canBet}
                   >
                     ${amount}
@@ -292,21 +286,17 @@ export const WheelGame: React.FC<WheelGameProps> = ({ gameId, onOpenChat }) => {
               </div>
             </div>
 
-            {/* Selected Seat */}
-            <div className="bg-black/60 backdrop-blur-sm border border-white/20 rounded-xl p-4">
-              <h3 className="text-white font-bold mb-3">Selected Seat</h3>
-              {selectedSeat !== null ? (
+            {/* Selected Seat Info */}
+            {selectedSeat !== null && (
+              <div className="bg-black/60 backdrop-blur-sm border border-white/20 rounded-xl p-4">
+                <h3 className="text-white font-bold mb-3">Selected Seat #{selectedSeat + 1}</h3>
                 <div className="space-y-3">
-                  <div className="text-center p-4 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-lg border border-purple-400/30">
-                    <div className="text-3xl font-black bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
-                      Seat {selectedSeat + 1}
-                    </div>
-                    <div className="text-white text-xl font-bold mt-1">
-                      Base: {gameState.seats[selectedSeat].multiplier}x
-                    </div>
+                  <div className="bg-purple-500/20 border border-purple-400/30 rounded-lg p-3">
+                    <div className="text-gray-400 text-xs mb-1">Base Multiplier</div>
+                    <div className="text-white text-3xl font-black">{gameState.seats[selectedSeat].multiplier}x</div>
                   </div>
-                  <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3 text-center">
-                    <div className="text-xs text-gray-400">Potential Win</div>
+                  <div className="bg-green-500/20 border border-green-500/30 rounded-lg p-3">
+                    <div className="text-gray-400 text-xs mb-1">Potential Win</div>
                     <div className="text-green-400 text-2xl font-bold">
                       ${(betAmount * gameState.seats[selectedSeat].multiplier * globalMultiplier).toFixed(2)}
                     </div>
@@ -325,22 +315,24 @@ export const WheelGame: React.FC<WheelGameProps> = ({ gameId, onOpenChat }) => {
                     {isReservingSeat ? 'RESERVING...' : 'RESERVE SEAT'}
                   </motion.button>
                 </div>
-              ) : (
-                <div className="text-center text-gray-500 py-8 text-sm">
-                  Click a seat to select
-                </div>
-              )}
-            </div>
+              </div>
+            )}
 
-            {/* My Seats */}
+            {/* My Active Seats */}
             {mySeats.length > 0 && (
               <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4">
-                <h3 className="text-green-400 font-bold mb-2">Your Seats ({mySeats.length})</h3>
-                <div className="space-y-1 text-sm">
+                <h3 className="text-green-400 font-bold mb-3 flex items-center justify-between">
+                  <span>Your Seats</span>
+                  <span className="bg-green-500 text-white text-xs px-2 py-1 rounded-full">{mySeats.length}</span>
+                </h3>
+                <div className="space-y-2">
                   {mySeats.map(s => (
-                    <div key={s.seatNumber} className="flex justify-between text-white">
-                      <span>Seat {s.seatNumber + 1}</span>
-                      <span>${s.betAmount?.toFixed(2)}</span>
+                    <div key={s.seatNumber} className="flex items-center justify-between bg-black/40 rounded-lg p-2">
+                      <span className="text-white font-semibold">Seat #{s.seatNumber + 1}</span>
+                      <div className="text-right">
+                        <div className="text-white font-bold">${s.betAmount?.toFixed(2)}</div>
+                        <div className="text-green-400 text-xs">{s.multiplier}x</div>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -348,136 +340,119 @@ export const WheelGame: React.FC<WheelGameProps> = ({ gameId, onOpenChat }) => {
             )}
           </div>
 
-          {/* Center: Wheel */}
-          <div className="lg:col-span-1">
+          {/* Center - Wheel with Seats Around It */}
+          <div className="lg:col-span-2">
             <div className="bg-black/60 backdrop-blur-sm border border-white/20 rounded-xl p-6">
-              <div className="relative w-full" style={{ paddingBottom: '100%' }}>
-                <div className="absolute inset-0">
-                  {/* Outer decorative ring */}
-                  <div className="absolute inset-0 rounded-full border-4 border-purple-500/20" />
-                  
-                  {/* Glow effect */}
-                  <div className="absolute inset-4 rounded-full bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 blur-2xl opacity-20 animate-pulse" />
-                  
-                  {/* Wheel container */}
-                  <div className="absolute inset-8">
-                    <WheelCanvas
-                      winningSegment={gameState.winningSegment}
-                      isSpinning={isSpinning}
-                      onSpinComplete={handleSpinComplete}
-                    />
-                  </div>
+              {/* Wheel and Seats Container */}
+              <div className="relative w-full mx-auto" style={{ paddingBottom: '100%', maxWidth: '600px' }}>
+                {/* 8 Seats positioned around the wheel */}
+                {gameState.seats.slice(0, 8).map((seat, index) => (
+                  <WheelSeat
+                    key={seat.seatNumber}
+                    seatNumber={seat.seatNumber}
+                    multiplier={seat.multiplier}
+                    occupied={seat.occupied}
+                    userId={seat.userId}
+                    username={seat.username}
+                    profileImage={seat.profileImage}
+                    betAmount={seat.betAmount}
+                    isSelected={selectedSeat === seat.seatNumber}
+                    isMySeat={seat.userId === user?._id}
+                    canBet={canBet}
+                    angle={seatAngles[index]}
+                    onSelect={() => !seat.occupied && canBet && setSelectedSeat(seat.seatNumber)}
+                  />
+                ))}
 
-                  {/* Center indicator */}
-                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-gradient-to-br from-gray-900 to-gray-800 rounded-full border-4 border-yellow-400 shadow-2xl flex items-center justify-center z-20">
-                    <motion.div
-                      animate={isSpinning ? { rotate: 360 } : {}}
-                      transition={isSpinning ? { duration: 1, repeat: Infinity, ease: "linear" } : {}}
-                      className="text-3xl"
-                    >
-                      {isSpinning ? '🎰' : '🎯'}
-                    </motion.div>
+                {/* Wheel in the center */}
+                <div className="absolute inset-0 flex items-center justify-center p-16">
+                  <div className="relative w-full h-full">
+                    {/* Glow effect */}
+                    <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 blur-3xl opacity-20 animate-pulse" />
+                    
+                    {/* Wheel */}
+                    <div className="absolute inset-0">
+                      <WheelCanvas
+                        winningSegment={gameState.winningSegment}
+                        isSpinning={isSpinning}
+                        onSpinComplete={handleSpinComplete}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Right: Seats Grid */}
+          {/* Right Sidebar - Game Info */}
           <div className="space-y-4">
+            {/* How to Play */}
             <div className="bg-black/60 backdrop-blur-sm border border-white/20 rounded-xl p-4">
-              <h3 className="text-white font-bold mb-4 text-center">SEATS</h3>
-              <div className="grid grid-cols-3 gap-3">
-                {gameState.seats.map((seat, index) => {
-                  const isSelected = selectedSeat === index;
-                  const isOccupied = seat.occupied;
-                  const isMySeat = seat.userId === user?._id;
-
-                  return (
-                    <motion.button
-                      key={index}
-                      onClick={() => !isOccupied && canBet && setSelectedSeat(index)}
-                      disabled={isOccupied || !canBet}
-                      whileHover={!isOccupied && canBet ? { scale: 1.05 } : {}}
-                      whileTap={!isOccupied && canBet ? { scale: 0.95 } : {}}
-                      className={`relative aspect-square rounded-xl border-3 transition-all ${
-                        isMySeat
-                          ? 'bg-gradient-to-br from-green-500 to-emerald-600 border-green-400 shadow-lg shadow-green-500/50'
-                          : isSelected
-                          ? 'bg-gradient-to-br from-yellow-500 to-orange-500 border-yellow-400 shadow-lg shadow-yellow-500/50'
-                          : isOccupied
-                          ? 'bg-gradient-to-br from-gray-700 to-gray-800 border-gray-600 opacity-50 cursor-not-allowed'
-                          : 'bg-gradient-to-br from-purple-600 to-blue-600 border-purple-400 hover:border-cyan-400 shadow-lg cursor-pointer'
-                      }`}
-                    >
-                      {/* Seat number badge */}
-                      <div className="absolute -top-2 -right-2 w-6 h-6 bg-black rounded-full border-2 border-white flex items-center justify-center z-10">
-                        <span className="text-white text-xs font-bold">{index + 1}</span>
-                      </div>
-
-                      {/* Flapper display */}
-                      <div className="absolute inset-0 flex flex-col items-center justify-center p-2">
-                        <div className="text-white text-2xl font-black">
-                          {seat.multiplier}x
-                        </div>
-                        {isOccupied && seat.betAmount && (
-                          <div className="text-xs text-white/80 mt-1">
-                            ${seat.betAmount.toFixed(0)}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Selection pulse */}
-                      {isSelected && (
-                        <motion.div
-                          className="absolute inset-0 rounded-xl border-4 border-yellow-300"
-                          animate={{ scale: [1, 1.1, 1], opacity: [1, 0.5, 1] }}
-                          transition={{ duration: 1.5, repeat: Infinity }}
-                        />
-                      )}
-
-                      {/* My seat indicator */}
-                      {isMySeat && (
-                        <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2">
-                          <div className="bg-green-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">
-                            YOU
-                          </div>
-                        </div>
-                      )}
-                    </motion.button>
-                  );
-                })}
+              <h3 className="text-white font-bold mb-3 text-sm">How to Play</h3>
+              <div className="space-y-2 text-xs text-gray-400">
+                <div className="flex items-start gap-2">
+                  <span className="text-cyan-400 font-bold">1.</span>
+                  <span>Select an empty seat (chair)</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-cyan-400 font-bold">2.</span>
+                  <span>Choose your bet amount</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-cyan-400 font-bold">3.</span>
+                  <span>Reserve the seat before time runs out</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-cyan-400 font-bold">4.</span>
+                  <span>You can occupy up to 2 seats!</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-cyan-400 font-bold">5.</span>
+                  <span>Watch the wheel spin and win!</span>
+                </div>
               </div>
             </div>
 
-            {/* Multiplier Legend */}
+            {/* Multiplier Info */}
             <div className="bg-black/60 backdrop-blur-sm border border-white/20 rounded-xl p-4">
-              <h3 className="text-white font-bold mb-3 text-sm">Base Multipliers</h3>
+              <h3 className="text-white font-bold mb-3 text-sm">Seat Multipliers</h3>
               <div className="space-y-2 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Seats 1-3:</span>
-                  <span className="text-green-400 font-semibold">2.0x</span>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-400">Seats 1-3</span>
+                  <span className="text-green-400 font-bold">2.0x</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Seats 4-6:</span>
-                  <span className="text-blue-400 font-semibold">3.0x</span>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-400">Seats 4-6</span>
+                  <span className="text-blue-400 font-bold">3.0x</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Seats 7-9:</span>
-                  <span className="text-purple-400 font-semibold">5.0x</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Seats 10-12:</span>
-                  <span className="text-yellow-400 font-semibold">10.0x</span>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-400">Seats 7-8</span>
+                  <span className="text-purple-400 font-bold">5.0x</span>
                 </div>
                 <div className="mt-3 pt-3 border-t border-white/10">
-                  <div className="text-center text-cyan-400 font-bold">
-                    × Global Multiplier
-                  </div>
-                  <div className="text-center text-xs text-gray-500 mt-1">
-                    Up to 100x boost!
+                  <div className="text-center">
+                    <div className="text-yellow-400 font-bold text-sm mb-1">
+                      × Global Multiplier
+                    </div>
+                    <div className="text-yellow-400 text-3xl font-black">
+                      {globalMultiplier}x
+                    </div>
+                    <div className="text-gray-500 text-xs mt-1">
+                      Applied to all winners!
+                    </div>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* Wheel Segments Info */}
+            <div className="bg-black/60 backdrop-blur-sm border border-white/20 rounded-xl p-4">
+              <h3 className="text-white font-bold mb-3 text-sm">Wheel Segments</h3>
+              <div className="text-xs text-gray-400 space-y-1">
+                <div>• 54 total segments</div>
+                <div>• Multipliers from -0.75x to 25x</div>
+                <div>• Higher multipliers are rarer</div>
+                <div>• Segments evenly distributed</div>
               </div>
             </div>
           </div>

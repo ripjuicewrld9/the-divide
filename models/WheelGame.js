@@ -30,6 +30,14 @@ const wheelGameSchema = new mongoose.Schema({
       ref: 'User',
       default: null,
     },
+    username: {
+      type: String,
+      default: null,
+    },
+    profileImage: {
+      type: String,
+      default: null,
+    },
     betAmount: {
       type: Number,
       default: 0,

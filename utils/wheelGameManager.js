@@ -228,6 +228,12 @@ class WheelGameManager {
         throw new Error('Seat already occupied');
       }
 
+      // Check if user already has 2 seats (max allowed)
+      const userSeats = game.seats.filter(s => s.userId && s.userId.toString() === userId.toString());
+      if (userSeats.length >= 2) {
+        throw new Error('You can only occupy up to 2 seats per game');
+      }
+
       // Check user balance
       const user = await User.findById(userId);
       if (!user) {
@@ -243,28 +249,27 @@ class WheelGameManager {
       user.balance -= betInCents;
       await user.save();
 
+      // Fetch user details for broadcast
+      const username = user.username;
+      const profileImage = user.profileImage;
+
       // Reserve seat
       seat.userId = userId;
+      seat.username = username;
+      seat.profileImage = profileImage;
       seat.betAmount = betInCents;
       seat.reservedAt = new Date();
 
       await game.save();
 
-      // Broadcast seat reservation
-      this.io.to(`wheel-${gameId}`).emit('seatReserved', {
+      // Broadcast seat reservation with user details
+      this.io.to(`wheel-${gameId}`).emit('wheel:seatReserved', {
         gameId,
         seatNumber,
         userId: userId.toString(),
+        username,
+        profileImage,
         betAmount: betAmount,
-      });
-
-      console.log(`[WheelGame] Seat ${seatNumber} reserved by user ${userId} in game ${gameId}`);
-      
-      // Emit seat reservation event
-      this.io.to(`wheel-${gameId}`).emit('wheel:seatReserved', {
-        seatNumber,
-        userId: userId.toString(),
-        betAmount,
       });
       
       return { success: true, game };
