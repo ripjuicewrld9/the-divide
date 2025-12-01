@@ -11,7 +11,7 @@ import {
 } from './wheelProofOfFair.js';
 
 // Wheel configuration: 54 segments total with base multipliers
-// Distribution as specified:
+// Distribution as specified (spread evenly like Crazy Time):
 // -0.75x: 15 segments
 // -0.5x: 10 segments
 // -0.25x: 5 segments
@@ -25,33 +25,13 @@ import {
 // 5x: 2 segments
 // 7.5x: 1 segment
 // 25x: 1 segment
+// Segments are arranged so matching multipliers are spread around the wheel evenly
 const WHEEL_SEGMENTS = [
-  // -0.75x (15 segments)
-  -0.75, -0.75, -0.75, -0.75, -0.75, -0.75, -0.75, -0.75, -0.75, -0.75, -0.75, -0.75, -0.75, -0.75, -0.75,
-  // -0.5x (10 segments)
-  -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5,
-  // -0.25x (5 segments)
-  -0.25, -0.25, -0.25, -0.25, -0.25,
-  // 0.25x (4 segments)
-  0.25, 0.25, 0.25, 0.25,
-  // 0.5x (4 segments)
-  0.5, 0.5, 0.5, 0.5,
-  // 0.75x (2 segments)
-  0.75, 0.75,
-  // 1x (2 segments)
-  1, 1,
-  // 1.5x (3 segments)
-  1.5, 1.5, 1.5,
-  // 2x (3 segments)
-  2, 2, 2,
-  // 3x (2 segments)
-  3, 3,
-  // 5x (2 segments)
-  5, 5,
-  // 7.5x (1 segment)
-  7.5,
-  // 25x (1 segment)
-  25
+  -0.75, -0.5, -0.25, 0.25, -0.75, -0.5, 0.5, -0.75, -0.25, 1.5,
+  -0.75, -0.5, 0.75, 2, -0.75, -0.5, 0.25, 3, -0.75, -0.25,
+  0.5, -0.75, -0.5, 1, 2, -0.75, -0.5, 0.25, -0.75, -0.25,
+  5, -0.75, -0.5, 0.5, 1.5, -0.75, -0.5, 0.25, -0.75, -0.25,
+  0.75, 2, -0.75, 1.5, 3, 0.5, 5, 1, 7.5, 25
 ];
 
 // 8 Fixed flapper positions (evenly spaced around the wheel)

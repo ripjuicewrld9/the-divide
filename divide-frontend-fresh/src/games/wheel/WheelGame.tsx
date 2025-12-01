@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import useWheelSocket from '../../hooks/useWheelSocket';
 import WheelCanvas from './components/WheelCanvas';
-import SeatSelector from './components/SeatSelector';
+import UserAvatar from '../../components/UserAvatar';
 import { ROUND_DURATION_MS, BETTING_DURATION_MS } from './constants';
 import MobileGameHeader from '../../components/MobileGameHeader';
 
@@ -11,6 +11,8 @@ interface Seat {
   seatNumber: number;
   occupied: boolean;
   userId?: string;
+  username?: string;
+  profileImage?: string;
   betAmount?: number;
   segments: number[];
   multiplier: number;
