@@ -290,7 +290,7 @@ export const NewWheelGame: React.FC<NewWheelGameProps> = ({ gameId, onOpenChat }
                 })}
 
                 {/* Wheel in the center */}
-                <div className="absolute inset-0 flex items-center justify-center" style={{ padding: '15%' }}>
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ padding: '15%', zIndex: 10 }}>
                   <div className="relative w-full h-full">
                     {/* Glow effect */}
                     <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 blur-3xl opacity-20 animate-pulse" />
@@ -301,6 +301,7 @@ export const NewWheelGame: React.FC<NewWheelGameProps> = ({ gameId, onOpenChat }
                         winningSegment={gameState.wheelStopPosition}
                         isSpinning={isSpinning}
                         onSpinComplete={() => {}}
+                        boostedSegments={gameState.boostedSegments}
                       />
                     </div>
                   </div>
