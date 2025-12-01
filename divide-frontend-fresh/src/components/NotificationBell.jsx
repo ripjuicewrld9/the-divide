@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useSocket } from '../hooks/useSocket';
+import useSocket from '../hooks/useSocket';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
