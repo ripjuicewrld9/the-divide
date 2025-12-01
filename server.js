@@ -357,6 +357,7 @@ app.post('/api/support/ticket', async (req, res) => {
 
     await ticket.save();
     console.log(`✅ Support ticket #${ticket._id} created by ${username} (${userId})`);
+    console.log(`   Discord ID: ${discordId || 'NONE'} - Will ${discordId ? '' : 'NOT '}create Discord thread`);
 
     // Only send to Discord if user has Discord linked
     if (discordId) {
