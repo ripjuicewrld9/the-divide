@@ -315,7 +315,7 @@ export const NewWheelGame: React.FC<NewWheelGameProps> = ({ gameId, onOpenChat }
                       return (
                         <div
                           key={flapperIndex}
-                          className="absolute"
+                          className="absolute z-30"
                           style={{
                             left: `${x}%`,
                             top: `${y}%`,

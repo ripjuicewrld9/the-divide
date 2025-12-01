@@ -58,9 +58,9 @@ const WheelSeat: React.FC<WheelSeatProps> = ({
             onSelect();
           }
         }}
-        disabled={occupied || !canBet}
-        style={{ cursor: (!occupied && canBet) ? 'pointer' : 'not-allowed' }}
         className={`relative w-16 h-20 rounded-xl transition-all ${
+          (!occupied && canBet) ? 'cursor-pointer' : 'cursor-default'
+        } ${
           isMySeat
             ? 'bg-gradient-to-br from-green-500 to-emerald-600 border-4 border-green-300 shadow-xl shadow-green-500/50'
             : isSelected

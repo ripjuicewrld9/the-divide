@@ -266,9 +266,8 @@ class WheelGameManager {
         throw new Error('Insufficient balance');
       }
 
-      // Deduct bet from user balance
-      user.balance -= betInCents;
-      await user.save();
+      // DO NOT deduct bet here - will be deducted after spin completes
+      // Just verify they have the balance
 
       // Fetch user details for broadcast
       const username = user.username;
@@ -529,7 +528,10 @@ class WheelGameManager {
         if (isOccupied && seat.userId) {
           const user = await User.findById(seat.userId);
           if (user) {
-            // Apply payout (can be positive or negative)
+            // Deduct the bet amount first
+            user.balance -= seat.betAmount;
+            
+            // Then apply payout (can be positive or negative)
             user.balance += payout;
             
             // Update stats
