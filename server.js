@@ -1094,7 +1094,7 @@ app.post('/api/support/tickets/:id/assign', auth, moderatorOnly, async (req, res
     }
 
     // Verify the moderatorId is the current user (moderators can only assign to themselves)
-    if (moderatorId !== req.userId) {
+    if (String(moderatorId) !== String(req.userId)) {
       return res.status(403).json({ error: 'You can only assign tickets to yourself' });
     }
 
