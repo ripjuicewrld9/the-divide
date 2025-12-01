@@ -496,23 +496,6 @@ export const NewWheelGame: React.FC<NewWheelGameProps> = ({ gameId, onOpenChat }
               </div>
             </div>
           </div>
-                  <span className="text-gray-500">8 segments</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-yellow-400">+7.5x</span>
-                  <span className="text-gray-500">1 segment</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-purple-400 font-bold">+25x</span>
-                  <span className="text-gray-500">1 segment</span>
-                </div>
-                <div className="border-t border-white/10 my-2"></div>
-                <div className="text-center text-yellow-400 font-bold text-sm">
-                  + Random Boosts (10x-100x)!
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Boost Reveal Animation */}
