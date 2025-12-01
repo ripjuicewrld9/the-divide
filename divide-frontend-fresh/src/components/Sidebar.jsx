@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 const IconWithGradient = ({ src, isActive, id }) => {
     return (
@@ -28,7 +30,33 @@ const IconWithGradient = ({ src, isActive, id }) => {
 
 export default function Sidebar() {
     const location = useLocation();
-    const { user } = useAuth();
+    const { user, token } = useAuth();
+    const [unreadCount, setUnreadCount] = useState(0);
+
+    const isModerator = user && (user.role === 'moderator' || user.role === 'admin');
+
+    // Fetch unread support notifications for moderators
+    useEffect(() => {
+        if (!isModerator || !token) return;
+
+        const fetchUnreadCount = async () => {
+            try {
+                const res = await fetch(`${API_BASE}/api/notifications/unread`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                const supportNotifs = data.notifications?.filter(n => n.type === 'support') || [];
+                setUnreadCount(supportNotifs.length);
+            } catch (err) {
+                console.error('Failed to fetch notifications:', err);
+            }
+        };
+
+        fetchUnreadCount();
+        const interval = setInterval(fetchUnreadCount, 30000); // Refresh every 30s
+
+        return () => clearInterval(interval);
+    }, [isModerator, token]);
 
     const links = [
         { name: 'Home', path: '/', icon: '/home-alt-svgrepo-com.svg' },
@@ -47,7 +75,10 @@ export default function Sidebar() {
                 <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Menu</h3>
                 <div className="space-y-1">
                     {links.map((link) => {
-                        const isActive = location.pathname === link.path;
+                        const isActive = location.pathname === link.path || location.pathname.startsWith(link.path + '/');
+                        const isSupport = link.path === '/support';
+                        const showBadge = isSupport && isModerator && unreadCount > 0;
+                        
                         return (
                             <Link
                                 key={link.path}
@@ -58,7 +89,12 @@ export default function Sidebar() {
                                     }`}
                             >
                                 <IconWithGradient src={link.icon} isActive={isActive} id={link.path.replace(/\//g, '-')} />
-                                {link.name}
+                                <span className="flex-1">{link.name}</span>
+                                {showBadge && (
+                                    <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full">
+                                        {unreadCount > 9 ? '9+' : unreadCount}
+                                    </span>
+                                )}
                                 {isActive && (
                                     <motion.div
                                         layoutId="activeSidebar"

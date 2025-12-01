@@ -94,6 +94,20 @@ export default function SupportInbox() {
             }
         }
 
+        // Optimistically add message to UI
+        const optimisticMessage = {
+            userId: user._id,
+            username: user.username,
+            message: isEncrypted ? encryptedText : messageText,
+            encrypted: isEncrypted,
+            role: user.role,
+            timestamp: new Date().toISOString()
+        };
+        
+        setMessages(prev => [...prev, optimisticMessage]);
+        setInputMessage('');
+
+        // Send to server
         socket.emit('moderator-chat:sendMessage', {
             userId: user._id,
             username: user.username,
@@ -101,8 +115,6 @@ export default function SupportInbox() {
             encrypted: isEncrypted,
             role: user.role,
         });
-
-        setInputMessage('');
     };
 
     const handleKeyDown = (e) => {
