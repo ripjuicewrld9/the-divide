@@ -274,7 +274,6 @@ export const NewWheelGame: React.FC<NewWheelGameProps> = ({ gameId, onOpenChat }
                     <WheelSeat
                       key={seat.seatNumber}
                       seatNumber={seat.seatNumber}
-                      multiplier={0} // Not used - outcome determined by wheel segment
                       occupied={seat.occupied}
                       userId={seat.userId}
                       username={seat.username}
@@ -284,7 +283,7 @@ export const NewWheelGame: React.FC<NewWheelGameProps> = ({ gameId, onOpenChat }
                       isMySeat={seat.userId === user?.id}
                       canBet={canBet}
                       angle={angle}
-                      onSelect={() => !seat.occupied && canBet && setSelectedSeat(seat.seatNumber)}
+                      onSelect={() => setSelectedSeat(seat.seatNumber)}
                     />
                   );
                 })}
@@ -315,7 +314,7 @@ export const NewWheelGame: React.FC<NewWheelGameProps> = ({ gameId, onOpenChat }
                       return (
                         <div
                           key={flapperIndex}
-                          className="absolute z-30"
+                          className="absolute z-50"
                           style={{
                             left: `${x}%`,
                             top: `${y}%`,

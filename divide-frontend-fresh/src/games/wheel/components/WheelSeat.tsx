@@ -4,7 +4,6 @@ import UserAvatar from '../../../components/UserAvatar';
 
 interface WheelSeatProps {
   seatNumber: number;
-  multiplier: number;
   occupied: boolean;
   userId?: string;
   username?: string;
@@ -19,7 +18,6 @@ interface WheelSeatProps {
 
 const WheelSeat: React.FC<WheelSeatProps> = ({
   seatNumber,
-  multiplier,
   occupied,
   userId,
   username,
@@ -93,11 +91,11 @@ const WheelSeat: React.FC<WheelSeatProps> = ({
             </>
           ) : (
             <>
-              {/* Empty seat - show multiplier */}
-              <div className="text-white text-xl font-black mb-1">
-                {multiplier}x
+              {/* Empty seat */}
+              <div className="text-white text-base font-bold mb-1">
+                OPEN
               </div>
-              <div className="text-[10px] text-white/60">Empty</div>
+              <div className="text-[10px] text-white/60">Click to Join</div>
             </>
           )}
         </div>
