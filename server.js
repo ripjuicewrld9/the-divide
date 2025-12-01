@@ -596,11 +596,6 @@ app.post('/api/support/tickets/:id/messages', auth, async (req, res) => {
       ticket.status = 'in_progress';
     }
 
-    // Update status if needed
-    if (ticket.status === 'open' && isAdmin) {
-      ticket.status = 'in_progress';
-    }
-
     await ticket.save();
 
     // Send to Discord thread if it exists
