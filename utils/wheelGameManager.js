@@ -412,9 +412,32 @@ class WheelGameManager {
       if (!hasPlayers) {
         // No players, skip spin and start next round immediately
         console.log(`[WheelGame] No players in game ${gameId}, skipping spin`);
-        setTimeout(() => {
-          this.startNextRound(gameId);
-        }, 2000);
+        game.status = 'betting';
+        game.roundNumber += 1;
+        game.roundStartTime = new Date();
+        game.roundEndTime = new Date(Date.now() + ROUND_DURATION_MS);
+        
+        // Clear seats and reset for next round
+        game.seats = game.seats.map(seat => ({
+          ...seat,
+          occupied: false,
+          userId: null,
+          username: null,
+          profileImage: null,
+          betAmount: 0,
+        }));
+        
+        await game.save();
+        
+        // Broadcast new round
+        this.io.to(`wheel-${gameId}`).emit('wheel:newRound', {
+          gameId,
+          roundNumber: game.roundNumber,
+          roundEndTime: game.roundEndTime,
+        });
+        
+        // Schedule next round
+        this.scheduleRoundEnd(gameId, game.roundEndTime);
         return;
       }
 
