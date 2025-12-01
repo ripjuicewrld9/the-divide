@@ -9,6 +9,9 @@ export default function DepositWithdrawModal({ isOpen, onClose }) {
     const [selectedPackage, setSelectedPackage] = useState(null);
     const [amount, setAmount] = useState('');
     const [error, setError] = useState('');
+    const [show2FAPrompt, setShow2FAPrompt] = useState(false);
+    const [twoFactorCode, setTwoFactorCode] = useState('');
+    const [pendingAction, setPendingAction] = useState(null);
 
     const depositMethods = [
         { id: 'btc', name: 'Bitcoin', symbol: 'BTC', color: '#f7931a', bgColor: 'rgba(247, 147, 26, 0.1)', icon: '/cryptosvg/bitcoin-btc-logo.svg' },
@@ -43,6 +46,17 @@ export default function DepositWithdrawModal({ isOpen, onClose }) {
     const handleBuy = (pkg) => {
         setError('');
 
+        // Check if 2FA is enabled and required
+        if (user?.twoFactorEnabled) {
+            setPendingAction({ type: 'buy', package: pkg });
+            setShow2FAPrompt(true);
+            return;
+        }
+
+        processBuy(pkg);
+    };
+
+    const processBuy = (pkg) => {
         // Daily limit check (Mock implementation using localStorage)
         try {
             const now = Date.now();
@@ -79,6 +93,49 @@ export default function DepositWithdrawModal({ isOpen, onClose }) {
         }
     };
 
+    const verify2FAAndProceed = async () => {
+        setError('');
+        
+        if (!twoFactorCode || twoFactorCode.length !== 6) {
+            setError('Please enter a valid 6-digit code');
+            return;
+        }
+
+        try {
+            const API_BASE = import.meta.env.VITE_API_URL || '';
+            const res = await fetch(`${API_BASE}/api/verify-2fa`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ token: twoFactorCode })
+            });
+
+            const data = await res.json();
+            
+            if (!res.ok || !data.verified) {
+                setError('Invalid 2FA code. Please try again.');
+                return;
+            }
+
+            // 2FA verified, proceed with the action
+            setShow2FAPrompt(false);
+            setTwoFactorCode('');
+            
+            if (pendingAction?.type === 'buy') {
+                processBuy(pendingAction.package);
+            } else if (pendingAction?.type === 'redeem') {
+                processRedeem();
+            }
+            
+            setPendingAction(null);
+        } catch (err) {
+            console.error('2FA verification error:', err);
+            setError('Failed to verify 2FA code. Please try again.');
+        }
+    };
+
     const handleRedeem = () => {
         setError('');
         const amt = Number(amount);
@@ -92,6 +149,19 @@ export default function DepositWithdrawModal({ isOpen, onClose }) {
             setError('Insufficient balance');
             return;
         }
+
+        // Check if 2FA is enabled and required
+        if (user?.twoFactorEnabled) {
+            setPendingAction({ type: 'redeem', amount: amt });
+            setShow2FAPrompt(true);
+            return;
+        }
+
+        processRedeem();
+    };
+
+    const processRedeem = () => {
+        const amt = pendingAction?.amount || Number(amount);
 
         // Simulate withdrawal by deducting from balance
         if (addFunds) {
@@ -140,7 +210,53 @@ export default function DepositWithdrawModal({ isOpen, onClose }) {
                 </div>
 
                 <div className="p-6 overflow-y-auto">
-                    {activeTab === 'deposit' ? (
+                    {show2FAPrompt ? (
+                        <div className="text-center">
+                            <div className="mb-6">
+                                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-cyan-500/20 flex items-center justify-center">
+                                    <svg className="w-8 h-8 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                    </svg>
+                                </div>
+                                <h3 className="text-xl font-bold mb-2">Two-Factor Authentication</h3>
+                                <p className="text-sm text-gray-400">Enter the 6-digit code from your authenticator app</p>
+                            </div>
+                            
+                            <input
+                                type="text"
+                                inputMode="numeric"
+                                maxLength="6"
+                                value={twoFactorCode}
+                                onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, ''))}
+                                placeholder="000000"
+                                className="w-full px-4 py-3 bg-black/50 border border-white/10 rounded-lg text-white text-center text-2xl tracking-widest placeholder-gray-500 focus:outline-none focus:border-cyan-400 transition-colors mb-4"
+                                autoFocus
+                            />
+                            
+                            {error && <p className="text-sm text-red-400 mb-4">{error}</p>}
+                            
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => {
+                                        setShow2FAPrompt(false);
+                                        setTwoFactorCode('');
+                                        setPendingAction(null);
+                                        setError('');
+                                    }}
+                                    className="flex-1 py-3 bg-white/5 hover:bg-white/10 text-white font-bold rounded-lg transition-all"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={verify2FAAndProceed}
+                                    disabled={twoFactorCode.length !== 6}
+                                    className="flex-1 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-all active:scale-95"
+                                >
+                                    Verify
+                                </button>
+                            </div>
+                        </div>
+                    ) : activeTab === 'deposit' ? (
                         !selectedMethod ? (
                             <>
                                 <p className="text-sm text-gray-400 mb-4">Select payment method</p>

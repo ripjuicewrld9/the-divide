@@ -12,12 +12,21 @@ export default function SupportDashboard() {
     const [tickets, setTickets] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    const isModerator = user && (user.role === 'moderator' || user.role === 'admin');
+
+    // Redirect non-moderators to tickets page
     useEffect(() => {
-        if (user && token) {
+        if (user && !isModerator) {
+            navigate('/support/tickets', { replace: true });
+        }
+    }, [user, isModerator, navigate]);
+
+    useEffect(() => {
+        if (user && token && isModerator) {
             fetchDashboardData();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user, token]);
+    }, [user, token, isModerator]);
 
     const fetchDashboardData = async () => {
         try {

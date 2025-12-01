@@ -1,7 +1,21 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import SupportLayout from '../components/SupportLayout';
 
 export default function SupportAnalytics() {
+    const { user } = useAuth();
+    const navigate = useNavigate();
+
+    const isModerator = user && (user.role === 'moderator' || user.role === 'admin');
+
+    // Redirect non-moderators to tickets page
+    useEffect(() => {
+        if (user && !isModerator) {
+            navigate('/support/tickets', { replace: true });
+        }
+    }, [user, isModerator, navigate]);
+
     return (
         <SupportLayout>
             <div className="p-4 md:p-8">

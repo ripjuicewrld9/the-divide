@@ -115,10 +115,7 @@ export default function SupportTickets() {
             ticket.userId?.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             ticket._id.substring(18).toUpperCase().includes(searchQuery.toUpperCase());
         
-        // Hide resolved tickets from "all" status view
-        const matchesStatus = filterStatus === 'all' 
-            ? ticket.status !== 'resolved' && ticket.status !== 'closed'
-            : ticket.status === filterStatus;
+        const matchesStatus = filterStatus === 'all' || ticket.status === filterStatus;
         const matchesPriority = filterPriority === 'all' || ticket.priority === filterPriority;
         
         // Filter by assigned status
@@ -129,6 +126,14 @@ export default function SupportTickets() {
         
         return matchesSearch && matchesStatus && matchesPriority && matchesAssigned;
     }).sort((a, b) => {
+        // Always push closed/resolved tickets to the bottom
+        const aIsClosed = a.status === 'closed' || a.status === 'resolved';
+        const bIsClosed = b.status === 'closed' || b.status === 'resolved';
+        
+        if (aIsClosed && !bIsClosed) return 1;  // a goes to bottom
+        if (!aIsClosed && bIsClosed) return -1; // b goes to bottom
+        
+        // For tickets with same closed/open status, apply normal sorting
         if (sortBy === 'newest') return new Date(b.createdAt) - new Date(a.createdAt);
         if (sortBy === 'oldest') return new Date(a.createdAt) - new Date(b.createdAt);
         if (sortBy === 'priority') {
@@ -272,7 +277,7 @@ export default function SupportTickets() {
                                 }}
                                 className="px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg focus:border-cyan-500 outline-none text-sm"
                             >
-                                <option value="all">Active Tickets</option>
+                                <option value="all">All Status</option>
                                 <option value="open">Open</option>
                                 <option value="in_progress">In Progress</option>
                                 <option value="resolved">Resolved</option>

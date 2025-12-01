@@ -319,6 +319,101 @@ app.post('/api/profile-image', auth, async (req, res) => {
   }
 });
 
+// ========================================
+// USER PROFILE & TIPPING
+// ========================================
+
+// Get user profile (public stats)
+app.get('/api/user/profile', async (req, res) => {
+  try {
+    const { id, username } = req.query;
+
+    if (!id && !username) {
+      return res.status(400).json({ error: 'User ID or username required' });
+    }
+
+    const query = id ? { _id: id } : { username: username };
+    const user = await User.findOne(query).select(
+      'username profileImage totalBets totalWins totalLosses wagered role createdAt'
+    ).lean();
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({ user });
+  } catch (err) {
+    console.error('Get profile error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Send tip to another user
+app.post('/api/user/tip', auth, async (req, res) => {
+  try {
+    const { recipientId, amount } = req.body;
+
+    if (!recipientId || !amount) {
+      return res.status(400).json({ error: 'Recipient ID and amount required' });
+    }
+
+    const tipAmount = Math.floor(Number(amount) * 100); // Convert to cents
+
+    if (isNaN(tipAmount) || tipAmount <= 0) {
+      return res.status(400).json({ error: 'Invalid tip amount' });
+    }
+
+    // Get sender
+    const sender = await User.findById(req.userId);
+    if (!sender) {
+      return res.status(404).json({ error: 'Sender not found' });
+    }
+
+    // Check if trying to tip yourself
+    if (sender._id.toString() === recipientId) {
+      return res.status(400).json({ error: 'You cannot tip yourself' });
+    }
+
+    // Check sender balance
+    if (sender.balance < tipAmount) {
+      return res.status(400).json({ error: 'Insufficient balance' });
+    }
+
+    // Get recipient
+    const recipient = await User.findById(recipientId);
+    if (!recipient) {
+      return res.status(404).json({ error: 'Recipient not found' });
+    }
+
+    // Process tip
+    sender.balance -= tipAmount;
+    recipient.balance += tipAmount;
+
+    await sender.save();
+    await recipient.save();
+
+    // Create notification for recipient
+    await Notification.create({
+      userId: recipient._id,
+      type: 'system',
+      title: 'Tip Received!',
+      message: `${sender.username} sent you a tip of $${amount}!`,
+      icon: '💰'
+    });
+
+    console.log(`💰 ${sender.username} tipped ${recipient.username} $${amount}`);
+
+    res.json({ 
+      success: true, 
+      message: `Successfully sent $${amount} to ${recipient.username}`,
+      newBalance: sender.balance
+    });
+  } catch (err) {
+    console.error('Tip error:', err);
+    res.status(500).json({ error: 'Failed to send tip' });
+  }
+});
+
 // Support Ticket System - creates private Discord threads
 app.post('/api/support/ticket', async (req, res) => {
   try {
@@ -1573,6 +1668,55 @@ app.get('/api/security/2fa/status', auth, async (req, res) => {
     res.json({ enabled: user.twoFactorEnabled || false });
   } catch (err) {
     console.error('2FA status error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// POST /api/verify-2fa - Verify 2FA token (for deposits/withdrawals)
+app.post('/api/verify-2fa', auth, twoFactorLimiter, async (req, res) => {
+  try {
+    const { token } = req.body || {};
+
+    if (!token) {
+      return res.status(400).json({ error: 'Verification code required' });
+    }
+
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    if (!user.twoFactorEnabled) {
+      return res.status(400).json({ error: '2FA is not enabled' });
+    }
+
+    // Verify TOTP token
+    const isValid = speakeasy.totp.verify({
+      secret: user.twoFactorSecret,
+      encoding: 'base32',
+      token,
+      window: 2
+    });
+
+    if (isValid) {
+      return res.json({ verified: true });
+    }
+
+    // Try backup codes
+    if (user.twoFactorBackupCodes?.length > 0) {
+      const backupCodeIndex = user.twoFactorBackupCodes.findIndex(code =>
+        bcrypt.compareSync(token, code)
+      );
+
+      if (backupCodeIndex !== -1) {
+        // Remove used backup code
+        user.twoFactorBackupCodes.splice(backupCodeIndex, 1);
+        await user.save();
+        return res.json({ verified: true, usedBackupCode: true });
+      }
+    }
+
+    res.status(400).json({ error: 'Invalid verification code' });
+  } catch (err) {
+    console.error('2FA verification error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });

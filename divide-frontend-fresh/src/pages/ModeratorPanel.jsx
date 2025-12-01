@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import SupportLayout from '../components/SupportLayout';
 
@@ -6,19 +7,29 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 
 export default function ModeratorPanel() {
     const { user, token } = useAuth();
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('chat');
     const [chatMessages, setChatMessages] = useState([]);
     const [mutedUsers, setMutedUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
 
+    const isModerator = user && (user.role === 'moderator' || user.role === 'admin');
+
+    // Redirect non-moderators to tickets page
     useEffect(() => {
-        if (user) {
+        if (user && !isModerator) {
+            navigate('/support/tickets', { replace: true });
+        }
+    }, [user, isModerator, navigate]);
+
+    useEffect(() => {
+        if (user && isModerator) {
             fetchChatMessages();
             fetchMutedUsers();
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user]);
+    }, [user, isModerator]);
 
     const fetchChatMessages = async () => {
         try {

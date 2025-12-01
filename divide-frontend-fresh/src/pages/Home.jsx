@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import RuggedCard from '../components/RuggedCard';
 import UserAvatar from '../components/UserAvatar';
 import ProvenFairModal from '../components/ProvenFairModal';
+import UserProfileModal from '../components/UserProfileModal';
 
 export default function Home() {
   const [hoveredCard, setHoveredCard] = useState(null);
@@ -11,6 +12,8 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState('all'); // 'all' or 'my'
   const [selectedGame, setSelectedGame] = useState(null);
   const [showProvenFair, setShowProvenFair] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [showUserProfile, setShowUserProfile] = useState(false);
 
   // Map game names to SVG icons
   const getGameIcon = (gameName) => {
@@ -524,8 +527,28 @@ export default function Home() {
                     fontSize: '13px',
                     color: '#00ffff'
                   }}>
-                    <UserAvatar user={{ username: game.username, profileImage: game.profileImage }} size={24} />
-                    {game.username}
+                    <UserAvatar 
+                      user={{ username: game.username, profileImage: game.profileImage }} 
+                      size={24}
+                      onClick={() => {
+                        setSelectedUser(game.username);
+                        setShowUserProfile(true);
+                      }}
+                    />
+                    <span 
+                      onClick={() => {
+                        setSelectedUser(game.username);
+                        setShowUserProfile(true);
+                      }}
+                      style={{
+                        cursor: 'pointer',
+                        transition: 'color 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.color = '#00ccff'}
+                      onMouseLeave={(e) => e.currentTarget.style.color = '#00ffff'}
+                    >
+                      {game.username}
+                    </span>
                   </div>
 
                   {/* Time */}
@@ -591,6 +614,15 @@ export default function Home() {
         isOpen={showProvenFair}
         onClose={() => setShowProvenFair(false)}
         gameData={selectedGame}
+      />
+
+      <UserProfileModal
+        isOpen={showUserProfile}
+        onClose={() => {
+          setShowUserProfile(false);
+          setSelectedUser(null);
+        }}
+        username={selectedUser}
       />
     </div>
   );

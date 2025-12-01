@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import useSocket from '../hooks/useSocket';
 import UserAvatar from '../components/UserAvatar';
@@ -13,6 +14,16 @@ export default function SupportInbox() {
     const [decryptedMessages, setDecryptedMessages] = useState({});
     const messagesEndRef = useRef(null);
     const encryptionSupported = isEncryptionSupported();
+    const navigate = useNavigate();
+
+    const isModerator = user && (user.role === 'moderator' || user.role === 'admin');
+
+    // Redirect non-moderators to tickets page
+    useEffect(() => {
+        if (user && !isModerator) {
+            navigate('/support/tickets', { replace: true });
+        }
+    }, [user, isModerator, navigate]);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
