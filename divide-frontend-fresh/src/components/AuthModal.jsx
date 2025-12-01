@@ -4,7 +4,7 @@ import ReactDOM from 'react-dom';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 export default function AuthModal({ onClose, isRegister, setIsRegister }) {
     const [username, setUsername] = useState('');

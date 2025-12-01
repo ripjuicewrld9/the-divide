@@ -11,7 +11,7 @@ export function useBlackjackProvenFair() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationResult, setVerificationResult] = useState<any>(null);
 
-  const apiUrl = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000';
+  const apiUrl = (import.meta as any).env.VITE_API_URL || '';
   const token = localStorage.getItem('token');
 
   /**

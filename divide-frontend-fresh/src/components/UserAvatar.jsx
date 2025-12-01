@@ -25,7 +25,7 @@ export default function UserAvatar({ user, size = 32 }) {
     if (profileImage.startsWith('/profilesvg/')) {
       return profileImage;
     }
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    const baseUrl = import.meta.env.VITE_API_URL || '';
     const fullUrl = `${baseUrl}${profileImage}`;
     return fullUrl;
   };

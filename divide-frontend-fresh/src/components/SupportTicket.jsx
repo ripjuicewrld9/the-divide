@@ -27,7 +27,7 @@ export default function SupportTicket({ onClose }) {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/support/ticket`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/support/ticket`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

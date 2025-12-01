@@ -34,10 +34,10 @@ export default function LiveGames({ isMobile = false }) {
   const fetchRecentGames = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
-      let url = (import.meta.env.VITE_API_URL || 'http://localhost:3000') + '/api/recent-games?limit=20';
+      let url = (import.meta.env.VITE_API_URL || '') + '/api/recent-games?limit=20';
       
       if (activeTab === 'my' && token) {
-        url = (import.meta.env.VITE_API_URL || 'http://localhost:3000') + '/api/my-games?limit=20';
+        url = (import.meta.env.VITE_API_URL || '') + '/api/my-games?limit=20';
       }
       
       const headers = {};

@@ -52,7 +52,7 @@ export const PlinkoLiveChart: React.FC<PlinkoLiveChartProps> = ({ onClose }) => 
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(
-        `${(import.meta as any).env.VITE_API_URL || 'http://localhost:3000'}/plinko/rounds?limit=200`,
+        `${(import.meta as any).env.VITE_API_URL || ''}/plinko/rounds?limit=200`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

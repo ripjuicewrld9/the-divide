@@ -156,7 +156,7 @@ export const WheelGame: React.FC<WheelGameProps> = ({ gameId, onOpenChat }) => {
 
     try {
       setIsReservingSeat(true);
-      const apiUrl = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000';
+      const apiUrl = (import.meta as any).env.VITE_API_URL || '';
       
       const response = await fetch(`${apiUrl}/api/wheel/reserve-seat`, {
         method: 'POST',

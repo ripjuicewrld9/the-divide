@@ -150,7 +150,7 @@ export default function AdminItems() {
       setUploading(true);
       setUploadError('');
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:3000/upload', {
+      const res = await fetch((import.meta.env.VITE_API_URL || '') + '/upload', {
         method: 'POST',
         credentials: 'include',
         headers: token ? { 'Authorization': `Bearer ${token}` } : {},

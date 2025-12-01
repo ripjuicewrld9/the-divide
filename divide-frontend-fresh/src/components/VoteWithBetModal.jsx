@@ -2,7 +2,7 @@ import React, { useContext, useState } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import '../styles/VoteWithBetModal.css';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 export default function VoteWithBetModal({ isOpen, onClose, divide, onVoted }) {
   const { user, refreshUser } = useContext(AuthContext);

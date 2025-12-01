@@ -251,7 +251,7 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({ onOpenChat }) => {
       }
 
       // Call backend API to play a round
-      const response = await fetch(`${(import.meta as any).env.VITE_API_URL || 'http://localhost:3000'}/api/plinko/play`, {
+      const response = await fetch(`${(import.meta as any).env.VITE_API_URL || ''}/api/plinko/play`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

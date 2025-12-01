@@ -49,7 +49,7 @@ export default function UserSettingsModal({ isOpen, onClose }) {
       const token = localStorage.getItem('token');
       // Note: File upload still needs the specific endpoint if it handles multipart/form-data
       // Assuming /api/user/upload-profile-image exists as seen in server.js
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/user/upload-profile-image`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/user/upload-profile-image`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`

@@ -26,7 +26,7 @@ interface BlackjackGameProps {
 
 const saveBlackjackGameResult = async (gameState: any, token: string) => {
   try {
-    const apiUrl = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000';
+    const apiUrl = (import.meta as any).env.VITE_API_URL || '';
 
     // Get the most recent round result
     const lastResult = gameState.roundResults[0];
@@ -215,7 +215,7 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
 
     setIsVerifying(true);
     try {
-      const apiUrl = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000';
+      const apiUrl = (import.meta as any).env.VITE_API_URL || '';
       // Fetch recent BLACKJACK games to get the last game ID
       const response = await fetch(`${apiUrl}/api/blackjack/games?limit=1`, {
         headers: {
@@ -268,7 +268,7 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
 
     try {
       // Start a provably fair session before dealing
-      const apiUrl = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000';
+      const apiUrl = (import.meta as any).env.VITE_API_URL || '';
       const response = await fetch(`${apiUrl}/api/blackjack/session/start`, {
         method: 'POST',
         headers: {

@@ -983,7 +983,7 @@ export default function CaseBattleArenaReelNative({ battleData, onBattleComplete
     // Fetch rock, paper, scissors items from database
     const fetchRpsItems = async () => {
       try {
-        const res = await fetch('http://localhost:3000/items');
+        const res = await fetch((import.meta.env.VITE_API_URL || '') + '/items');
         const data = await res.json();
 
         // Filter for rock, paper, scissors items
