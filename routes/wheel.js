@@ -60,6 +60,31 @@ export default function registerWheelRoutes(app, io, { auth }) {
   });
 
   /**
+   * GET /api/wheel/state/:gameId - Get specific game state (PUBLIC) - Alias for compatibility
+   */
+  router.get('/state/:gameId', async (req, res) => {
+    try {
+      const { gameId } = req.params;
+      const wheelGameManager = req.app.locals.wheelGameManager;
+      
+      if (!wheelGameManager) {
+        return res.status(500).json({ error: 'Game manager not initialized' });
+      }
+
+      const gameState = await wheelGameManager.getGameState(gameId);
+      
+      if (!gameState) {
+        return res.status(404).json({ error: 'Game not found' });
+      }
+
+      res.json(gameState);
+    } catch (error) {
+      console.error('[WheelAPI] Error fetching game state:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  /**
    * POST /api/wheel/reserve-seat - Reserve a seat (REQUIRES AUTH)
    */
   router.post('/reserve-seat', auth, async (req, res) => {
