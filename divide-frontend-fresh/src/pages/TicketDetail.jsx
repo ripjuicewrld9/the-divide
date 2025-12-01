@@ -426,9 +426,17 @@ export default function TicketDetail() {
                         <textarea
                             value={message}
                             onChange={e => setMessage(e.target.value)}
+                            onKeyDown={e => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    if (message.trim() && !sending) {
+                                        handleSendMessage(e);
+                                    }
+                                }
+                            }}
                             className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:border-cyan-500 outline-none resize-none mb-3"
                             rows="4"
-                            placeholder="Type your message..."
+                            placeholder="Type your message... (Press Enter to send, Shift+Enter for new line)"
                             disabled={sending}
                         />
                         <div className="flex justify-end">
