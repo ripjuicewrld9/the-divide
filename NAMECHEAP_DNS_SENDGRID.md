@@ -34,17 +34,20 @@ SMTP_FROM=noreply@betbro.club
 ## Troubleshooting
 
 **Email not arriving?**
+
 - Check spam folder
 - Verify SMTP_PASS is correct API key
 - Check Render logs for email errors
 - Verify email address exists in your database
 
 **"Invalid API key" error?**
+
 - API key must start with `SG.`
 - Copy entire key including `SG.` prefix
 - No spaces before/after the key
 
 **Email arrives but link doesn't work?**
+
 - Verify frontend is deployed to cPanel
 - Check token hasn't expired (1 hour limit)
 - Clear browser cache
@@ -52,6 +55,7 @@ SMTP_FROM=noreply@betbro.club
 ## Email Rate Limits
 
 SendGrid free tier: **100 emails per day**
+
 - Password resets
 - Future marketing campaigns
 - Any other system emails

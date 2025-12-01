@@ -723,10 +723,10 @@ app.post('/register', async (req, res) => {
 //  RATE LIMITING CONFIGURATION
 // ──────────────────────────────────────────────
 
-// Login rate limiter - 5 attempts per 15 minutes
+// Login rate limiter - 50 attempts per 15 minutes (increased for testing)
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5,
+  max: 50,
   message: 'Too many login attempts from this IP, please try again after 15 minutes',
   standardHeaders: true,
   legacyHeaders: false,
