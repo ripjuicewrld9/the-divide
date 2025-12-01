@@ -308,32 +308,43 @@ export const NewWheelGame: React.FC<NewWheelGameProps> = ({ gameId, onOpenChat }
                     {[0, 1, 2, 3, 4, 5, 6, 7].map((flapperIndex) => {
                       const angle = (flapperIndex * 360) / 8;
                       const radians = ((angle - 90) * Math.PI) / 180;
-                      const flapperRadius = 48; // Adjusted for bigger wheel
+                      const flapperRadius = 48; // Position outside wheel rim
                       const x = 50 + flapperRadius * Math.cos(radians);
                       const y = 50 + flapperRadius * Math.sin(radians);
                       
                       return (
                         <div
                           key={flapperIndex}
-                          className="absolute w-0 h-0"
+                          className="absolute"
                           style={{
                             left: `${x}%`,
                             top: `${y}%`,
                             transform: `translate(-50%, -50%) rotate(${angle}deg)`,
+                            pointerEvents: 'none',
                           }}
                         >
-                          {/* Flapper arrow pointing toward wheel center */}
-                          <div
-                            className="absolute bg-red-600 border-2 border-red-700 shadow-lg"
-                            style={{
-                              width: '0',
-                              height: '0',
-                              borderLeft: '10px solid transparent',
-                              borderRight: '10px solid transparent',
-                              borderTop: '25px solid #dc2626',
-                              transform: 'translateY(-12px)',
-                            }}
-                          />
+                          {/* Triangle flapper pointing toward wheel center */}
+                          <svg width="30" height="30" viewBox="0 0 30 30" style={{ transform: 'translateY(-15px)' }}>
+                            <defs>
+                              <filter id={`shadow-${flapperIndex}`} x="-50%" y="-50%" width="200%" height="200%">
+                                <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#000" floodOpacity="0.5"/>
+                              </filter>
+                            </defs>
+                            {/* Triangle pointing down (toward wheel center after rotation) */}
+                            <polygon 
+                              points="15,25 5,5 25,5" 
+                              fill="#dc2626"
+                              stroke="#991b1b"
+                              strokeWidth="2"
+                              filter={`url(#shadow-${flapperIndex})`}
+                            />
+                            {/* Highlight for 3D effect */}
+                            <polygon 
+                              points="15,23 8,8 15,8" 
+                              fill="#ef4444"
+                              opacity="0.6"
+                            />
+                          </svg>
                         </div>
                       );
                     })}

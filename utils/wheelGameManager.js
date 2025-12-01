@@ -283,6 +283,27 @@ class WheelGameManager {
 
       await game.save();
 
+      // If game was paused (no active round), start a new round
+      const wasIdle = !this.roundTimers.has(gameId);
+      if (wasIdle) {
+        console.log(`[WheelGame] First player joined game ${gameId}, starting new round`);
+        game.roundNumber += 1;
+        game.roundStartTime = new Date();
+        game.roundEndTime = new Date(Date.now() + ROUND_DURATION_MS);
+        game.status = 'betting';
+        await game.save();
+        
+        // Broadcast new round started
+        this.io.to(`wheel-${gameId}`).emit('wheel:newRound', {
+          gameId,
+          roundNumber: game.roundNumber,
+          roundEndTime: game.roundEndTime,
+        });
+        
+        // Schedule the round end
+        this.scheduleRoundEnd(gameId, game.roundEndTime);
+      }
+
       // Broadcast seat reservation with user details
       this.io.to(`wheel-${gameId}`).emit('wheel:seatReserved', {
         gameId,
@@ -410,14 +431,12 @@ class WheelGameManager {
       const hasPlayers = game.seats.some(seat => seat.userId !== null);
       
       if (!hasPlayers) {
-        // No players, skip spin and start next round immediately
-        console.log(`[WheelGame] No players in game ${gameId}, skipping spin`);
+        // No players, pause the game instead of continuing rounds
+        console.log(`[WheelGame] No players in game ${gameId}, pausing game`);
         game.status = 'betting';
-        game.roundNumber += 1;
-        game.roundStartTime = new Date();
-        game.roundEndTime = new Date(Date.now() + ROUND_DURATION_MS);
+        game.boostedSegments = [];
         
-        // Clear seats and reset for next round
+        // Clear seats
         game.seats = game.seats.map(seat => ({
           ...seat,
           occupied: false,
@@ -429,15 +448,13 @@ class WheelGameManager {
         
         await game.save();
         
-        // Broadcast new round
-        this.io.to(`wheel-${gameId}`).emit('wheel:newRound', {
+        // Broadcast game paused state
+        this.io.to(`wheel-${gameId}`).emit('wheel:gamePaused', {
           gameId,
-          roundNumber: game.roundNumber,
-          roundEndTime: game.roundEndTime,
+          message: 'Waiting for players...',
         });
         
-        // Schedule next round
-        this.scheduleRoundEnd(gameId, game.roundEndTime);
+        // DO NOT schedule next round - game will resume when a player joins
         return;
       }
 
