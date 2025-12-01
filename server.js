@@ -4510,12 +4510,10 @@ setTimeout(() => {
 }, 5000);
 
 // Catch-all route: serve index.html for client-side routing (must be LAST)
+// This will only be reached if no previous middleware/route handled the request
 app.use((req, res, next) => {
-  // Skip catch-all for API routes, static assets, and files with extensions
-  if (req.path.startsWith('/api') || 
-      req.path.startsWith('/sounds') || 
-      req.path.startsWith('/assets') ||
-      req.path.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|json|map)$/)) {
+  // Don't override API routes that return 404s or errors
+  if (req.path.startsWith('/api') || req.path.startsWith('/socket.io')) {
     return next();
   }
   // Serve index.html for all other routes (React Router)
