@@ -261,9 +261,77 @@ export const NewWheelGame: React.FC<NewWheelGameProps> = ({ gameId, onOpenChat }
         </div>
 
         {/* Main Game Container */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left: Bet Controls */}
-          <div className="space-y-4">
+        <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-180px)]">
+          {/* Left: Wheel Game Area (takes most space) */}
+          <div className="flex-1 flex items-center justify-center min-h-0">
+            <div className="bg-[#1a1a2e] border border-white/10 rounded-xl p-4 w-full h-full flex flex-col items-center justify-center relative">
+              {/* Wheel and Seats Container */}
+              <div className="relative w-full mx-auto flex-shrink-0" style={{ paddingBottom: '100%', maxWidth: 'min(85vh, 90vw)' }}>
+                {/* 8 Seats positioned around the wheel */}
+                {gameState.seats.map((seat, index) => {
+                  const angle = (index * 360) / 8;
+                  return (
+                    <WheelSeat
+                      key={seat.seatNumber}
+                      seatNumber={seat.seatNumber}
+                      multiplier={0} // Not used - outcome determined by wheel segment
+                      occupied={seat.occupied}
+                      userId={seat.userId}
+                      username={seat.username}
+                      profileImage={seat.profileImage}
+                      betAmount={seat.betAmount}
+                      isSelected={selectedSeat === seat.seatNumber}
+                      isMySeat={seat.userId === user?.id}
+                      canBet={canBet}
+                      angle={angle}
+                      onSelect={() => !seat.occupied && canBet && setSelectedSeat(seat.seatNumber)}
+                    />
+                  );
+                })}
+
+                {/* Wheel in the center */}
+                <div className="absolute inset-0 flex items-center justify-center p-16">
+                  <div className="relative w-full h-full">
+                    {/* Glow effect */}
+                    <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 blur-3xl opacity-20 animate-pulse" />
+                    
+                    {/* Wheel */}
+                    <div className="absolute inset-0">
+                      <WheelCanvas
+                        winningSegment={gameState.wheelStopPosition}
+                        isSpinning={isSpinning}
+                        onSpinComplete={() => {}}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Boost Legend (when boosted segments are active) - Position at bottom of wheel */}
+              {gameState.boostedSegments && gameState.boostedSegments.length > 0 && (
+                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 w-auto max-w-md p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg backdrop-blur-sm">
+                  <div className="text-yellow-400 font-bold text-sm mb-2 text-center">🎰 Boosted Segments</div>
+                  <div className="space-y-1 text-xs">
+                    {gameState.boostedSegments.map((boost, i) => (
+                      <div key={i} className="flex justify-between items-center gap-4">
+                        <span className="text-gray-400">Segment #{boost.segmentIndex}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-white">{boost.baseMultiplier}x</span>
+                          <span className="text-gray-500">×</span>
+                          <span className="text-yellow-400 font-bold">{boost.boostMultiplier}x</span>
+                          <span className="text-gray-500">=</span>
+                          <span className="text-green-400 font-bold">{boost.finalMultiplier.toFixed(2)}x</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right: Control Panel */}
+          <div className="w-full lg:w-80 xl:w-96 space-y-4 overflow-y-auto max-h-full">
             {/* Bet Amount */}
             <div className="bg-[#1a1a2e] border border-white/10 rounded-xl p-4">
               <h3 className="text-white font-bold mb-3 flex items-center gap-2">
@@ -354,104 +422,6 @@ export const NewWheelGame: React.FC<NewWheelGameProps> = ({ gameId, onOpenChat }
                 <p>• Wheel spins and stops</p>
                 <p>• Your flapper determines your outcome</p>
                 <p>• Win or lose based on segment multiplier!</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Center: Wheel with Seats Around It */}
-          <div className="lg:col-span-1">
-            <div className="bg-[#1a1a2e] border border-white/10 rounded-xl p-6">
-              {/* Wheel and Seats Container */}
-              <div className="relative w-full mx-auto" style={{ paddingBottom: '100%', maxWidth: '600px' }}>
-                {/* 8 Seats positioned around the wheel */}
-                {gameState.seats.map((seat, index) => {
-                  const angle = (index * 360) / 8;
-                  return (
-                    <WheelSeat
-                      key={seat.seatNumber}
-                      seatNumber={seat.seatNumber}
-                      multiplier={0} // Not used - outcome determined by wheel segment
-                      occupied={seat.occupied}
-                      userId={seat.userId}
-                      username={seat.username}
-                      profileImage={seat.profileImage}
-                      betAmount={seat.betAmount}
-                      isSelected={selectedSeat === seat.seatNumber}
-                      isMySeat={seat.userId === user?.id}
-                      canBet={canBet}
-                      angle={angle}
-                      onSelect={() => !seat.occupied && canBet && setSelectedSeat(seat.seatNumber)}
-                    />
-                  );
-                })}
-
-                {/* Wheel in the center */}
-                <div className="absolute inset-0 flex items-center justify-center p-16">
-                  <div className="relative w-full h-full">
-                    {/* Glow effect */}
-                    <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 blur-3xl opacity-20 animate-pulse" />
-                    
-                    {/* Wheel */}
-                    <div className="absolute inset-0">
-                      <WheelCanvas
-                        winningSegment={gameState.wheelStopPosition}
-                        isSpinning={isSpinning}
-                        onSpinComplete={() => {}}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Boost Legend (when boosted segments are active) */}
-              {gameState.boostedSegments && gameState.boostedSegments.length > 0 && (
-                <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-                  <div className="text-yellow-400 font-bold text-sm mb-2">🎰 Boosted Segments</div>
-                  <div className="space-y-1 text-xs">
-                    {gameState.boostedSegments.map((boost, i) => (
-                      <div key={i} className="flex justify-between items-center">
-                        <span className="text-gray-400">Segment #{boost.segmentIndex}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-white">{boost.baseMultiplier}x</span>
-                          <span className="text-gray-500">×</span>
-                          <span className="text-yellow-400 font-bold">{boost.boostMultiplier}x</span>
-                          <span className="text-gray-500">=</span>
-                          <span className="text-green-400 font-bold">{boost.finalMultiplier.toFixed(2)}x</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Right: Game Info */}
-          <div className="space-y-4">
-            {/* How to Play */}
-            <div className="bg-[#1a1a2e] border border-white/10 rounded-xl p-4">
-              <h3 className="text-white font-bold mb-3 text-sm">How to Play</h3>
-              <div className="space-y-2 text-xs text-gray-400">
-                <div className="flex items-start gap-2">
-                  <span className="text-cyan-400 font-bold">1.</span>
-                  <span>Select an empty seat (chair around the wheel)</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-cyan-400 font-bold">2.</span>
-                  <span>Choose your bet amount</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-cyan-400 font-bold">3.</span>
-                  <span>Reserve the seat before betting closes</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-cyan-400 font-bold">4.</span>
-                  <span>You can occupy up to 2 seats per game!</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-cyan-400 font-bold">5.</span>
-                  <span>Watch where your flapper lands when the wheel stops!</span>
-                </div>
               </div>
             </div>
 
