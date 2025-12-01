@@ -23,6 +23,12 @@ import WheelPage from "./games/wheel/index.tsx";
 import WheelLobby from "./games/wheel/WheelLobby.tsx";
 import ProfilePage from "./pages/ProfileNew.jsx";
 import Support from "./pages/Support.jsx";
+import SupportDashboard from "./pages/SupportDashboard.jsx";
+import SupportTickets from "./pages/SupportTickets.jsx";
+import SupportInbox from "./pages/SupportInbox.jsx";
+import SupportTeams from "./pages/SupportTeams.jsx";
+import SupportAnalytics from "./pages/SupportAnalytics.jsx";
+import SupportSettings from "./pages/SupportSettings.jsx";
 import TicketDetail from "./pages/TicketDetail.jsx";
 import ForgotPassword from "./pages/ForgotPassword.jsx";
 import ResetPassword from "./pages/ResetPassword.jsx";
@@ -86,8 +92,16 @@ export default function DesktopApp() {
             <Route path="/battles/create" element={<CreateBattlePage />} />
             <Route path="/battles/:id" element={<CaseBattleDetail />} />
             <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/support" element={<Support />} />
-            <Route path="/support/:id" element={<TicketDetail />} />
+            
+            {/* Support Routes - Moderators get full dashboard, users get simple view */}
+            <Route path="/support" element={<SupportDashboard />} />
+            <Route path="/support/tickets" element={<SupportTickets />} />
+            <Route path="/support/tickets/:id" element={<TicketDetail />} />
+            <Route path="/support/inbox" element={<SupportInbox />} />
+            <Route path="/support/teams" element={<SupportTeams />} />
+            <Route path="/support/analytics" element={<SupportAnalytics />} />
+            <Route path="/support/settings" element={<SupportSettings />} />
+            
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/link-discord" element={<DiscordLinkHandler />} />

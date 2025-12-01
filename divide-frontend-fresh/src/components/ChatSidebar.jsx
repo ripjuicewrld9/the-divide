@@ -62,56 +62,55 @@ export default function ChatSidebar({ isOpen, setIsOpen }) {
 
   return (
     <>
-      {/* Floating Chat Button */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        style={{
-          position: 'fixed',
-          bottom: '20px',
-          right: '20px',
-          width: '56px',
-          height: '56px',
-          borderRadius: '50%',
-          background: 'linear-gradient(135deg, #00ffff, #00ccff)',
-          border: 'none',
-          color: '#000',
-          fontSize: '24px',
-          cursor: 'pointer',
-          boxShadow: '0 4px 12px rgba(0, 255, 255, 0.4)',
-          transition: 'all 0.3s ease',
-          zIndex: 999,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontWeight: 'bold',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'scale(1.1)';
-          e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 255, 255, 0.6)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'scale(1)';
-          e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 255, 255, 0.4)';
-        }}
-      >
-        💬
-      </button>
+      {/* Floating Chat Button - only show when closed */}
+      {!isOpen && (
+        <button
+          onClick={() => setIsOpen(true)}
+          style={{
+            position: 'fixed',
+            bottom: '20px',
+            right: '20px',
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #00ffff, #00ccff)',
+            border: 'none',
+            color: '#000',
+            fontSize: '24px',
+            cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(0, 255, 255, 0.4)',
+            transition: 'all 0.3s ease',
+            zIndex: 999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: 'bold',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'scale(1.1)';
+            e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 255, 255, 0.6)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'scale(1)';
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 255, 255, 0.4)';
+          }}
+        >
+          💬
+        </button>
+      )}
 
       {/* Chat Sidebar */}
       <div
         style={{
-          position: 'fixed',
-          top: '64px',
-          right: isOpen ? '0' : '-320px',
-          width: '320px',
-          height: 'calc(100vh - 64px)',
+          width: isOpen ? '320px' : '0',
+          height: '100%',
           background: '#0b0b0b',
-          borderLeft: '2px solid rgba(0, 255, 255, 0.2)',
-          transition: 'right 0.3s ease',
-          zIndex: 998,
+          borderLeft: isOpen ? '2px solid rgba(0, 255, 255, 0.2)' : 'none',
+          transition: 'width 0.3s ease',
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: isOpen ? '-4px 0 20px rgba(0, 0, 0, 0.5)' : 'none',
+          overflow: 'hidden',
+          flexShrink: 0,
         }}
       >
         {/* Chat Header */}
@@ -120,6 +119,8 @@ export default function ChatSidebar({ isOpen, setIsOpen }) {
             padding: '16px',
             borderBottom: '2px solid rgba(0, 255, 255, 0.2)',
             background: 'linear-gradient(135deg, rgba(0, 255, 255, 0.1), rgba(0, 204, 255, 0.1))',
+            minHeight: '64px',
+            display: isOpen ? 'block' : 'none',
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -167,7 +168,7 @@ export default function ChatSidebar({ isOpen, setIsOpen }) {
             flex: 1,
             overflowY: 'auto',
             padding: '16px',
-            display: 'flex',
+            display: isOpen ? 'flex' : 'none',
             flexDirection: 'column',
             gap: '12px',
           }}
@@ -246,6 +247,7 @@ export default function ChatSidebar({ isOpen, setIsOpen }) {
             padding: '16px',
             borderTop: '2px solid rgba(0, 255, 255, 0.2)',
             background: 'rgba(0, 0, 0, 0.3)',
+            display: isOpen ? 'block' : 'none',
           }}
         >
           {user ? (
