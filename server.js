@@ -4510,6 +4510,11 @@ setTimeout(() => {
 }, 5000);
 
 // Catch-all route: serve index.html for client-side routing (must be LAST)
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'divide-frontend-fresh', 'dist', 'index.html'));
+app.use((req, res, next) => {
+  // Only serve index.html for non-API routes and non-static files
+  if (!req.path.startsWith('/api') && !req.path.startsWith('/sounds') && !req.path.match(/\.\w+$/)) {
+    res.sendFile(path.join(__dirname, 'divide-frontend-fresh', 'dist', 'index.html'));
+  } else {
+    next();
+  }
 });
