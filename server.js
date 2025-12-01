@@ -641,18 +641,114 @@ app.patch('/api/support/tickets/:id/status', auth, moderatorOnly, async (req, re
       return res.status(400).json({ error: 'Invalid status' });
     }
 
-    const ticket = await SupportTicket.findById(req.params.id);
+    const ticket = await SupportTicket.findById(req.params.id)
+      .populate('userId', 'username')
+      .populate('messages.sender', 'username role')
+      .populate('assignedTo', 'username')
+      .populate('escalatedBy', 'username');
 
     if (!ticket) {
       return res.status(404).json({ error: 'Ticket not found' });
     }
 
+    const previousStatus = ticket.status;
     ticket.status = status;
     if (status === 'resolved' || status === 'closed') {
       ticket.resolvedAt = new Date();
     }
 
     await ticket.save();
+
+    // Auto-save transcript when ticket is closed (if not already saved)
+    if (status === 'closed' && !ticket.transcriptSaved && previousStatus !== 'closed') {
+      const botToken = process.env.DISCORD_BOT_TOKEN;
+      const transcriptChannelId = process.env.DISCORD_TRANSCRIPT_CHANNEL_ID;
+
+      if (botToken && transcriptChannelId) {
+        try {
+          const ticketId = ticket._id.toString().substring(18).toUpperCase();
+          
+          // Generate transcript
+          const transcriptLines = [
+            `═══════════════════════════════════════════════════`,
+            `SUPPORT TICKET TRANSCRIPT #${ticketId}`,
+            `═══════════════════════════════════════════════════`,
+            ``,
+            `User: ${ticket.userId.username}`,
+            `Category: ${ticket.category.charAt(0).toUpperCase() + ticket.category.slice(1)}`,
+            `Subject: ${ticket.subject}`,
+            `Status: ${ticket.status.toUpperCase()}`,
+            `Priority: ${ticket.priority.toUpperCase()}`,
+            `Created: ${new Date(ticket.createdAt).toLocaleString()}`,
+            ticket.resolvedAt ? `Resolved: ${new Date(ticket.resolvedAt).toLocaleString()}` : '',
+            ticket.assignedTo ? `Assigned To: ${ticket.assignedTo.username}` : '',
+            ticket.escalated ? `⚠️ ESCALATED by ${ticket.escalatedBy?.username} at ${new Date(ticket.escalatedAt).toLocaleString()}` : '',
+            ``,
+            `───────────────────────────────────────────────────`,
+            `CONVERSATION`,
+            `───────────────────────────────────────────────────`,
+            ``
+          ].filter(Boolean).join('\n');
+
+          const messagesText = ticket.messages.map((msg) => {
+            const sender = msg.sender?.username || 'Unknown';
+            const role = msg.senderType === 'admin' ? ' [ADMIN]' : '';
+            const timestamp = new Date(msg.createdAt).toLocaleString();
+            return `[${timestamp}] ${sender}${role}:\n${msg.message}\n`;
+          }).join('\n');
+
+          const fullTranscript = transcriptLines + messagesText + `\n═══════════════════════════════════════════════════`;
+
+          // Split into chunks
+          const chunks = [];
+          let currentChunk = '';
+          
+          for (const line of fullTranscript.split('\n')) {
+            if ((currentChunk + line + '\n').length > 1900) {
+              chunks.push('```\n' + currentChunk + '```');
+              currentChunk = line + '\n';
+            } else {
+              currentChunk += line + '\n';
+            }
+          }
+          if (currentChunk) {
+            chunks.push('```\n' + currentChunk + '```');
+          }
+
+          // Send header
+          const ticketUrl = `${process.env.FRONTEND_URL || 'https://thedivide.us'}/support/${ticket._id}`;
+          await fetch(`https://discord.com/api/v10/channels/${transcriptChannelId}/messages`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bot ${botToken}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              content: `📋 **Ticket #${ticketId}** closed - Transcript auto-saved - [View Online](${ticketUrl})`
+            })
+          });
+
+          // Send chunks
+          for (const chunk of chunks) {
+            await fetch(`https://discord.com/api/v10/channels/${transcriptChannelId}/messages`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bot ${botToken}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ content: chunk })
+            });
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+
+          ticket.transcriptSaved = true;
+          await ticket.save();
+          console.log(`✅ Auto-saved transcript for closed ticket ${ticket._id}`);
+        } catch (transcriptErr) {
+          console.error('Failed to auto-save transcript:', transcriptErr);
+        }
+      }
+    }
 
     // Populate and return the updated ticket
     const populatedTicket = await SupportTicket.findById(ticket._id)
