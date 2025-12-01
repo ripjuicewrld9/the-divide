@@ -173,6 +173,8 @@ function checkPlayRate(userId, { windowMs = 5000, max = 50 } = {}) {
 
 // Configure CORS to allow the React dev server and allow credentials (cookies)
 const allowedOrigins = [
+  'https://thedivide.us',
+  'https://www.thedivide.us',
   'https://betbro.club',
   'https://www.betbro.club',
   'https://the-divide.onrender.com',
