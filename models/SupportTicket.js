@@ -19,6 +19,10 @@ const supportTicketSchema = new mongoose.Schema({
   messages: [ticketMessageSchema],
   discordThreadId: { type: String, default: null }, // Only set if user has Discord linked
   assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  escalated: { type: Boolean, default: false },
+  escalatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  escalatedAt: { type: Date },
+  transcriptSaved: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
   resolvedAt: { type: Date }

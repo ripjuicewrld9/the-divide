@@ -34,7 +34,7 @@ const userSchema = new mongoose.Schema({
   totalWithdrawn: { type: Number, default: 0 }, // total withdrawals in cents
   totalRedemptions: { type: Number, default: 0 }, // count of withdrawal transactions
   wagerRequirement: { type: Number, default: 0 }, // amount that must be wagered before withdrawal (1x playthrough)
-  role: { type: String, default: 'user' },
+  role: { type: String, enum: ['user', 'moderator', 'admin'], default: 'user' },
   holdingsDC: { type: Number, default: 0 },
   holdingsInvested: { type: Number, default: 0 },
   profileImage: { type: String, default: '' },

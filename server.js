@@ -115,6 +115,20 @@ async function adminOnly(req, res, next) {
   }
 }
 
+// moderatorOnly guard that allows moderators and admins
+async function moderatorOnly(req, res, next) {
+  try {
+    if (!req.userId) return res.status(401).json({ error: 'Not authenticated' });
+    const u = await User.findById(req.userId).select('role');
+    if (!u || (u.role !== 'moderator' && u.role !== 'admin')) {
+      return res.status(403).json({ error: 'Moderator access required' });
+    }
+    return next();
+  } catch (e) {
+    return res.status(500).json({ error: 'Server error' });
+  }
+}
+
 // Helper function to update house statistics for a game
 // game: 'plinko', 'blackjack', 'keno', 'rugged', 'mines', 'divides'
 // betAmount: amount wagered in cents
@@ -357,119 +371,79 @@ app.post('/api/support/ticket', async (req, res) => {
 
     await ticket.save();
     console.log(`✅ Support ticket #${ticket._id} created by ${username} (${userId})`);
-    console.log(`   Discord ID: ${discordId || 'NONE'} - Will ${discordId ? '' : 'NOT '}create Discord thread`);
 
-    // Only send to Discord if user has Discord linked
-    if (discordId) {
-      const botToken = process.env.DISCORD_BOT_TOKEN;
-      const channelId = process.env.DISCORD_SUPPORT_CHANNEL_ID;
-      const adminRoleId = process.env.DISCORD_ADMIN_ROLE_ID;
+    // Send notification to Discord (no thread, just a simple notification)
+    const botToken = process.env.DISCORD_BOT_TOKEN;
+    const channelId = process.env.DISCORD_SUPPORT_CHANNEL_ID;
+    const moderatorRoleId = process.env.DISCORD_MODERATOR_ROLE_ID;
 
-      if (botToken && channelId) {
-        try {
-          const ticketId = ticket._id.toString().substring(18).toUpperCase();
-          const threadName = `🎫 ${category.toUpperCase()} - ${username} - ${ticketId}`;
+    if (botToken && channelId) {
+      try {
+        const ticketId = ticket._id.toString().substring(18).toUpperCase();
+        const ticketUrl = `${process.env.FRONTEND_URL || 'https://thedivide.us'}/support/${ticket._id}`;
 
-          // Create Discord embed
-          const embed = {
-            title: `New Support Ticket #${ticketId}`,
-            color: category === 'bug' ? 0xff0000 :
-              category === 'complaint' ? 0xff9900 :
-                category === 'payment' ? 0x00ff00 : 0x3b82f6,
-            fields: [
-              {
-                name: '📋 Category',
-                value: category.charAt(0).toUpperCase() + category.slice(1),
-                inline: true
-              },
-              {
-                name: '👤 User',
-                value: username,
-                inline: true
-              },
-              {
-                name: '🆔 Ticket ID',
-                value: ticketId,
-                inline: true
-              },
-              {
-                name: '📧 Email',
-                value: email || user.googleEmail || 'Not provided',
-                inline: true
-              },
-              {
-                name: '📌 Subject',
-                value: subject,
-                inline: false
-              },
-              {
-                name: '📝 Description',
-                value: description.length > 1024 ? description.substring(0, 1021) + '...' : description,
-                inline: false
-              }
-            ],
-            timestamp: new Date().toISOString(),
-            footer: {
-              text: 'Support Ticket System'
-            }
-          };
-
-          // Create a PRIVATE thread
-          const threadResponse = await fetch(`https://discord.com/api/v10/channels/${channelId}/threads`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bot ${botToken}`,
-              'Content-Type': 'application/json'
+        // Create Discord embed for notification
+        const embed = {
+          title: `🎫 New Support Ticket #${ticketId}`,
+          color: category === 'bug' ? 0xff0000 :
+            category === 'complaint' ? 0xff9900 :
+              category === 'payment' ? 0x00ff00 : 0x3b82f6,
+          fields: [
+            {
+              name: '📋 Category',
+              value: category.charAt(0).toUpperCase() + category.slice(1),
+              inline: true
             },
-            body: JSON.stringify({
-              name: threadName,
-              type: 12, // GUILD_PRIVATE_THREAD
-              auto_archive_duration: 10080,
-              invitable: false
-            })
-          });
-
-          if (threadResponse.ok) {
-            const thread = await threadResponse.json();
-
-            // Save Discord thread ID to ticket
-            ticket.discordThreadId = thread.id;
-            await ticket.save();
-
-            // Add the user to the private thread
-            await fetch(`https://discord.com/api/v10/channels/${thread.id}/thread-members/${discordId}`, {
-              method: 'PUT',
-              headers: {
-                'Authorization': `Bot ${botToken}`
-              }
-            });
-
-            // Send the ticket details
-            await fetch(`https://discord.com/api/v10/channels/${thread.id}/messages`, {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bot ${botToken}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                content: `${adminRoleId ? `<@&${adminRoleId}>` : '@here'} New support ticket from **${username}** (<@${discordId}>)`,
-                embeds: [embed]
-              })
-            });
-
-            console.log(`✅ Discord thread ${thread.id} created for ticket ${ticket._id}`);
+            {
+              name: '👤 User',
+              value: username,
+              inline: true
+            },
+            {
+              name: '📌 Subject',
+              value: subject,
+              inline: false
+            },
+            {
+              name: '📝 Description',
+              value: description.length > 1024 ? description.substring(0, 1021) + '...' : description,
+              inline: false
+            },
+            {
+              name: '🔗 View Ticket',
+              value: `[Click here to view and respond](${ticketUrl})`,
+              inline: false
+            }
+          ],
+          timestamp: new Date().toISOString(),
+          footer: {
+            text: 'Support Ticket System - Handle on website'
           }
-        } catch (discordError) {
-          console.error('Discord thread creation failed:', discordError);
-          // Continue - ticket still saved in database
-        }
+        };
+
+        // Send notification to channel (not a thread)
+        await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bot ${botToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            content: `${moderatorRoleId ? `<@&${moderatorRoleId}>` : '@here'} New support ticket from **${username}**`,
+            embeds: [embed]
+          })
+        });
+
+        console.log(`✅ Discord notification sent for ticket ${ticket._id}`);
+      } catch (discordError) {
+        console.error('Discord notification failed:', discordError);
+        // Continue - ticket still saved in database
       }
     }
 
     res.json({
       message: 'Ticket submitted successfully! Our team will review it shortly.',
-      ticketId: ticket._id,
-      hasDiscord: !!discordId
+      ticketId: ticket._id
     });
 
   } catch (err) {
@@ -497,8 +471,8 @@ app.get('/api/support/tickets', auth, async (req, res) => {
   }
 });
 
-// Get all tickets (admin only)
-app.get('/api/support/tickets/all', auth, adminOnly, async (req, res) => {
+// Get all tickets (moderator+ only)
+app.get('/api/support/tickets/all', auth, moderatorOnly, async (req, res) => {
   try {
     const tickets = await SupportTicket.find()
       .sort({ createdAt: -1 })
@@ -545,18 +519,29 @@ app.get('/api/admin/marketing-emails', auth, adminOnly, async (req, res) => {
 // Get single ticket
 app.get('/api/support/tickets/:id', auth, async (req, res) => {
   try {
+    if (!req.userId) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    const user = await User.findById(req.userId).select('role').lean();
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
     const ticket = await SupportTicket.findById(req.params.id)
       .populate('userId', 'username profileImage discordId')
       .populate('messages.sender', 'username profileImage role')
       .populate('assignedTo', 'username')
+      .populate('escalatedBy', 'username')
       .lean();
 
     if (!ticket) {
       return res.status(404).json({ error: 'Ticket not found' });
     }
 
-    // Only allow ticket owner or admins to view
-    if (ticket.userId._id.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+    // Only allow ticket owner, moderators, or admins to view
+    const isModerator = user.role === 'moderator' || user.role === 'admin';
+    if (ticket.userId._id.toString() !== req.userId.toString() && !isModerator) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
@@ -576,26 +561,40 @@ app.post('/api/support/tickets/:id/messages', auth, async (req, res) => {
       return res.status(400).json({ error: 'Message is required' });
     }
 
+    if (!req.userId) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    const user = await User.findById(req.userId).select('username role').lean();
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
     const ticket = await SupportTicket.findById(req.params.id).populate('userId', 'discordId');
 
     if (!ticket) {
       return res.status(404).json({ error: 'Ticket not found' });
     }
 
-    // Only allow ticket owner or admins to add messages
-    const isOwner = ticket.userId._id.toString() === req.user._id.toString();
-    const isAdmin = req.user.role === 'admin';
+    // Only allow ticket owner, moderators, or admins to add messages
+    const isOwner = ticket.userId._id.toString() === req.userId.toString();
+    const isModerator = user.role === 'moderator' || user.role === 'admin';
 
-    if (!isOwner && !isAdmin) {
+    if (!isOwner && !isModerator) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
     // Add message to ticket
     ticket.messages.push({
-      sender: req.user._id,
-      senderType: isAdmin ? 'admin' : 'user',
+      sender: req.userId,
+      senderType: isModerator ? 'admin' : 'user',
       message: message.trim()
     });
+
+    // Update status if needed
+    if (ticket.status === 'open' && isModerator) {
+      ticket.status = 'in_progress';
+    }
 
     // Update status if needed
     if (ticket.status === 'open' && isAdmin) {
@@ -616,7 +615,7 @@ app.post('/api/support/tickets/:id/messages', auth, async (req, res) => {
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              content: `**${req.user.username}** ${isAdmin ? '(Admin)' : ''}: ${message}`
+              content: `**${user.username}** ${isModerator ? '(Staff)' : ''}: ${message}`
             })
           });
         } catch (discordErr) {
@@ -662,6 +661,226 @@ app.patch('/api/support/tickets/:id/status', auth, adminOnly, async (req, res) =
   } catch (err) {
     console.error('Update status error:', err);
     res.status(500).json({ error: 'Failed to update status' });
+  }
+});
+
+// Escalate ticket to admins (moderator only)
+app.post('/api/support/tickets/:id/escalate', auth, moderatorOnly, async (req, res) => {
+  try {
+    if (!req.userId) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    const user = await User.findById(req.userId).select('username role').lean();
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const ticket = await SupportTicket.findById(req.params.id)
+      .populate('userId', 'username profileImage')
+      .lean();
+
+    if (!ticket) {
+      return res.status(404).json({ error: 'Ticket not found' });
+    }
+
+    if (ticket.escalated) {
+      return res.status(400).json({ error: 'Ticket is already escalated' });
+    }
+
+    // Update ticket to escalated status
+    await SupportTicket.findByIdAndUpdate(req.params.id, {
+      escalated: true,
+      escalatedBy: req.userId,
+      escalatedAt: new Date(),
+      priority: 'urgent'
+    });
+
+    // Send Discord notification to admin role
+    const botToken = process.env.DISCORD_BOT_TOKEN;
+    const channelId = process.env.DISCORD_SUPPORT_CHANNEL_ID;
+    const adminRoleId = process.env.DISCORD_ADMIN_ROLE_ID;
+
+    if (botToken && channelId && adminRoleId) {
+      try {
+        const ticketId = ticket._id.toString().substring(18).toUpperCase();
+        const ticketUrl = `${process.env.FRONTEND_URL || 'https://thedivide.us'}/support/${ticket._id}`;
+
+        const embed = {
+          title: `🚨 ESCALATED TICKET #${ticketId}`,
+          color: 0xff0000,
+          fields: [
+            {
+              name: '⚠️ Escalated By',
+              value: user.username,
+              inline: true
+            },
+            {
+              name: '👤 Original User',
+              value: ticket.userId.username,
+              inline: true
+            },
+            {
+              name: '📋 Category',
+              value: ticket.category.charAt(0).toUpperCase() + ticket.category.slice(1),
+              inline: true
+            },
+            {
+              name: '📌 Subject',
+              value: ticket.subject,
+              inline: false
+            },
+            {
+              name: '🔗 View Ticket',
+              value: `[Click here to view and respond](${ticketUrl})`,
+              inline: false
+            }
+          ],
+          timestamp: new Date().toISOString(),
+          footer: {
+            text: 'Support Ticket Escalated - Immediate Admin Attention Required'
+          }
+        };
+
+        await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bot ${botToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            content: `<@&${adminRoleId}> 🚨 **ESCALATED SUPPORT TICKET** - Immediate attention required!`,
+            embeds: [embed]
+          })
+        });
+
+        console.log(`✅ Escalation notification sent for ticket ${ticket._id}`);
+      } catch (discordError) {
+        console.error('Discord escalation notification failed:', discordError);
+      }
+    }
+
+    res.json({ message: 'Ticket escalated to admins successfully' });
+  } catch (err) {
+    console.error('Escalate ticket error:', err);
+    res.status(500).json({ error: 'Failed to escalate ticket' });
+  }
+});
+
+// Save ticket transcript to Discord (moderator only)
+app.post('/api/support/tickets/:id/transcript', auth, moderatorOnly, async (req, res) => {
+  try {
+    const ticket = await SupportTicket.findById(req.params.id)
+      .populate('userId', 'username profileImage')
+      .populate('messages.sender', 'username role')
+      .populate('assignedTo', 'username')
+      .populate('escalatedBy', 'username')
+      .lean();
+
+    if (!ticket) {
+      return res.status(404).json({ error: 'Ticket not found' });
+    }
+
+    // Generate transcript text
+    const ticketId = ticket._id.toString().substring(18).toUpperCase();
+    const transcriptLines = [
+      `═══════════════════════════════════════════════════`,
+      `SUPPORT TICKET TRANSCRIPT #${ticketId}`,
+      `═══════════════════════════════════════════════════`,
+      ``,
+      `User: ${ticket.userId.username}`,
+      `Category: ${ticket.category.charAt(0).toUpperCase() + ticket.category.slice(1)}`,
+      `Subject: ${ticket.subject}`,
+      `Status: ${ticket.status.toUpperCase()}`,
+      `Priority: ${ticket.priority.toUpperCase()}`,
+      `Created: ${new Date(ticket.createdAt).toLocaleString()}`,
+      ticket.resolvedAt ? `Resolved: ${new Date(ticket.resolvedAt).toLocaleString()}` : '',
+      ticket.assignedTo ? `Assigned To: ${ticket.assignedTo.username}` : '',
+      ticket.escalated ? `⚠️ ESCALATED by ${ticket.escalatedBy?.username} at ${new Date(ticket.escalatedAt).toLocaleString()}` : '',
+      ``,
+      `───────────────────────────────────────────────────`,
+      `CONVERSATION`,
+      `───────────────────────────────────────────────────`,
+      ``
+    ].filter(Boolean).join('\n');
+
+    const messagesText = ticket.messages.map((msg, index) => {
+      const sender = msg.sender?.username || 'Unknown';
+      const role = msg.senderType === 'admin' ? ' [ADMIN]' : '';
+      const timestamp = new Date(msg.createdAt).toLocaleString();
+      return `[${timestamp}] ${sender}${role}:\n${msg.message}\n`;
+    }).join('\n');
+
+    const fullTranscript = transcriptLines + messagesText + `\n═══════════════════════════════════════════════════`;
+
+    // Send to Discord transcript channel
+    const botToken = process.env.DISCORD_BOT_TOKEN;
+    const transcriptChannelId = process.env.DISCORD_TRANSCRIPT_CHANNEL_ID;
+
+    if (!botToken || !transcriptChannelId) {
+      return res.status(500).json({ error: 'Discord transcript channel not configured' });
+    }
+
+    try {
+      // Split transcript into chunks if too long (Discord has 2000 char limit)
+      const chunks = [];
+      let currentChunk = '';
+      
+      for (const line of fullTranscript.split('\n')) {
+        if ((currentChunk + line + '\n').length > 1900) {
+          chunks.push('```\n' + currentChunk + '```');
+          currentChunk = line + '\n';
+        } else {
+          currentChunk += line + '\n';
+        }
+      }
+      if (currentChunk) {
+        chunks.push('```\n' + currentChunk + '```');
+      }
+
+      // Send header message
+      const ticketUrl = `${process.env.FRONTEND_URL || 'https://thedivide.us'}/support/${ticket._id}`;
+      await fetch(`https://discord.com/api/v10/channels/${transcriptChannelId}/messages`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bot ${botToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          content: `📋 **Ticket #${ticketId}** transcript saved - [View Online](${ticketUrl})`
+        })
+      });
+
+      // Send transcript chunks
+      for (const chunk of chunks) {
+        await fetch(`https://discord.com/api/v10/channels/${transcriptChannelId}/messages`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bot ${botToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            content: chunk
+          })
+        });
+        // Small delay to avoid rate limits
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
+      // Mark ticket as transcript saved
+      await SupportTicket.findByIdAndUpdate(req.params.id, {
+        transcriptSaved: true
+      });
+
+      console.log(`✅ Transcript saved for ticket ${ticket._id}`);
+      res.json({ message: 'Transcript saved to Discord successfully' });
+    } catch (discordError) {
+      console.error('Discord transcript save failed:', discordError);
+      res.status(500).json({ error: 'Failed to save transcript to Discord' });
+    }
+  } catch (err) {
+    console.error('Save transcript error:', err);
+    res.status(500).json({ error: 'Failed to save transcript' });
   }
 });
 

@@ -13,6 +13,8 @@ export default function TicketDetail() {
     const [loading, setLoading] = useState(true);
     const [message, setMessage] = useState('');
     const [sending, setSending] = useState(false);
+    const [escalating, setEscalating] = useState(false);
+    const [savingTranscript, setSavingTranscript] = useState(false);
 
     const fetchTicket = useCallback(async () => {
         try {
@@ -75,6 +77,64 @@ export default function TicketDetail() {
             alert('Failed to send message');
         } finally {
             setSending(false);
+        }
+    };
+
+    const handleEscalate = async () => {
+        if (!confirm('Escalate this ticket to admins? This will mark it as urgent and notify admin staff.')) {
+            return;
+        }
+
+        setEscalating(true);
+        try {
+            const res = await fetch(`${API_BASE}/api/support/tickets/${id}/escalate`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (res.ok) {
+                alert('Ticket escalated to admins successfully');
+                await fetchTicket(); // Refresh ticket data
+            } else {
+                const data = await res.json();
+                alert(data.error || 'Failed to escalate ticket');
+            }
+        } catch (err) {
+            console.error('Escalate error:', err);
+            alert('Failed to escalate ticket');
+        } finally {
+            setEscalating(false);
+        }
+    };
+
+    const handleSaveTranscript = async () => {
+        if (!confirm('Save this ticket transcript to Discord? This will post the full conversation to the transcript channel.')) {
+            return;
+        }
+
+        setSavingTranscript(true);
+        try {
+            const res = await fetch(`${API_BASE}/api/support/tickets/${id}/transcript`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (res.ok) {
+                alert('Transcript saved to Discord successfully');
+                await fetchTicket(); // Refresh ticket data
+            } else {
+                const data = await res.json();
+                alert(data.error || 'Failed to save transcript');
+            }
+        } catch (err) {
+            console.error('Save transcript error:', err);
+            alert('Failed to save transcript');
+        } finally {
+            setSavingTranscript(false);
         }
     };
 
@@ -155,6 +215,67 @@ export default function TicketDetail() {
                         </div>
                     </div>
                 </div>
+
+                {/* Moderator Controls Panel */}
+                {(user.role === 'moderator' || user.role === 'admin') && (
+                    <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/30 rounded-lg p-6 mb-6">
+                        <div className="flex items-center gap-2 mb-4">
+                            <svg className="w-5 h-5 text-purple-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                            </svg>
+                            <h3 className="text-lg font-bold text-purple-400">Moderator Controls</h3>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <button
+                                onClick={handleEscalate}
+                                disabled={escalating || ticket.escalated}
+                                className="px-4 py-3 bg-red-500/20 border border-red-500/30 text-red-400 rounded-lg font-semibold hover:bg-red-500/30 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                {ticket.escalated ? (
+                                    <>
+                                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                        </svg>
+                                        Already Escalated
+                                    </>
+                                ) : (
+                                    <>
+                                        🚨 {escalating ? 'Escalating...' : 'Escalate to Admin'}
+                                    </>
+                                )}
+                            </button>
+
+                            <button
+                                onClick={handleSaveTranscript}
+                                disabled={savingTranscript || ticket.transcriptSaved}
+                                className="px-4 py-3 bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 rounded-lg font-semibold hover:bg-cyan-500/30 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                {ticket.transcriptSaved ? (
+                                    <>
+                                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                        </svg>
+                                        Transcript Saved
+                                    </>
+                                ) : (
+                                    <>
+                                        📋 {savingTranscript ? 'Saving...' : 'Save Transcript'}
+                                    </>
+                                )}
+                            </button>
+                        </div>
+
+                        {ticket.escalated && (
+                            <div className="mt-3 p-3 bg-red-500/10 border border-red-500/30 rounded text-sm">
+                                <p className="text-red-400">
+                                    ⚠️ Escalated by <span className="font-semibold">{ticket.escalatedBy?.username || 'Unknown'}</span> on{' '}
+                                    {new Date(ticket.escalatedAt).toLocaleString()}
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* Messages */}
                 <div className="space-y-4 mb-6">
