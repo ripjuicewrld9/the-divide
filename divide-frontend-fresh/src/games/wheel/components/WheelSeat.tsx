@@ -51,9 +51,17 @@ const WheelSeat: React.FC<WheelSeatProps> = ({
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
+          console.log('[WheelSeat] Button clicked!', {
+            seatNumber,
+            occupied,
+            canBet,
+            willCall: !occupied && canBet
+          });
           if (!occupied && canBet) {
-            console.log('Seat clicked:', seatNumber, 'occupied:', occupied, 'canBet:', canBet);
+            console.log('[WheelSeat] Calling onSelect for seat', seatNumber);
             onSelect();
+          } else {
+            console.log('[WheelSeat] Click ignored -', occupied ? 'occupied' : 'cannot bet');
           }
         }}
         className={`relative w-16 h-20 rounded-xl transition-all ${

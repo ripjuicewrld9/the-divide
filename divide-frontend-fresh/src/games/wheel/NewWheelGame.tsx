@@ -174,11 +174,27 @@ export const NewWheelGame: React.FC<NewWheelGameProps> = ({ gameId, onOpenChat }
 
   // Handle seat reservation
   const handleReserveSeat = async () => {
-    if (!token || selectedSeat === null || isReservingSeat) return;
+    console.log('[NewWheelGame] handleReserveSeat called', {
+      token: !!token,
+      selectedSeat,
+      isReservingSeat,
+      betAmount,
+      gameId
+    });
+
+    if (!token || selectedSeat === null || isReservingSeat) {
+      console.log('[NewWheelGame] Seat reservation blocked:', { 
+        noToken: !token, 
+        noSeat: selectedSeat === null, 
+        alreadyReserving: isReservingSeat 
+      });
+      return;
+    }
 
     try {
       setIsReservingSeat(true);
       const apiUrl = (import.meta as any).env.VITE_API_URL || '';
+      console.log('[NewWheelGame] Sending reserve request to:', `${apiUrl}/api/wheel/reserve-seat`);
       
       const response = await fetch(`${apiUrl}/api/wheel/reserve-seat`, {
         method: 'POST',
@@ -193,16 +209,21 @@ export const NewWheelGame: React.FC<NewWheelGameProps> = ({ gameId, onOpenChat }
         }),
       });
 
+      console.log('[NewWheelGame] Reserve response status:', response.status);
+
       if (response.ok) {
+        const data = await response.json();
+        console.log('[NewWheelGame] Seat reserved successfully:', data);
         await fetchGameState();
         setSelectedSeat(null);
       } else {
         const error = await response.json();
+        console.error('[NewWheelGame] Reserve failed:', error);
         alert(error.error || 'Failed to reserve seat');
       }
     } catch (error) {
       console.error('[NewWheelGame] Error reserving seat:', error);
-      alert('Failed to reserve seat');
+      alert('Failed to reserve seat: ' + (error as Error).message);
     } finally {
       setIsReservingSeat(false);
     }
@@ -283,7 +304,11 @@ export const NewWheelGame: React.FC<NewWheelGameProps> = ({ gameId, onOpenChat }
                       isMySeat={seat.userId === user?.id}
                       canBet={canBet}
                       angle={angle}
-                      onSelect={() => setSelectedSeat(seat.seatNumber)}
+                      onSelect={() => {
+                        console.log('[NewWheelGame] Seat onSelect called for seat', seat.seatNumber);
+                        setSelectedSeat(seat.seatNumber);
+                        console.log('[NewWheelGame] Selected seat set to', seat.seatNumber);
+                      }}
                     />
                   );
                 })}
