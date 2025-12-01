@@ -108,8 +108,11 @@ export default function SupportDashboard() {
             .slice(0, 5);
     };
 
-    const StatCard = ({ title, value, subtitle, icon, color = 'cyan', trend }) => (
-        <div className="bg-white/5 border border-white/10 rounded-lg p-6 hover:border-white/20 transition">
+    const StatCard = ({ title, value, subtitle, icon, color = 'cyan', trend, onClick }) => (
+        <button
+            onClick={onClick}
+            className="bg-white/5 border border-white/10 rounded-lg p-6 hover:border-cyan-500/50 hover:bg-white/10 transition text-left w-full cursor-pointer"
+        >
             <div className="flex items-start justify-between mb-4">
                 <div className={`p-3 rounded-lg bg-${color}-500/10 border border-${color}-500/20`}>
                     {icon}
@@ -123,7 +126,7 @@ export default function SupportDashboard() {
             <div className="text-3xl font-bold mb-1">{value}</div>
             <div className="text-sm text-gray-400">{title}</div>
             {subtitle && <div className="text-xs text-gray-500 mt-1">{subtitle}</div>}
-        </div>
+        </button>
     );
 
     if (loading) {
@@ -162,6 +165,7 @@ export default function SupportDashboard() {
                                 value={stats?.myTotalTickets || 0}
                                 subtitle="All time"
                                 color="blue"
+                                onClick={() => navigate('/support/tickets?assigned=me')}
                                 icon={
                                     <svg className="w-6 h-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -173,6 +177,7 @@ export default function SupportDashboard() {
                                 value={stats?.myOpenTickets || 0}
                                 subtitle="Currently assigned"
                                 color="yellow"
+                                onClick={() => navigate('/support/tickets?assigned=me&status=open')}
                                 icon={
                                     <svg className="w-6 h-6 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -216,6 +221,7 @@ export default function SupportDashboard() {
                                 value={stats?.openTickets || 0}
                                 subtitle="Waiting for assignment"
                                 color="cyan"
+                                onClick={() => navigate('/support/tickets?status=open')}
                                 icon={
                                     <svg className="w-6 h-6 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -227,6 +233,7 @@ export default function SupportDashboard() {
                                 value={stats?.inProgressTickets || 0}
                                 subtitle="Being worked on"
                                 color="blue"
+                                onClick={() => navigate('/support/tickets?status=in_progress')}
                                 icon={
                                     <svg className="w-6 h-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -238,6 +245,7 @@ export default function SupportDashboard() {
                                 value={stats?.urgentTickets || 0}
                                 subtitle="Requires immediate attention"
                                 color="red"
+                                onClick={() => navigate('/support/tickets?priority=urgent')}
                                 icon={
                                     <svg className="w-6 h-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />

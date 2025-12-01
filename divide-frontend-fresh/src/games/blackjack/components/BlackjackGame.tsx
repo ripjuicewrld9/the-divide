@@ -116,7 +116,7 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
   // Device detection
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 600;
   const gameState = useGameStore();
-  const { user, token, refreshUser, updateUser } = useAuth();
+  const { user, token, refreshUser, updateUser, setBalance } = useAuth();
   const [showRules, setShowRules] = useState(false);
   const [showVerification, setShowVerification] = useState(false);
   const [verificationResult, setVerificationResult] = useState<any>(null);
@@ -310,7 +310,12 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
     if (updateUser && typeof gameState.balance === 'number') {
       updateUser({ balance: gameState.balance });
     }
-  }, [gameState.balance]);
+    // Also update balance immediately for instant UI feedback in header
+    if (setBalance && typeof gameState.balance === 'number') {
+      console.log('[Blackjack] Updating balance instantly:', gameState.balance);
+      setBalance(gameState.balance);
+    }
+  }, [gameState.balance, updateUser, setBalance]);
 
   // When a new round result appears, compute total won for that round and show overlay
   useEffect(() => {

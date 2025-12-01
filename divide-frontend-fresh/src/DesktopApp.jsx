@@ -13,7 +13,6 @@ import KenoPage from "./pages/Keno.jsx";
 import RuggedPage from "./pages/Rugged.jsx";
 import ActiveBattlesPage from "./components/ActiveBattlesPage.jsx";
 import CreateBattlePage from "./components/CreateBattlePage.jsx";
-import CaseBattleDetail from "./components/CaseBattleDetail.jsx";
 import Header from "./components/Header.jsx";
 import Sidebar from "./components/Sidebar.jsx";
 import ChatSidebar from "./components/ChatSidebar.jsx";
@@ -33,7 +32,6 @@ import ModeratorPanel from "./pages/ModeratorPanel.jsx";
 import TicketDetail from "./pages/TicketDetail.jsx";
 import ForgotPassword from "./pages/ForgotPassword.jsx";
 import ResetPassword from "./pages/ResetPassword.jsx";
-import CaseBattlesPage from "./components/CaseBattlesPage.jsx";
 import DiscordLinkHandler from "./components/DiscordLinkHandler.jsx";
 import OAuthLoginHandler from "./components/OAuthLoginHandler.jsx";
 
@@ -86,12 +84,6 @@ export default function DesktopApp() {
                 <WheelPage />
               </ProtectedRoute>
             } />
-            <Route path="/battles" element={<ActiveBattlesPage />} />
-            <Route path="/case-battles" element={<CaseBattlesPage />} />
-            <Route path="/case-battles/create" element={<CreateBattlePage />} />
-            <Route path="/case-battles/:id" element={<CaseBattleDetail />} />
-            <Route path="/battles/create" element={<CreateBattlePage />} />
-            <Route path="/battles/:id" element={<CaseBattleDetail />} />
             <Route path="/profile" element={<ProfilePage />} />
             
             {/* Support Routes - Moderators get full dashboard, users get simple view */}

@@ -1021,6 +1021,32 @@ app.post('/api/support/tickets/:id/assign', auth, moderatorOnly, async (req, res
   }
 });
 
+// Update ticket priority
+app.patch('/api/support/tickets/:id/priority', auth, moderatorOnly, async (req, res) => {
+  try {
+    const { priority } = req.body;
+    const validPriorities = ['low', 'medium', 'high', 'urgent'];
+    
+    if (!validPriorities.includes(priority)) {
+      return res.status(400).json({ error: 'Invalid priority level' });
+    }
+
+    const ticket = await SupportTicket.findById(req.params.id);
+    if (!ticket) {
+      return res.status(404).json({ error: 'Ticket not found' });
+    }
+
+    ticket.priority = priority;
+    await ticket.save();
+
+    console.log(`🔄 Ticket ${ticket._id} priority changed to ${priority}`);
+    res.json({ message: 'Priority updated successfully', ticket });
+  } catch (err) {
+    console.error('Update priority error:', err);
+    res.status(500).json({ error: 'Failed to update priority' });
+  }
+});
+
 // ========================================
 // MODERATOR PANEL - CHAT MODERATION
 // ========================================

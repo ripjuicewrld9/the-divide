@@ -43,8 +43,6 @@ const WheelSeat: React.FC<WheelSeatProps> = ({
         transform: 'translate(-50%, -50%)',
         pointerEvents: 'auto',
       }}
-      whileHover={!occupied && canBet ? { scale: 1.1 } : {}}
-      whileTap={!occupied && canBet ? { scale: 0.95 } : {}}
     >
       <button
         type="button"

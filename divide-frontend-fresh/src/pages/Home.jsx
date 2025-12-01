@@ -18,8 +18,7 @@ export default function Home() {
       'Keno': '/tiles-svgrepo-com.svg',
       'Plinko': '/ball-pyramid-svgrepo-com.svg',
       'Blackjack': '/cards-game-solitaire-poker-blackjack-casino-svgrepo-com.svg',
-      'Wheel': '/helm-wheel-svgrepo-com.svg',
-      'Case Battle': '/swords-power-svgrepo-com.svg'
+      'Wheel': '/helm-wheel-svgrepo-com.svg'
     };
     return iconMap[gameName] || '/tiles-svgrepo-com.svg';
   };
@@ -107,19 +106,9 @@ export default function Home() {
       color: '#3b82f6',
       gradient: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
       path: '/wheel',
-      label: 'Coming Soon',
-      tagline: 'Spin & Win'
-    },
-    {
-      id: 'battles',
-      title: 'Case Battles',
-      description: 'Create custom item cases and battle other players to win big',
-      icon: '/swords-power-svgrepo-com.svg',
-      color: '#f59e0b',
-      gradient: 'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)',
-      path: '/case-battles',
-      label: 'Join Battle',
-      tagline: 'Compete & Conquer'
+      label: 'Spin Now',
+      tagline: 'Spin & Win',
+      isActive: true
     },
     {
       id: 'pump',
@@ -129,9 +118,8 @@ export default function Home() {
       color: '#10b981',
       gradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
       path: '/rugged',
-      label: 'Trade Now',
-      tagline: 'Pump or Dump',
-      isActive: true
+      label: 'Coming Soon',
+      tagline: 'Pump or Dump'
     }
   ];
 

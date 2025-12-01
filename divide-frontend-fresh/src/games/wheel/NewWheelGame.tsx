@@ -253,19 +253,20 @@ export const NewWheelGame: React.FC<NewWheelGameProps> = ({ gameId, onOpenChat }
     );
   }
 
-  // Can bet if status is betting AND (no timer set yet OR betting time remaining)
-  // Game with no timer means it's idle and waiting for first player
-  const canBet = gameState.status === 'betting' && (gameState.bettingTimeRemaining === 0 || bettingTimeLeft > 0);
+  // Can bet if status is betting AND (game is idle OR betting time remaining)
+  // Game is idle when bettingTimeRemaining is 0 (waiting for first player)
+  const isIdle = gameState.status === 'betting' && gameState.bettingTimeRemaining === 0;
+  const canBet = gameState.status === 'betting' && (isIdle || bettingTimeLeft > 0);
   
   // Debug logging for canBet
   console.log('[NewWheelGame] canBet calculation:', {
     canBet,
+    isIdle,
     status: gameState.status,
     bettingTimeLeft,
     bettingTimeRemaining: gameState.bettingTimeRemaining,
     statusIsBetting: gameState.status === 'betting',
-    timeIsPositive: bettingTimeLeft > 0,
-    isIdle: gameState.bettingTimeRemaining === 0
+    timeIsPositive: bettingTimeLeft > 0
   });
   const bettingProgress = (bettingTimeLeft / BETTING_DURATION_MS) * 100;
 
@@ -288,16 +289,18 @@ export const NewWheelGame: React.FC<NewWheelGameProps> = ({ gameId, onOpenChat }
             <div className="w-px h-4 bg-white/20" />
             <div className="flex items-center gap-2">
               <div className={`w-2 h-2 rounded-full ${canBet ? 'bg-green-400 animate-pulse' : 'bg-yellow-400'}`} />
-              <span className="text-white font-bold uppercase">{gameState.status}</span>
+              <span className="text-white font-bold uppercase">
+                {isIdle ? 'WAITING FOR PLAYERS' : gameState.status}
+              </span>
             </div>
             <div className="w-px h-4 bg-white/20" />
             <span className="text-cyan-400 font-mono text-xl font-bold">
-              {(canBet ? bettingTimeLeft / 1000 : timeLeft / 1000).toFixed(1)}s
+              {isIdle ? '∞' : `${(canBet ? bettingTimeLeft / 1000 : timeLeft / 1000).toFixed(1)}s`}
             </span>
           </div>
 
           {/* Betting Timer Bar */}
-          {canBet && (
+          {canBet && !isIdle && (
             <div className="mt-4 max-w-md mx-auto">
               <div className="h-2 bg-black/60 rounded-full overflow-hidden border border-white/10">
                 <motion.div

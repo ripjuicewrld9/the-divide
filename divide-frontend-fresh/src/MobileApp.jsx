@@ -8,7 +8,6 @@ import KenoPage from "./pages/Keno.jsx";
 import RuggedPage from "./pages/Rugged.jsx";
 import ActiveBattlesPage from "./components/ActiveBattlesPage.jsx";
 import CreateBattlePage from "./components/CreateBattlePage.jsx";
-import CaseBattleDetail from "./components/CaseBattleDetail.jsx";
 import BlackjackPage from "./games/blackjack/index.tsx";
 import PlinkoPage from "./games/plinko/index.tsx";
 import WheelPage from "./games/wheel/index.tsx";
@@ -57,14 +56,6 @@ export default function MobileApp() {
                     </ProtectedRoute>
                 } />
                 <Route path="/divides" element={<Divides onOpenChat={() => setIsChatOpen(true)} />} />
-
-                {/* Case Battles */}
-                <Route path="/case-battles" element={<ActiveBattlesPage onOpenChat={() => setIsChatOpen(true)} />} />
-                <Route path="/case-battles/create" element={<CreateBattlePage onOpenChat={() => setIsChatOpen(true)} />} />
-                <Route path="/case-battles/:id" element={<CaseBattleDetail onOpenChat={() => setIsChatOpen(true)} />} />
-                <Route path="/battles" element={<ActiveBattlesPage onOpenChat={() => setIsChatOpen(true)} />} />
-                <Route path="/battles/create" element={<CreateBattlePage onOpenChat={() => setIsChatOpen(true)} />} />
-                <Route path="/battles/:id" element={<CaseBattleDetail onOpenChat={() => setIsChatOpen(true)} />} />
 
                 {/* Profile */}
                 <Route path="/profile" element={<ProfilePage onOpenChat={() => setIsChatOpen(true)} />} />

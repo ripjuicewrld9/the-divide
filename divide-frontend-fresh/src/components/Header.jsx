@@ -8,6 +8,7 @@ import UserAvatar from './UserAvatar.jsx';
 import UserSettingsModal from './UserSettingsModal.jsx';
 import DepositWithdrawModal from './DepositWithdrawModal.jsx';
 import SupportTicket from './SupportTicket.jsx';
+import NotificationBell from './NotificationBell.jsx';
 
 export default function Header() {
   const { user, logout, addFunds } = useAuth();
@@ -106,6 +107,9 @@ export default function Header() {
 
           {user ? (
             <>
+              {/* Notification Bell */}
+              <NotificationBell />
+
               {/* Balance & Add Funds */}
               <div className="flex items-center gap-2 rounded-full border border-white/10 bg-black/40 px-1 py-1 pr-4">
                 <div className="flex flex-col items-end leading-none mr-2">

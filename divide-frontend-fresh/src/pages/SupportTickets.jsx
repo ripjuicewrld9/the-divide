@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import UserAvatar from '../components/UserAvatar';
 import SupportLayout from '../components/SupportLayout';
@@ -9,12 +9,14 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 export default function SupportTickets() {
     const { user, token } = useAuth();
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [tickets, setTickets] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
-    const [filterStatus, setFilterStatus] = useState('all');
-    const [filterPriority, setFilterPriority] = useState('all');
-    const [sortBy, setSortBy] = useState('newest');
+    const [filterStatus, setFilterStatus] = useState(searchParams.get('status') || 'all');
+    const [filterPriority, setFilterPriority] = useState(searchParams.get('priority') || 'all');
+    const [filterAssigned, setFilterAssigned] = useState(searchParams.get('assigned') || 'all');
+    const [sortBy, setSortBy] = useState('priority');
 
     const isModerator = user && (user.role === 'moderator' || user.role === 'admin');
 
@@ -56,6 +58,31 @@ export default function SupportTickets() {
         }
     };
 
+    const handlePriorityChange = async (e, ticketId, newPriority) => {
+        e.stopPropagation();
+        try {
+            const res = await fetch(`${API_BASE}/api/support/tickets/${ticketId}/priority`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ priority: newPriority })
+            });
+
+            if (res.ok) {
+                // Update local state immediately
+                setTickets(prev => prev.map(t => 
+                    t._id === ticketId ? { ...t, priority: newPriority } : t
+                ));
+            } else {
+                console.error('Failed to update priority');
+            }
+        } catch (err) {
+            console.error('Error updating priority:', err);
+        }
+    };
+
     useEffect(() => {
         if (user) {
             fetchTickets();
@@ -88,16 +115,28 @@ export default function SupportTickets() {
             ticket.userId?.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             ticket._id.substring(18).toUpperCase().includes(searchQuery.toUpperCase());
         
-        const matchesStatus = filterStatus === 'all' || ticket.status === filterStatus;
+        // Hide resolved tickets from "all" status view
+        const matchesStatus = filterStatus === 'all' 
+            ? ticket.status !== 'resolved' && ticket.status !== 'closed'
+            : ticket.status === filterStatus;
         const matchesPriority = filterPriority === 'all' || ticket.priority === filterPriority;
         
-        return matchesSearch && matchesStatus && matchesPriority;
+        // Filter by assigned status
+        const matchesAssigned = filterAssigned === 'all' ||
+            (filterAssigned === 'me' && (ticket.assignedTo?._id === user._id || ticket.assignedTo === user._id)) ||
+            (filterAssigned === 'unassigned' && !ticket.assignedTo) ||
+            (filterAssigned === 'assigned' && ticket.assignedTo);
+        
+        return matchesSearch && matchesStatus && matchesPriority && matchesAssigned;
     }).sort((a, b) => {
         if (sortBy === 'newest') return new Date(b.createdAt) - new Date(a.createdAt);
         if (sortBy === 'oldest') return new Date(a.createdAt) - new Date(b.createdAt);
         if (sortBy === 'priority') {
             const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
-            return priorityOrder[a.priority] - priorityOrder[b.priority];
+            const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
+            // If same priority, sort by newest first
+            if (priorityDiff === 0) return new Date(b.createdAt) - new Date(a.createdAt);
+            return priorityDiff;
         }
         return 0;
     });
@@ -213,27 +252,27 @@ export default function SupportTickets() {
 
                         {/* Filter and Sort Controls */}
                         <div className="flex gap-2">
-                            <button className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition text-sm">
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                                </svg>
-                                View
-                            </button>
                             <select
                                 value={sortBy}
                                 onChange={(e) => setSortBy(e.target.value)}
                                 className="px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg focus:border-cyan-500 outline-none text-sm"
                             >
+                                <option value="priority">Priority First</option>
                                 <option value="newest">Newest First</option>
                                 <option value="oldest">Oldest First</option>
-                                <option value="priority">Priority</option>
                             </select>
                             <select
                                 value={filterStatus}
-                                onChange={(e) => setFilterStatus(e.target.value)}
+                                onChange={(e) => {
+                                    setFilterStatus(e.target.value);
+                                    const params = new URLSearchParams(searchParams);
+                                    if (e.target.value === 'all') params.delete('status');
+                                    else params.set('status', e.target.value);
+                                    setSearchParams(params);
+                                }}
                                 className="px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg focus:border-cyan-500 outline-none text-sm"
                             >
-                                <option value="all">All Status</option>
+                                <option value="all">Active Tickets</option>
                                 <option value="open">Open</option>
                                 <option value="in_progress">In Progress</option>
                                 <option value="resolved">Resolved</option>
@@ -241,7 +280,13 @@ export default function SupportTickets() {
                             </select>
                             <select
                                 value={filterPriority}
-                                onChange={(e) => setFilterPriority(e.target.value)}
+                                onChange={(e) => {
+                                    setFilterPriority(e.target.value);
+                                    const params = new URLSearchParams(searchParams);
+                                    if (e.target.value === 'all') params.delete('priority');
+                                    else params.set('priority', e.target.value);
+                                    setSearchParams(params);
+                                }}
                                 className="px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg focus:border-cyan-500 outline-none text-sm"
                             >
                                 <option value="all">All Priorities</option>
@@ -249,6 +294,22 @@ export default function SupportTickets() {
                                 <option value="high">High</option>
                                 <option value="medium">Medium</option>
                                 <option value="low">Low</option>
+                            </select>
+                            <select
+                                value={filterAssigned}
+                                onChange={(e) => {
+                                    setFilterAssigned(e.target.value);
+                                    const params = new URLSearchParams(searchParams);
+                                    if (e.target.value === 'all') params.delete('assigned');
+                                    else params.set('assigned', e.target.value);
+                                    setSearchParams(params);
+                                }}
+                                className="px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg focus:border-cyan-500 outline-none text-sm"
+                            >
+                                <option value="all">All Agents</option>
+                                <option value="me">My Tickets</option>
+                                <option value="assigned">Assigned</option>
+                                <option value="unassigned">Unassigned</option>
                             </select>
                         </div>
                     </div>
@@ -318,21 +379,31 @@ export default function SupportTickets() {
 
                                         {/* Priority */}
                                         <div className="col-span-1">
-                                            <span className={`inline-flex px-2 py-1 rounded text-xs font-semibold border ${getPriorityBadge(ticket.priority)}`}>
-                                                {ticket.priority?.toUpperCase()}
-                                            </span>
+                                            <select
+                                                value={ticket.priority}
+                                                onChange={(e) => handlePriorityChange(e, ticket._id, e.target.value)}
+                                                onClick={(e) => e.stopPropagation()}
+                                                className={`px-2 py-1 rounded text-xs font-semibold border bg-transparent outline-none cursor-pointer ${getPriorityBadge(ticket.priority)}`}
+                                            >
+                                                <option value="urgent">URGENT</option>
+                                                <option value="high">HIGH</option>
+                                                <option value="medium">MEDIUM</option>
+                                                <option value="low">LOW</option>
+                                            </select>
                                         </div>
 
                                         {/* Agent */}
                                         <div className="col-span-1">
                                             {ticket.assignedTo ? (
-                                                <UserAvatar user={ticket.assignedTo} size={28} />
+                                                <div className="flex items-center gap-2">
+                                                    <UserAvatar user={ticket.assignedTo} size={32} />
+                                                </div>
                                             ) : ticket.escalated ? (
                                                 <span className="text-xs text-red-400">🚨</span>
                                             ) : (
                                                 <button
                                                     onClick={(e) => handleAssignToMe(e, ticket._id)}
-                                                    className="w-7 h-7 rounded-full bg-white/5 hover:bg-gradient-to-r hover:from-cyan-500/20 hover:to-blue-500/20 border border-white/10 hover:border-cyan-500/50 flex items-center justify-center transition group"
+                                                    className="w-8 h-8 rounded-full bg-white/5 hover:bg-gradient-to-r hover:from-cyan-500/20 hover:to-blue-500/20 border border-white/10 hover:border-cyan-500/50 flex items-center justify-center transition group"
                                                     title="Assign to me"
                                                 >
                                                     <span className="text-gray-400 group-hover:text-cyan-400 font-semibold">+</span>
