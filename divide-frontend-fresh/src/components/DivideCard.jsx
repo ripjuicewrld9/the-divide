@@ -132,7 +132,7 @@ export default function DivideCard({
       return;
     }
     setEditingSide(side);
-    setBetAmount('1');
+    setBetAmount(''); // Start with empty input for custom amount
   };
 
   const handleSubmitBet = async (side) => {
@@ -250,17 +250,20 @@ export default function DivideCard({
               <input
                 className="clean-input vote-input"
                 type="number"
-                min="0"
+                min="0.01"
+                step="0.01"
+                placeholder="$ Amount"
                 value={betAmount}
                 onChange={(e) => setBetAmount(e.target.value)}
                 onClick={(e) => e.stopPropagation()}
                 aria-label={`Bet amount for ${left}`}
+                autoFocus
               />
               <button type="button" className="vote-submit" onClick={(e) => { e.stopPropagation(); handleSubmitBet('left'); }} aria-label="Submit bet">✔</button>
             </span>
           ) : (
             <span>
-              {(hoverSide === "left" && status !== 'active') ? `${leftPct}%` : left}
+              {(hoverSide === "left" && status !== 'active') ? `${leftPct}%` : `$${Number(left).toFixed(2)}`}
             </span>
           )}
         </div>
@@ -281,17 +284,20 @@ export default function DivideCard({
               <input
                 className="clean-input vote-input"
                 type="number"
-                min="0"
+                min="0.01"
+                step="0.01"
+                placeholder="$ Amount"
                 value={betAmount}
                 onChange={(e) => setBetAmount(e.target.value)}
                 onClick={(e) => e.stopPropagation()}
                 aria-label={`Bet amount for ${right}`}
+                autoFocus
               />
               <button type="button" className="vote-submit" onClick={(e) => { e.stopPropagation(); handleSubmitBet('right'); }} aria-label="Submit bet">✔</button>
             </span>
           ) : (
             <span>
-              {(hoverSide === "right" && status !== 'active') ? `${rightPct}%` : right}
+              {(hoverSide === "right" && status !== 'active') ? `${rightPct}%` : `$${Number(right).toFixed(2)}`}
             </span>
           )}
         </div>

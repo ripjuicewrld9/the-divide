@@ -37,7 +37,12 @@ export const AuthProvider = ({ children }) => {
                     totalLosses: data.totalLosses || 0,
                     createdAt: data.createdAt,
                     discordId: data.discordId || null,
-                    discordUsername: data.discordUsername || null
+                    discordUsername: data.discordUsername || null,
+                    xp: data.xp || 0,
+                    level: data.level || 1,
+                    currentBadge: data.currentBadge || 'newbie',
+                    xpThisWeek: data.xpThisWeek || 0,
+                    xpThisMonth: data.xpThisMonth || 0
                 });
             } catch (err) {
                 console.error('[Auth] loadUser error:', err.message);
@@ -65,6 +70,11 @@ export const AuthProvider = ({ children }) => {
                                     balance: data.balance,
                                     wagered: data.wagered || prevUser.wagered,
                                     totalWon: data.totalWon || prevUser.totalWon,
+                                    xp: data.xp || prevUser.xp,
+                                    level: data.level || prevUser.level,
+                                    currentBadge: data.currentBadge || prevUser.currentBadge,
+                                    xpThisWeek: data.xpThisWeek || prevUser.xpThisWeek,
+                                    xpThisMonth: data.xpThisMonth || prevUser.xpThisMonth
                                 };
                             }
                             return prevUser;

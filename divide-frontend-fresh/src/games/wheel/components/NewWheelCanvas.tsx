@@ -105,12 +105,12 @@ export const NewWheelCanvas: React.FC<NewWheelCanvasProps> = ({
       
       if (isBoosted && boost) {
         // Show boosted multiplier
-        ctx.fillText(`${boost.finalMultiplier.toFixed(1)}x`, radius - 8, 0);
+        ctx.fillText(`${boost.finalMultiplier.toFixed(1)}x`, radius - 15, 0);
         ctx.font = 'bold 7px Arial';
         ctx.fillStyle = '#FFD700';
-        ctx.fillText(`⚡${boost.boostMultiplier}x`, radius - 8, 10);
+        ctx.fillText(`⚡${boost.boostMultiplier}x`, radius - 15, 10);
       } else {
-        ctx.fillText(`${multiplier >= 0 ? '+' : ''}${multiplier}x`, radius - 8, 0);
+        ctx.fillText(`${multiplier >= 0 ? '+' : ''}${multiplier}x`, radius - 15, 0);
       }
       
       ctx.restore();
@@ -247,19 +247,6 @@ export const NewWheelCanvas: React.FC<NewWheelCanvasProps> = ({
         className="w-full h-full"
         style={{ maxWidth: '100%', maxHeight: '100%' }}
       />
-
-      {/* Status overlay */}
-      {isSpinning && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            className="text-6xl opacity-30"
-          >
-            🎰
-          </motion.div>
-        </div>
-      )}
     </div>
   );
 };

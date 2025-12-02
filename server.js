@@ -2687,25 +2687,21 @@ app.post('/divides/vote', auth, async (req, res) => {
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    let shortAmount = 0; // dollar amount being shorted
-    let isFree = true;
-    if (boostAmount > 0) {
-      // boostAmount is provided in dollars by client; convert to cents for internal accounting
-      const boostCents = toCents(boostAmount);
-      if (user.balance < boostCents) return res.status(400).json({ error: 'Insufficient balance' });
-      user.balance = Math.max(0, user.balance - boostCents);
-      // Reduce wager requirement (1x playthrough)
-      if (user.wagerRequirement > 0) {
-        user.wagerRequirement = Math.max(0, user.wagerRequirement - boostCents);
-      }
-      shortAmount = boostAmount; // dollar amount being shorted
-      isFree = false;
+    // Require bet amount (no free shorts)
+    if (!boostAmount || boostAmount <= 0) {
+      return res.status(400).json({ error: 'Bet amount required (minimum $0.01)' });
     }
 
-    // free short handling
-    const today = new Date().toDateString();
-    if (isFree && user.lastFreeVoteDate === today) return res.status(400).json({ error: 'Free short used today' });
-    if (isFree) user.lastFreeVoteDate = today;
+    let shortAmount = boostAmount; // dollar amount being shorted
+    let boostCents = toCents(boostAmount); // amount in cents
+    
+    if (user.balance < boostCents) return res.status(400).json({ error: 'Insufficient balance' });
+    user.balance = Math.max(0, user.balance - boostCents);
+    
+    // Reduce wager requirement (1x playthrough)
+    if (user.wagerRequirement > 0) {
+      user.wagerRequirement = Math.max(0, user.wagerRequirement - boostCents);
+    }
 
     const existing = divide.votes.find(v => v.userId === req.userId);
     if (existing) {
@@ -2715,10 +2711,9 @@ app.post('/divides/vote', auth, async (req, res) => {
       } else {
         existing.voteCount += shortAmount; // voteCount field stores dollar amount
         existing.side = side;
-        existing.isFree = isFree;
       }
     } else {
-      divide.votes.push({ userId: req.userId, side, voteCount: shortAmount, isFree });
+      divide.votes.push({ userId: req.userId, side, voteCount: shortAmount });
     }
 
     divide.totalVotes += shortAmount;
@@ -2727,35 +2722,31 @@ app.post('/divides/vote', auth, async (req, res) => {
     // divide.pot stored in dollars in DB (legacy); keep pot arithmetic in dollars
     divide.pot = Number((divide.pot + boostAmount).toFixed(2));
 
-    // Update user statistics for paid shorts (track engagement)
-    if (!isFree && boostCents > 0) {
-      user.totalBets = (user.totalBets || 0) + 1;
-      user.wagered = (user.wagered || 0) + boostCents;
-      // Divides shorting is a bet - outcome (win/loss) determined when divide ends
-      // For now, count all paid shorts as "bets" without immediate win/loss classification
-      
-      // Award XP for wagering (2 XP per $1)
-      await awardXp(req.userId, 'usdWager', boostCents, { 
-        divideId: divide.id || divide._id, 
-        side,
-        amount: boostAmount 
-      });
-    }
+    // Update user statistics (track engagement)
+    user.totalBets = (user.totalBets || 0) + 1;
+    user.wagered = (user.wagered || 0) + boostCents;
+    // Divides shorting is a bet - outcome (win/loss) determined when divide ends
+    // For now, count all shorts as "bets" without immediate win/loss classification
+    
+    // Award XP for wagering (2 XP per $1)
+    await awardXp(req.userId, 'usdWager', boostCents, { 
+      divideId: divide.id || divide._id, 
+      side,
+      amount: boostAmount 
+    });
 
     await divide.save();
     await user.save();
 
-    // Ledger: record paid vote (money into the system) when boostAmount used
+    // Ledger: record short bet (money into the system)
     try {
-      if (!isFree && boostAmount > 0) {
-        await Ledger.create({
-          type: 'divides_bet',
-          amount: Number(boostAmount),
-          userId: req.userId,
-          divideId: divide.id || divide._id,
-          meta: { side }
-        });
-      }
+      await Ledger.create({
+        type: 'divides_bet',
+        amount: Number(boostAmount),
+        userId: req.userId,
+        divideId: divide.id || divide._id,
+        meta: { side }
+      });
     } catch (e) {
       console.error('Failed to create ledger entry for divide vote', e);
     }
@@ -2800,71 +2791,53 @@ app.post('/Divides/vote', auth, async (req, res) => {
       return res.status(400).json({ error: 'You have already voted on this divide' });
     }
 
-    let voteCount = 1;
-    let isFree = true;
-    let betAmount = 0;
-
-    // For user-created divides, voting requires a bet
-    if (divide.isUserCreated) {
-      if (!bet || bet <= 0) return res.status(400).json({ error: 'Bet amount required for user-created divides' });
-      const betCents = toCents(bet);
-      if (user.balance < betCents) return res.status(400).json({ error: 'Insufficient balance' });
-      user.balance = user.balance - betCents;
-      voteCount = bet;
-      isFree = false;
-      betAmount = bet;
-    } else {
-      // Admin-created divides: legacy free vote or boost logic
-      if (boostAmount > 0) {
-        const boostCents = toCents(boostAmount);
-        if (user.balance < boostCents) return res.status(400).json({ error: 'Insufficient balance' });
-        user.balance = Math.max(0, user.balance - boostCents);
-        voteCount = boostAmount;
-        isFree = false;
-        betAmount = boostAmount;
-      }
-
-      const today = new Date().toDateString();
-      if (isFree && user.lastFreeVoteDate === today) return res.status(400).json({ error: 'Free vote used today' });
-      if (isFree) user.lastFreeVoteDate = today;
+    // Require bet amount (no free shorts)
+    const betAmount = bet || boostAmount;
+    if (!betAmount || betAmount <= 0) {
+      return res.status(400).json({ error: 'Bet amount required (minimum $0.01)' });
     }
 
-    divide.votes.push({ userId: req.userId, side, voteCount, isFree, bet: betAmount });
+    const betCents = toCents(betAmount);
+    if (user.balance < betCents) return res.status(400).json({ error: 'Insufficient balance' });
+    user.balance = user.balance - betCents;
+    
+    // Reduce wager requirement
+    if (user.wagerRequirement > 0) {
+      user.wagerRequirement = Math.max(0, user.wagerRequirement - betCents);
+    }
+    
+    let voteCount = betAmount; // dollar amount being shorted
+
+    divide.votes.push({ userId: req.userId, side, voteCount, bet: betAmount });
 
     divide.totalVotes += voteCount;
     if (side === 'A') divide.votesA += voteCount;
     else divide.votesB += voteCount;
-    divide.pot = Number((divide.pot + (betAmount || boostAmount)).toFixed(2));
+    divide.pot = Number((divide.pot + betAmount).toFixed(2));
 
-    // Update user statistics for paid votes
-    const paidAmount = betAmount || boostAmount;
-    if (!isFree && paidAmount > 0) {
-      user.totalBets = (user.totalBets || 0) + 1;
-      user.wagered = (user.wagered || 0) + toCents(paidAmount);
-      
-      // Award XP for wagering (2 XP per $1)
-      await awardXp(req.userId, 'usdWager', toCents(paidAmount), { 
-        divideId: divide.id || divide._id, 
-        side,
-        amount: paidAmount 
-      });
-    }
+    // Update user statistics
+    user.totalBets = (user.totalBets || 0) + 1;
+    user.wagered = (user.wagered || 0) + betCents;
+    
+    // Award XP for wagering (2 XP per $1)
+    await awardXp(req.userId, 'usdWager', betCents, { 
+      divideId: divide.id || divide._id, 
+      side,
+      amount: betAmount 
+    });
 
     await divide.save();
     await user.save();
 
-    // Ledger: record vote bet
+    // Ledger: record short bet
     try {
-      const betForLedger = betAmount || boostAmount;
-      if (!isFree && betForLedger > 0) {
-        await Ledger.create({
-          type: 'divides_bet',
-          amount: Number(betForLedger),
-          userId: req.userId,
-          divideId: divide.id || divide._id,
-          meta: { side }
-        });
-      }
+      await Ledger.create({
+        type: 'divides_bet',
+        amount: Number(betAmount),
+        userId: req.userId,
+        divideId: divide.id || divide._id,
+        meta: { side }
+      });
     } catch (e) {
       console.error('Failed to create ledger entry for divide vote (alias)', e);
     }
@@ -3087,12 +3060,12 @@ app.post('/Divides/create-user', auth, async (req, res) => {
       soundA: '',
       soundB: '',
       endTime,
-      votesA: side === 'A' ? 1 : 0,
-      votesB: side === 'B' ? 1 : 0,
-      totalVotes: 1,
+      votesA: side === 'A' ? bet : 0,
+      votesB: side === 'B' ? bet : 0,
+      totalVotes: bet,
       pot: bet,
       status: 'active',
-      votes: [{ userId: req.userId, side, voteCount: 1, isFree: false, bet }],
+      votes: [{ userId: req.userId, side, voteCount: bet, isFree: false, bet }],
       creatorId: req.userId,
       creatorBet: bet,
       creatorSide: side,

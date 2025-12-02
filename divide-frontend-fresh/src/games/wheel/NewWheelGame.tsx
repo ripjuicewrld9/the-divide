@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import useWheelSocket from '../../hooks/useWheelSocket';
@@ -111,6 +111,9 @@ export const NewWheelGame: React.FC<NewWheelGameProps> = ({ gameId, onOpenChat }
       console.log('[NewWheelGame] Betting closed, boosted segments:', data.boostedSegments);
       setRevealedBoosts(data.boostedSegments);
       setShowBoostReveal(true);
+      
+      // Reset wheelStopPosition for new spin
+      setGameState(prev => prev ? { ...prev, wheelStopPosition: null } : prev);
       
       // Hide boost reveal after 3 seconds and start spin
       setTimeout(() => {
@@ -256,20 +259,13 @@ export const NewWheelGame: React.FC<NewWheelGameProps> = ({ gameId, onOpenChat }
 
   // Can bet if status is betting AND (game is idle OR betting time remaining)
   // Game is idle when bettingTimeRemaining is 0 (waiting for first player)
-  const isIdle = gameState.status === 'betting' && gameState.bettingTimeRemaining === 0;
-  const canBet = gameState.status === 'betting' && (isIdle || bettingTimeLeft > 0);
-  
-  // Debug logging for canBet
-  console.log('[NewWheelGame] canBet calculation:', {
-    canBet,
-    isIdle,
-    status: gameState.status,
-    bettingTimeLeft,
-    bettingTimeRemaining: gameState.bettingTimeRemaining,
-    statusIsBetting: gameState.status === 'betting',
-    timeIsPositive: bettingTimeLeft > 0
-  });
-  const bettingProgress = (bettingTimeLeft / BETTING_DURATION_MS) * 100;
+  const { canBet, isIdle, bettingProgress } = useMemo(() => {
+    const idle = gameState.status === 'betting' && gameState.bettingTimeRemaining === 0;
+    const bet = gameState.status === 'betting' && (idle || bettingTimeLeft > 0);
+    const progress = (bettingTimeLeft / BETTING_DURATION_MS) * 100;
+    
+    return { canBet: bet, isIdle: idle, bettingProgress: progress };
+  }, [gameState.status, gameState.bettingTimeRemaining, bettingTimeLeft]);
 
   // Get user's reserved seats
   const mySeats = gameState.seats.filter(s => s.userId === user?.id);
