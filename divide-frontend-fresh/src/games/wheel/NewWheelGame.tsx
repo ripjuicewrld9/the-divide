@@ -249,6 +249,26 @@ export const NewWheelGame: React.FC<NewWheelGameProps> = ({ gameId, onOpenChat }
     }
   };
 
+  // Can bet if status is betting AND (game is idle OR betting time remaining)
+  // Game is idle when bettingTimeRemaining is 0 (waiting for first player)
+  // NOTE: This hook MUST be before any early returns to satisfy React's rules of hooks
+  const { canBet, isIdle, bettingProgress } = useMemo(() => {
+    if (!gameState) {
+      return { canBet: false, isIdle: false, bettingProgress: 0 };
+    }
+    const idle = gameState.status === 'betting' && gameState.bettingTimeRemaining === 0;
+    const bet = gameState.status === 'betting' && (idle || bettingTimeLeft > 0);
+    const progress = (bettingTimeLeft / BETTING_DURATION_MS) * 100;
+    
+    return { canBet: bet, isIdle: idle, bettingProgress: progress };
+  }, [gameState?.status, gameState?.bettingTimeRemaining, bettingTimeLeft]);
+
+  // Get user's reserved seats
+  const mySeats = useMemo(() => {
+    if (!gameState) return [];
+    return gameState.seats.filter(s => s.userId === user?.id);
+  }, [gameState?.seats, user?.id]);
+
   if (!gameState) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#0b0b0b]">
@@ -256,19 +276,6 @@ export const NewWheelGame: React.FC<NewWheelGameProps> = ({ gameId, onOpenChat }
       </div>
     );
   }
-
-  // Can bet if status is betting AND (game is idle OR betting time remaining)
-  // Game is idle when bettingTimeRemaining is 0 (waiting for first player)
-  const { canBet, isIdle, bettingProgress } = useMemo(() => {
-    const idle = gameState.status === 'betting' && gameState.bettingTimeRemaining === 0;
-    const bet = gameState.status === 'betting' && (idle || bettingTimeLeft > 0);
-    const progress = (bettingTimeLeft / BETTING_DURATION_MS) * 100;
-    
-    return { canBet: bet, isIdle: idle, bettingProgress: progress };
-  }, [gameState.status, gameState.bettingTimeRemaining, bettingTimeLeft]);
-
-  // Get user's reserved seats
-  const mySeats = gameState.seats.filter(s => s.userId === user?.id);
 
   return (
     <div className="min-h-screen bg-[#0b0b0b] text-white">
