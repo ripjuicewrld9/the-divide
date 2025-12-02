@@ -162,19 +162,19 @@ export default function ProfilePage({ onOpenChat }) {
                             <div className="flex flex-wrap justify-center md:justify-start gap-3">
                                 <div className="bg-black/30 px-4 py-2 rounded-lg border border-white/10">
                                     <div className="text-xs text-gray-500 uppercase font-bold">Balance</div>
-                                    <div className="text-xl font-mono text-cyan-400">${formatCurrency(user.balance / 100 || 0)}</div>
+                                    <div className="text-xl font-mono text-cyan-400">${formatCurrency(user.balance || 0)}</div>
                                 </div>
                                 <div className="bg-black/30 px-4 py-2 rounded-lg border border-white/10">
                                     <div className="text-xs text-gray-500 uppercase font-bold">Wagered</div>
-                                    <div className="text-xl font-mono text-purple-400">${formatCurrency(user.wagered / 100 || 0)}</div>
+                                    <div className="text-xl font-mono text-purple-400">${formatCurrency(user.wagered || 0)}</div>
                                 </div>
                                 <div className="bg-black/30 px-4 py-2 rounded-lg border border-white/10">
                                     <div className="text-xs text-gray-500 uppercase font-bold">Deposited</div>
-                                    <div className="text-xl font-mono text-green-400">${formatCurrency((user.totalDeposited || 0) / 100)}</div>
+                                    <div className="text-xl font-mono text-green-400">${formatCurrency(user.totalDeposited || 0)}</div>
                                 </div>
                                 <div className="bg-black/30 px-4 py-2 rounded-lg border border-white/10">
                                     <div className="text-xs text-gray-500 uppercase font-bold">Withdrawn</div>
-                                    <div className="text-xl font-mono text-orange-400">${formatCurrency((user.totalWithdrawn || 0) / 100)}</div>
+                                    <div className="text-xl font-mono text-orange-400">${formatCurrency(user.totalWithdrawn || 0)}</div>
                                 </div>
                             </div>
                         </div>

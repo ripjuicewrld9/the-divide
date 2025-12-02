@@ -2526,7 +2526,7 @@ app.post('/divides/vote', auth, async (req, res) => {
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    let voteCount = 1;
+    let shortAmount = 0; // dollar amount being shorted
     let isFree = true;
     if (boostAmount > 0) {
       // boostAmount is provided in dollars by client; convert to cents for internal accounting
@@ -2537,45 +2537,44 @@ app.post('/divides/vote', auth, async (req, res) => {
       if (user.wagerRequirement > 0) {
         user.wagerRequirement = Math.max(0, user.wagerRequirement - boostCents);
       }
-      voteCount = boostAmount; // votes are counted in whole-dollar units as before
+      shortAmount = boostAmount; // dollar amount being shorted
       isFree = false;
     }
 
-    // free vote handling
+    // free short handling
     const today = new Date().toDateString();
-    if (isFree && user.lastFreeVoteDate === today) return res.status(400).json({ error: 'Free vote used today' });
+    if (isFree && user.lastFreeVoteDate === today) return res.status(400).json({ error: 'Free short used today' });
     if (isFree) user.lastFreeVoteDate = today;
 
     const existing = divide.votes.find(v => v.userId === req.userId);
     if (existing) {
-      // If creator, only allow updating vote if side matches locked side
+      // If creator, only allow updating short if side matches locked side
       if (divide.isUserCreated && divide.creatorId === req.userId && divide.creatorSide && side !== divide.creatorSide) {
-        return res.status(400).json({ error: 'Creator is locked to their chosen side and cannot vote on the other side.' });
+        return res.status(400).json({ error: 'Creator is locked to their chosen side and cannot short the other side.' });
       } else {
-        existing.voteCount += voteCount;
+        existing.voteCount += shortAmount; // voteCount field stores dollar amount
         existing.side = side;
         existing.isFree = isFree;
       }
     } else {
-      divide.votes.push({ userId: req.userId, side, voteCount, isFree });
+      divide.votes.push({ userId: req.userId, side, voteCount: shortAmount, isFree });
     }
 
-    divide.totalVotes += voteCount;
-    if (side === 'A') divide.votesA += voteCount;
-    else divide.votesB += voteCount;
+    divide.totalVotes += shortAmount;
+    if (side === 'A') divide.votesA += shortAmount;
+    else divide.votesB += shortAmount;
     // divide.pot stored in dollars in DB (legacy); keep pot arithmetic in dollars
     divide.pot = Number((divide.pot + boostAmount).toFixed(2));
 
-    // Update user statistics for ALL votes (including base $0.50 minimum)
-    const totalWageredCents = isFree ? 0 : (50 * voteCount + boostCents); // $0.50 base + boost
-    if (!isFree && totalWageredCents > 0) {
+    // Update user statistics for paid shorts (track engagement)
+    if (!isFree && boostCents > 0) {
       user.totalBets = (user.totalBets || 0) + 1;
-      user.wagered = (user.wagered || 0) + totalWageredCents;
-      // Divides voting is a bet - outcome (win/loss) determined when divide ends
-      // For now, count all paid votes as "bets" without immediate win/loss classification
+      user.wagered = (user.wagered || 0) + boostCents;
+      // Divides shorting is a bet - outcome (win/loss) determined when divide ends
+      // For now, count all paid shorts as "bets" without immediate win/loss classification
       
       // Award XP for wagering (2 XP per $1)
-      await awardXp(req.userId, 'usdWager', totalWageredCents, { 
+      await awardXp(req.userId, 'usdWager', boostCents, { 
         divideId: divide.id || divide._id, 
         side,
         amount: boostAmount 
