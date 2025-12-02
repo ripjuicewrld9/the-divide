@@ -26,9 +26,6 @@ export default function DivideCard({
   const [r, setR] = useState(Number(rightVotes) || 0);
   const [editingSide, setEditingSide] = useState(null);
   const [betAmount, setBetAmount] = useState('');
-  const [userVotedSide, setUserVotedSide] = useState(() => {
-    try { return localStorage.getItem(`divideVote:${divideId}`); } catch { return null; }
-  });
   const [seconds, setSeconds] = useState(() => {
     if (!endTime) return 0;
     const delta = Math.floor((new Date(endTime) - Date.now()) / 1000);
@@ -70,12 +67,8 @@ export default function DivideCard({
     try {
       if (onVote) {
         await onVote(side === "left" ? "A" : "B", boostAmount);
-        try { localStorage.setItem(`divideVote:${divideId}`, side === 'left' ? 'A' : 'B'); } catch (e) {}
-        setUserVotedSide(side === 'left' ? 'A' : 'B');
         return;
       }
-      if (side === "left") setL((p) => p + 1);
-      else setR((p) => p + 1);
     } catch (err) {
       console.error("Position error:", err);
       alert(err.message || "Failed to place position");
@@ -83,10 +76,8 @@ export default function DivideCard({
   };
 
   const handleStartEdit = (side) => {
-    if (userVotedSide && ((userVotedSide === 'A' && side === 'right') || (userVotedSide === 'B' && side === 'left'))) {
-      alert('You already have a position on the other side.');
-      return;
-    }
+    // Server handles all validation (creator lock, duplicate votes, etc.)
+    // Frontend just opens the input - server will reject invalid attempts
     setEditingSide(side);
     setBetAmount('');
   };
