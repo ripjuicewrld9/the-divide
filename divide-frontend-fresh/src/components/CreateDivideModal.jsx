@@ -111,12 +111,12 @@ export default function CreateDivideModal({ isOpen, onClose, onDivideCreated }) 
           fontSize: '15px',
           lineHeight: '1.6'
         }}>
-          🎭 <strong>BLIND SHORT BETS</strong> — Never Seen Before!
+          🎭 <strong>BLIND SHORT OPINION MARKETS</strong> — Never Seen Before!
           <br />
           <span style={{ fontSize: '13px', opacity: 0.95, display: 'block', marginTop: '6px' }}>
-            • You bet on what will <strong>LOSE</strong> (short bet)<br />
-            • You can't see what others picked (blind betting)<br />
-            • Losing side splits the pot — winners lose their bets!
+            • <strong>Opinion-based</strong>: Outcome decided by player shorts, not external events<br />
+            • <strong>Blind betting</strong>: Can't see what others picked until it ends<br />
+            • <strong>Short mechanism</strong>: Bet on what will LOSE — losing side wins the pot!
           </span>
         </div>
 

@@ -60,13 +60,13 @@ export default function Home() {
     {
       id: 'divides',
       title: 'Divides',
-      description: 'BLIND SHORT BETS: Bet on what will LOSE without seeing others\' picks!',
+      description: 'OPINION MARKETS: Players decide outcomes with blind short bets!',
       icon: '/blind-short-divide.svg',
       color: '#ff6b6b',
       gradient: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)',
       path: '/divides',
-      label: 'Blind Short',
-      tagline: '🎭 Blind Shorts'
+      label: 'Opinion Markets',
+      tagline: '🎭 Opinion Markets'
     },
     {
       id: 'keno',

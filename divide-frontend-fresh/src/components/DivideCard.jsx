@@ -228,7 +228,7 @@ export default function DivideCard({
           textAlign: 'center',
           boxShadow: '0 2px 8px rgba(255, 107, 107, 0.2)'
         }}>
-          🎭 <strong>BLIND SHORT</strong>: Bet on what will <strong>LOSE</strong> • Can't see others' picks • Losing side wins!
+          🎭 <strong>OPINION MARKET</strong>: Players decide outcome • Blind shorts • Losing side wins!
         </div>
       )}
 
