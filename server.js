@@ -2851,7 +2851,17 @@ app.post('/Divides/vote', auth, async (req, res) => {
 });
 
 // GET list of divides (alias with capital D for legacy clients)
-app.get('/Divides', async (req, res) => {
+app.get('/Divides', async (req, res, next) => {
+  // If browser is requesting HTML (page refresh), serve the SPA
+  if (req.accepts('html') && !req.accepts('json')) {
+    return res.sendFile(path.join(__dirname, 'divide-frontend-fresh', 'dist', 'index.html'));
+  }
+  // Also serve SPA if Accept header prefers HTML over JSON
+  const acceptHeader = req.get('Accept') || '';
+  if (acceptHeader.includes('text/html') && !acceptHeader.includes('application/json')) {
+    return res.sendFile(path.join(__dirname, 'divide-frontend-fresh', 'dist', 'index.html'));
+  }
+  
   try {
     // Return all divides, but include the creator's username when available
     // Use aggregation with a lookup to users collection to avoid extra roundtrips
@@ -2883,6 +2893,11 @@ app.get('/Divides', async (req, res) => {
       res.status(500).json({ error: 'Server error' });
     }
   }
+});
+
+// Serve SPA for /divides lowercase route (React Router uses this path)
+app.get('/divides', (req, res) => {
+  res.sendFile(path.join(__dirname, 'divide-frontend-fresh', 'dist', 'index.html'));
 });
 
 // Create a new divide (admin only). Client sends title/optionA/optionB and optional image/sound fields

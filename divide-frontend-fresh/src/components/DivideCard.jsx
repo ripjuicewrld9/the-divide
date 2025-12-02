@@ -263,7 +263,7 @@ export default function DivideCard({
             </span>
           ) : (
             <span>
-              {(hoverSide === "left" && status !== 'active') ? `${leftPct}%` : `$${Number(left).toFixed(2)}`}
+              {(hoverSide === "left" && status !== 'active') ? `${leftPct}%` : left}
             </span>
           )}
         </div>
@@ -297,7 +297,7 @@ export default function DivideCard({
             </span>
           ) : (
             <span>
-              {(hoverSide === "right" && status !== 'active') ? `${rightPct}%` : `$${Number(right).toFixed(2)}`}
+              {(hoverSide === "right" && status !== 'active') ? `${rightPct}%` : right}
             </span>
           )}
         </div>

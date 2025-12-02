@@ -153,7 +153,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         };
         set({
           playerHands: [newHand],
-          // DON'T deduct balance here - server will deduct when Deal is clicked
+          balance: state.balance - amount, // Deduct immediately - will be returned on clear/undo
         });
       } else {
         const hands = [...state.playerHands];
@@ -161,7 +161,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         hands[0].betPlacementOrder.push(['main', amount]);
         set({
           playerHands: hands,
-          // DON'T deduct balance here - server will deduct when Deal is clicked
+          balance: state.balance - amount, // Deduct immediately - will be returned on clear/undo
         });
       }
     } else if (state.playerHands.length > 0) {
@@ -176,7 +176,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       hands[0].betPlacementOrder.push([mode as 'perfectPairs' | 'twentyPlusThree' | 'blazingSevens', amount]);
       set({
         playerHands: hands,
-        // DON'T deduct balance here - server will deduct when Deal is clicked
+        balance: state.balance - amount, // Deduct immediately - will be returned on clear/undo
       });
     } else {
       // Need main bet first before side bets
@@ -185,10 +185,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   clearBets: () => {
-    // Just clear the bets - no money was deducted yet, so nothing to return
+    const state = get();
+    // Calculate total bet to return to balance
+    let totalToReturn = 0;
+    if (state.playerHands.length > 0) {
+      const hand = state.playerHands[0];
+      totalToReturn = hand.bet + hand.sideBets.perfectPairs + hand.sideBets.twentyPlusThree + hand.sideBets.blazingSevens;
+    }
     set({
       playerHands: [],
       dealerHand: { cards: [], bet: 0, sideBets: { perfectPairs: 0, twentyPlusThree: 0, blazingSevens: 0 }, betPlacementOrder: [], isDealerHand: true },
+      balance: state.balance + totalToReturn, // Return the deducted money
     });
   },
 
