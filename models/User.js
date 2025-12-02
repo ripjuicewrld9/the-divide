@@ -34,6 +34,13 @@ const userSchema = new mongoose.Schema({
   totalWithdrawn: { type: Number, default: 0 }, // total withdrawals in cents
   totalRedemptions: { type: Number, default: 0 }, // count of withdrawal transactions
   wagerRequirement: { type: Number, default: 0 }, // amount that must be wagered before withdrawal (1x playthrough)
+  // XP & Level system
+  xp: { type: Number, default: 0 }, // lifetime XP (never decreases)
+  level: { type: Number, default: 1 },
+  xpThisWeek: { type: Number, default: 0 }, // resets weekly for leaderboard
+  xpThisMonth: { type: Number, default: 0 }, // resets monthly for leaderboard
+  totalWageredUsd: { type: Number, default: 0 }, // total USD wagered on Divides (cents)
+  currentBadge: { type: String, default: 'newbie' }, // badge name from level thresholds
   role: { type: String, enum: ['user', 'moderator', 'admin'], default: 'user' },
   holdingsDC: { type: Number, default: 0 },
   holdingsInvested: { type: Number, default: 0 },

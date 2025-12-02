@@ -101,7 +101,8 @@ export default function SupportInbox() {
             message: isEncrypted ? encryptedText : messageText,
             encrypted: isEncrypted,
             role: user.role,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            profileImage: user.profileImage
         };
         
         setMessages(prev => [...prev, optimisticMessage]);
@@ -178,7 +179,13 @@ export default function SupportInbox() {
                                         {/* Avatar */}
                                         <div className="flex-shrink-0">
                                             {showAvatar ? (
-                                                <UserAvatar user={{ username: msg.username }} size={40} />
+                                                <UserAvatar 
+                                                    user={{ 
+                                                        username: msg.username,
+                                                        profileImage: msg.profileImage 
+                                                    }} 
+                                                    size={40} 
+                                                />
                                             ) : (
                                                 <div className="w-10" />
                                             )}

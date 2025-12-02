@@ -35,25 +35,27 @@ export default function Sidebar() {
 
     const isModerator = user && (user.role === 'moderator' || user.role === 'admin');
 
-    // Fetch unread support notifications for moderators
+    // Fetch open ticket count for moderators
     useEffect(() => {
         if (!isModerator || !token) return;
 
-        const fetchUnreadCount = async () => {
+        const fetchTicketCount = async () => {
             try {
-                const res = await fetch(`${API_BASE}/api/notifications/unread`, {
+                const res = await fetch(`${API_BASE}/api/support/tickets/all`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const data = await res.json();
-                const supportNotifs = data.notifications?.filter(n => n.type === 'support') || [];
-                setUnreadCount(supportNotifs.length);
+                const openTickets = data.tickets?.filter(t => 
+                    t.status === 'open' || t.status === 'in_progress'
+                ) || [];
+                setUnreadCount(openTickets.length);
             } catch (err) {
-                console.error('Failed to fetch notifications:', err);
+                console.error('Failed to fetch ticket count:', err);
             }
         };
 
-        fetchUnreadCount();
-        const interval = setInterval(fetchUnreadCount, 30000); // Refresh every 30s
+        fetchTicketCount();
+        const interval = setInterval(fetchTicketCount, 30000); // Refresh every 30s
 
         return () => clearInterval(interval);
     }, [isModerator, token]);

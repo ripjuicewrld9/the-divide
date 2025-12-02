@@ -14,6 +14,7 @@ import ChatMessage from './models/ChatMessage.js';
 import ChatMute from './models/ChatMute.js';
 import ModeratorChatMessage from './models/ModeratorChatMessage.js';
 import Notification from './models/Notification.js';
+import UserEngagement from './models/UserEngagement.js';
 import PlinkoGame from './models/PlinkoGame.js';
 import PlinkoRecording from './models/PlinkoRecording.js';
 import BlackjackGame from './models/BlackjackGame.js';
@@ -165,6 +166,122 @@ async function updateHouseStats(game, betAmount, payout) {
     console.log(`[House Stats] ${game}: bet=${betAmount}, payout=${payout}, jackpotFee=${jackpotFee}, houseNet=${houseNet}`);
   } catch (err) {
     console.error(`Failed to update house stats for ${game}:`, err);
+  }
+}
+
+// ========================================
+// XP & LEVEL SYSTEM
+// ========================================
+import { XP_RATES, getLevelFromXP, getXPToNextLevel, getProgressPercent } from './utils/xpSystem.js';
+
+/**
+ * Award XP to a user and handle level-ups
+ * @param {string} userId - User ID to award XP to
+ * @param {string} type - Type of engagement (usdWager, likeReceived, etc.)
+ * @param {number} amount - Base amount (e.g., wagered cents, not the XP itself)
+ * @param {object} extra - Extra metadata to log
+ * @returns {object} { leveledUp: boolean, newLevel: number, xpAwarded: number }
+ */
+async function awardXp(userId, type, amount = 0, extra = {}) {
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      console.error(`[XP] User ${userId} not found`);
+      return { leveledUp: false, newLevel: 1, xpAwarded: 0 };
+    }
+
+    // Calculate XP based on type
+    let xpAwarded = 0;
+    switch (type) {
+      case 'usdWager':
+        // $1 wagered = 2 XP (amount in cents, so divide by 100 then multiply by rate)
+        xpAwarded = Math.floor((amount / 100) * XP_RATES.usdWager);
+        break;
+      case 'gcScWager':
+        // $1 casino wagered = 1 XP
+        xpAwarded = Math.floor((amount / 100) * XP_RATES.gcScWager);
+        break;
+      case 'likeGiven':
+        xpAwarded = XP_RATES.likeGiven;
+        break;
+      case 'likeReceived':
+        xpAwarded = XP_RATES.likeReceived;
+        break;
+      case 'dislikeReceived':
+        xpAwarded = XP_RATES.dislikeReceived;
+        break;
+      case 'divideCreated':
+        xpAwarded = XP_RATES.divideCreated;
+        break;
+      case 'dividePot100':
+        xpAwarded = XP_RATES.dividePot100;
+        break;
+      case 'dividePot1000':
+        xpAwarded = XP_RATES.dividePot1000;
+        break;
+      default:
+        console.error(`[XP] Unknown type: ${type}`);
+        return { leveledUp: false, newLevel: user.level, xpAwarded: 0 };
+    }
+
+    if (xpAwarded <= 0) return { leveledUp: false, newLevel: user.level, xpAwarded: 0 };
+
+    // Get level before update
+    const oldLevel = user.level;
+    const oldBadge = user.currentBadge;
+
+    // Update XP totals
+    user.xp = (user.xp || 0) + xpAwarded;
+    user.xpThisWeek = (user.xpThisWeek || 0) + xpAwarded;
+    user.xpThisMonth = (user.xpThisMonth || 0) + xpAwarded;
+
+    // Check for level up
+    const levelData = getLevelFromXP(user.xp);
+    user.level = levelData.level;
+    user.currentBadge = levelData.badgeName;
+
+    // Track wager amounts
+    if (type === 'usdWager') {
+      user.totalWageredUsd = (user.totalWageredUsd || 0) + amount;
+    }
+
+    await user.save();
+
+    // Log engagement
+    await UserEngagement.create({
+      userId: user._id,
+      type,
+      xpAwarded,
+      metadata: extra,
+      timestamp: new Date()
+    });
+
+    const leveledUp = user.level > oldLevel;
+
+    // Emit level-up event to socket
+    if (leveledUp) {
+      console.log(`🎉 [XP] User ${user.username} leveled up! ${oldLevel} → ${user.level} (${oldBadge} → ${user.currentBadge})`);
+      io.emit('userLevelUp', {
+        userId: user._id,
+        username: user.username,
+        newLevel: user.level,
+        newBadge: user.currentBadge,
+        oldLevel,
+        oldBadge
+      });
+    }
+
+    console.log(`[XP] ${user.username}: +${xpAwarded} XP (${type}) → Total: ${user.xp} XP, Lv.${user.level}`);
+
+    return {
+      leveledUp,
+      newLevel: user.level,
+      xpAwarded,
+      newBadge: user.currentBadge
+    };
+  } catch (err) {
+    console.error(`[XP] Error awarding XP:`, err);
+    return { leveledUp: false, newLevel: 1, xpAwarded: 0 };
   }
 }
 
@@ -411,6 +528,158 @@ app.post('/api/user/tip', auth, async (req, res) => {
   } catch (err) {
     console.error('Tip error:', err);
     res.status(500).json({ error: 'Failed to send tip' });
+  }
+});
+
+// ========================================
+// XP & LEVEL SYSTEM ENDPOINTS
+// ========================================
+
+// Get current user's XP progress
+app.get('/api/me/xp', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select('xp level currentBadge xpThisWeek xpThisMonth username');
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const xpToNextLevel = getXPToNextLevel(user.xp);
+    const progressPercent = getProgressPercent(user.xp);
+    const levelData = getLevelFromXP(user.xp);
+
+    // Get weekly rank
+    const usersAbove = await User.countDocuments({ xpThisWeek: { $gt: user.xpThisWeek } });
+    const weeklyRank = usersAbove + 1;
+
+    res.json({
+      xp: user.xp,
+      level: user.level,
+      currentBadge: user.currentBadge,
+      badgeColor: levelData.badgeColorHex,
+      xpToNextLevel,
+      progressPercent: Math.round(progressPercent * 10) / 10, // Round to 1 decimal
+      weeklyRank,
+      xpThisWeek: user.xpThisWeek,
+      xpThisMonth: user.xpThisMonth
+    });
+  } catch (err) {
+    console.error('Get XP error:', err);
+    res.status(500).json({ error: 'Failed to fetch XP data' });
+  }
+});
+
+// Get leaderboard (weekly or monthly)
+app.get('/api/leaderboard', async (req, res) => {
+  try {
+    const period = req.query.period || 'weekly'; // 'weekly' or 'monthly'
+    const limit = Math.min(parseInt(req.query.limit) || 100, 100);
+
+    const sortField = period === 'weekly' ? 'xpThisWeek' : 'xpThisMonth';
+
+    const leaders = await User.find()
+      .sort({ [sortField]: -1 })
+      .limit(limit)
+      .select(`username profileImage level currentBadge ${sortField}`)
+      .lean();
+
+    const leaderboard = leaders.map((user, index) => ({
+      rank: index + 1,
+      userId: user._id,
+      username: user.username,
+      profileImage: user.profileImage,
+      level: user.level,
+      badge: user.currentBadge,
+      xp: user[sortField]
+    }));
+
+    res.json({ period, leaderboard });
+  } catch (err) {
+    console.error('Leaderboard error:', err);
+    res.status(500).json({ error: 'Failed to fetch leaderboard' });
+  }
+});
+
+// Like a divide side (awards XP to creator)
+app.post('/api/divides/:id/like/:side', auth, async (req, res) => {
+  try {
+    const { id, side } = req.params;
+
+    if (!['A', 'B'].includes(side.toUpperCase())) {
+      return res.status(400).json({ error: 'Invalid side. Must be A or B' });
+    }
+
+    const divide = await Divide.findOne({ $or: [{ id }, { _id: id }] });
+    if (!divide) {
+      return res.status(404).json({ error: 'Divide not found' });
+    }
+
+    // Increment like counter
+    const likesField = side.toUpperCase() === 'A' ? 'likesA' : 'likesB';
+    divide[likesField] = (divide[likesField] || 0) + 1;
+    await divide.save();
+
+    // Award XP to liker (encourages engagement)
+    await awardXp(req.userId, 'likeGiven', 0, { divideId: divide._id, side });
+
+    // Award XP to divide creator (if user-created)
+    if (divide.isUserCreated && divide.creatorId) {
+      await awardXp(divide.creatorId, 'likeReceived', 0, { 
+        divideId: divide._id, 
+        side,
+        fromUser: req.userId 
+      });
+    }
+
+    res.json({ 
+      success: true,
+      likesA: divide.likesA,
+      likesB: divide.likesB
+    });
+  } catch (err) {
+    console.error('Like error:', err);
+    res.status(500).json({ error: 'Failed to like divide' });
+  }
+});
+
+// Dislike a divide side (awards XP to creator, but less than like)
+app.post('/api/divides/:id/dislike/:side', auth, async (req, res) => {
+  try {
+    const { id, side } = req.params;
+
+    if (!['A', 'B'].includes(side.toUpperCase())) {
+      return res.status(400).json({ error: 'Invalid side. Must be A or B' });
+    }
+
+    const divide = await Divide.findOne({ $or: [{ id }, { _id: id }] });
+    if (!divide) {
+      return res.status(404).json({ error: 'Divide not found' });
+    }
+
+    // Increment dislike counter
+    const dislikesField = side.toUpperCase() === 'A' ? 'dislikesA' : 'dislikesB';
+    divide[dislikesField] = (divide[dislikesField] || 0) + 1;
+    await divide.save();
+
+    // Award XP to disliker (encourages engagement)
+    await awardXp(req.userId, 'likeGiven', 0, { divideId: divide._id, side, type: 'dislike' });
+
+    // Award XP to divide creator (engagement is engagement)
+    if (divide.isUserCreated && divide.creatorId) {
+      await awardXp(divide.creatorId, 'dislikeReceived', 0, { 
+        divideId: divide._id, 
+        side,
+        fromUser: req.userId 
+      });
+    }
+
+    res.json({ 
+      success: true,
+      dislikesA: divide.dislikesA,
+      dislikesB: divide.dislikesB
+    });
+  } catch (err) {
+    console.error('Dislike error:', err);
+    res.status(500).json({ error: 'Failed to dislike divide' });
   }
 });
 
@@ -765,56 +1034,30 @@ app.patch('/api/support/tickets/:id/status', auth, moderatorOnly, async (req, re
       if (botToken && transcriptChannelId) {
         try {
           const ticketId = ticket._id.toString().substring(18).toUpperCase();
+          const ticketUrl = `${process.env.FRONTEND_URL || 'https://thedivide.us'}/support/tickets/${ticket._id}`;
           
-          // Generate transcript
-          const transcriptLines = [
-            `═══════════════════════════════════════════════════`,
-            `SUPPORT TICKET TRANSCRIPT #${ticketId}`,
-            `═══════════════════════════════════════════════════`,
+          // Create summary embed
+          const messageCount = ticket.messages?.length || 0;
+          const duration = ticket.resolvedAt && ticket.createdAt 
+            ? Math.round((new Date(ticket.resolvedAt) - new Date(ticket.createdAt)) / 1000 / 60)
+            : 0;
+
+          const summaryMessage = [
+            `📋 **Support Ticket Closed**`,
             ``,
-            `User: ${ticket.userId.username}`,
-            `Category: ${ticket.category.charAt(0).toUpperCase() + ticket.category.slice(1)}`,
-            `Subject: ${ticket.subject}`,
-            `Status: ${ticket.status.toUpperCase()}`,
-            `Priority: ${ticket.priority.toUpperCase()}`,
-            `Created: ${new Date(ticket.createdAt).toLocaleString()}`,
-            ticket.resolvedAt ? `Resolved: ${new Date(ticket.resolvedAt).toLocaleString()}` : '',
-            ticket.assignedTo ? `Assigned To: ${ticket.assignedTo.username}` : '',
-            ticket.escalated ? `⚠️ ESCALATED by ${ticket.escalatedBy?.username} at ${new Date(ticket.escalatedAt).toLocaleString()}` : '',
+            `**Ticket ID:** #${ticketId}`,
+            `**User:** ${ticket.userId?.username || 'Unknown'}`,
+            `**Subject:** ${ticket.subject}`,
+            `**Category:** ${ticket.category}`,
+            `**Priority:** ${ticket.priority.toUpperCase()}`,
+            `**Messages:** ${messageCount}`,
+            `**Duration:** ${duration} minutes`,
+            ticket.assignedTo ? `**Handled by:** ${ticket.assignedTo.username}` : '',
+            ticket.escalated ? `**⚠️ Was Escalated**` : '',
             ``,
-            `───────────────────────────────────────────────────`,
-            `CONVERSATION`,
-            `───────────────────────────────────────────────────`,
-            ``
+            `🔗 [View Full Transcript](${ticketUrl})`
           ].filter(Boolean).join('\n');
 
-          const messagesText = ticket.messages.map((msg) => {
-            const sender = msg.sender?.username || 'Unknown';
-            const role = msg.senderType === 'admin' ? ' [ADMIN]' : '';
-            const timestamp = new Date(msg.createdAt).toLocaleString();
-            return `[${timestamp}] ${sender}${role}:\n${msg.message}\n`;
-          }).join('\n');
-
-          const fullTranscript = transcriptLines + messagesText + `\n═══════════════════════════════════════════════════`;
-
-          // Split into chunks
-          const chunks = [];
-          let currentChunk = '';
-          
-          for (const line of fullTranscript.split('\n')) {
-            if ((currentChunk + line + '\n').length > 1900) {
-              chunks.push('```\n' + currentChunk + '```');
-              currentChunk = line + '\n';
-            } else {
-              currentChunk += line + '\n';
-            }
-          }
-          if (currentChunk) {
-            chunks.push('```\n' + currentChunk + '```');
-          }
-
-          // Send header
-          const ticketUrl = `${process.env.FRONTEND_URL || 'https://thedivide.us'}/support/${ticket._id}`;
           await fetch(`https://discord.com/api/v10/channels/${transcriptChannelId}/messages`, {
             method: 'POST',
             headers: {
@@ -822,26 +1065,13 @@ app.patch('/api/support/tickets/:id/status', auth, moderatorOnly, async (req, re
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              content: `📋 **Ticket #${ticketId}** closed - Transcript auto-saved - [View Online](${ticketUrl})`
+              content: summaryMessage
             })
           });
 
-          // Send chunks
-          for (const chunk of chunks) {
-            await fetch(`https://discord.com/api/v10/channels/${transcriptChannelId}/messages`, {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bot ${botToken}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({ content: chunk })
-            });
-            await new Promise(resolve => setTimeout(resolve, 100));
-          }
-
           ticket.transcriptSaved = true;
           await ticket.save();
-          console.log(`✅ Auto-saved transcript for closed ticket ${ticket._id}`);
+          console.log(`✅ Auto-saved transcript summary for closed ticket ${ticket._id}`);
         } catch (transcriptErr) {
           console.error('Failed to auto-save transcript:', transcriptErr);
         }
@@ -1087,6 +1317,8 @@ app.post('/api/support/tickets/:id/transcript', auth, moderatorOnly, async (req,
 app.post('/api/support/tickets/:id/assign', auth, moderatorOnly, async (req, res) => {
   try {
     const { moderatorId } = req.body;
+    console.log(`[Assign] Request to assign ticket ${req.params.id} to ${moderatorId}, requester: ${req.userId}`);
+    
     const ticket = await SupportTicket.findById(req.params.id);
 
     if (!ticket) {
@@ -1095,6 +1327,7 @@ app.post('/api/support/tickets/:id/assign', auth, moderatorOnly, async (req, res
 
     // Verify the moderatorId is the current user (moderators can only assign to themselves)
     if (String(moderatorId) !== String(req.userId)) {
+      console.log(`[Assign] ❌ ID mismatch: moderatorId=${moderatorId}, req.userId=${req.userId}`);
       return res.status(403).json({ error: 'You can only assign tickets to yourself' });
     }
 
@@ -1108,8 +1341,13 @@ app.post('/api/support/tickets/:id/assign', auth, moderatorOnly, async (req, res
 
     await ticket.save();
 
+    // Return populated ticket
+    const populatedTicket = await SupportTicket.findById(ticket._id)
+      .populate('assignedTo', 'username profileImage')
+      .lean();
+
     console.log(`✅ Ticket ${ticket._id} assigned to moderator ${moderatorId}`);
-    res.json({ message: 'Ticket assigned successfully', ticket });
+    res.json({ message: 'Ticket assigned successfully', ticket: populatedTicket });
   } catch (err) {
     console.error('Assign ticket error:', err);
     res.status(500).json({ error: 'Failed to assign ticket' });
@@ -1139,6 +1377,28 @@ app.patch('/api/support/tickets/:id/priority', auth, moderatorOnly, async (req, 
   } catch (err) {
     console.error('Update priority error:', err);
     res.status(500).json({ error: 'Failed to update priority' });
+  }
+});
+
+// ========================================
+// SUPPORT TEAM MANAGEMENT
+// ========================================
+
+// Get team members (admins and moderators)
+app.get('/api/support/team', auth, moderatorOnly, async (req, res) => {
+  try {
+    const team = await User.find({ 
+      role: { $in: ['moderator', 'admin'] } 
+    })
+    .select('username profileImage email role createdAt')
+    .sort({ role: -1, createdAt: 1 }) // admins first, then by join date
+    .lean();
+    
+    console.log(`📋 Team members fetched: ${team.length} members`);
+    res.json({ team });
+  } catch (err) {
+    console.error('Error fetching team members:', err);
+    res.status(500).json({ error: 'Failed to fetch team members' });
   }
 });
 
@@ -2312,6 +2572,13 @@ app.post('/divides/vote', auth, async (req, res) => {
       user.wagered = (user.wagered || 0) + boostCents;
       // Divides voting is a bet - outcome (win/loss) determined when divide ends
       // For now, count all paid votes as "bets" without immediate win/loss classification
+      
+      // Award XP for wagering (2 XP per $1)
+      await awardXp(req.userId, 'usdWager', boostCents, { 
+        divideId: divide.id || divide._id, 
+        side,
+        amount: boostAmount 
+      });
     }
 
     await divide.save();
@@ -2413,6 +2680,13 @@ app.post('/Divides/vote', auth, async (req, res) => {
     if (!isFree && paidAmount > 0) {
       user.totalBets = (user.totalBets || 0) + 1;
       user.wagered = (user.wagered || 0) + toCents(paidAmount);
+      
+      // Award XP for wagering (2 XP per $1)
+      await awardXp(req.userId, 'usdWager', toCents(paidAmount), { 
+        divideId: divide.id || divide._id, 
+        side,
+        amount: paidAmount 
+      });
     }
 
     await divide.save();
@@ -2679,6 +2953,20 @@ app.post('/Divides/create-user', auth, async (req, res) => {
     } catch (e) {
       console.error('Failed to create ledger entry for initial divide bet', e);
     }
+
+    // Award XP for creating a divide
+    await awardXp(req.userId, 'divideCreated', 0, { 
+      divideId: doc.id || doc._id,
+      title,
+      pot: bet 
+    });
+
+    // Award XP for the initial wager
+    await awardXp(req.userId, 'usdWager', betCents, { 
+      divideId: doc.id || doc._id,
+      side,
+      amount: bet 
+    });
 
     io.emit('newDivide', doc);
     res.json(doc);
@@ -4043,8 +4331,20 @@ moderatorChatNamespace.on('connection', (socket) => {
         .sort({ timestamp: -1 })
         .limit(100)
         .lean();
-      socket.emit('moderator-chat:history', messages.reverse());
-      console.log(`[ModChat] Sent ${messages.length} messages to ${socket.id}`);
+      
+      // Enrich messages with profile images
+      const enrichedMessages = await Promise.all(
+        messages.map(async (msg) => {
+          const user = await User.findById(msg.userId).select('profileImage').lean();
+          return {
+            ...msg,
+            profileImage: user?.profileImage || null
+          };
+        })
+      );
+      
+      socket.emit('moderator-chat:history', enrichedMessages.reverse());
+      console.log(`[ModChat] Sent ${enrichedMessages.length} messages to ${socket.id}`);
     } catch (err) {
       console.error('[ModChat] Error fetching history:', err);
       socket.emit('moderator-chat:history', []);
@@ -4067,6 +4367,9 @@ moderatorChatNamespace.on('connection', (socket) => {
         return;
       }
 
+      // Get user's profile image
+      const user = await User.findById(userId).select('profileImage').lean();
+
       // Limit message length (3000 for encrypted, 2000 for plaintext)
       const maxLength = encrypted ? 3000 : 2000;
       const trimmedMessage = message.trim().slice(0, maxLength);
@@ -4088,7 +4391,8 @@ moderatorChatNamespace.on('connection', (socket) => {
         role: chatMessage.role,
         message: chatMessage.message,
         encrypted: chatMessage.encrypted,
-        timestamp: chatMessage.timestamp
+        timestamp: chatMessage.timestamp,
+        profileImage: user?.profileImage || null
       });
 
       const msgPreview = encrypted ? '[Encrypted]' : trimmedMessage.substring(0, 50);
@@ -4615,7 +4919,18 @@ async function endDivideById(divideId, invokedByUserId = null) {
     divide.status = 'settling';
     await divide.save();
 
-    const winnerSide = divide.votesA > divide.votesB ? 'A' : 'B';
+    // NEW LOGIC: 50/50 coin flip determines winner (provably fair)
+    // If tied votes, flip coin. Otherwise minority wins with better multipliers
+    let winnerSide;
+    if (divide.votesA === divide.votesB) {
+      // Perfect tie - 50/50 coin flip using crypto randomness
+      const randomByte = require('crypto').randomBytes(1)[0];
+      winnerSide = randomByte < 128 ? 'A' : 'B';
+      console.log(`🪙 Coin flip (tie): ${divide.votesA} vs ${divide.votesB} → Winner: ${winnerSide}`);
+    } else {
+      // Minority wins - creates better multipliers with imbalance
+      winnerSide = divide.votesA < divide.votesB ? 'A' : 'B';
+    }
     const winnerVotes = winnerSide === 'A' ? divide.votesA : divide.votesB;
 
     const houseCut = 0; // No per-divide house cuts
@@ -4764,6 +5079,22 @@ async function endDivideById(divideId, invokedByUserId = null) {
     divide.status = 'ended';
     divide.winnerSide = winnerSide;
     await divide.save();
+
+    // Award pot milestone XP to creator (if user-created)
+    if (divide.isUserCreated && divide.creatorId) {
+      const potAmount = divide.pot;
+      if (potAmount >= 1000) {
+        await awardXp(divide.creatorId, 'dividePot1000', 0, { 
+          divideId: divide.id || divide._id,
+          pot: potAmount 
+        });
+      } else if (potAmount >= 100) {
+        await awardXp(divide.creatorId, 'dividePot100', 0, { 
+          divideId: divide.id || divide._id,
+          pot: potAmount 
+        });
+      }
+    }
 
     // emit structured ended event
     io.emit('divideEnded', { id: divide.id, _id: divide._id, winner: winnerSide, pot: divide.pot, houseCut, jackpotAmount, distributed });

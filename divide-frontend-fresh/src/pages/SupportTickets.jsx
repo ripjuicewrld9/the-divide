@@ -38,6 +38,7 @@ export default function SupportTickets() {
     const handleAssignToMe = async (e, ticketId) => {
         e.stopPropagation(); // Prevent navigation to ticket detail
         try {
+            console.log('Assigning ticket:', ticketId, 'to user:', user._id);
             const res = await fetch(`${API_BASE}/api/support/tickets/${ticketId}/assign`, {
                 method: 'POST',
                 headers: {
@@ -47,14 +48,19 @@ export default function SupportTickets() {
                 body: JSON.stringify({ moderatorId: user._id })
             });
 
+            const data = await res.json();
+            
             if (res.ok) {
+                console.log('✅ Ticket assigned successfully:', data);
                 // Refresh tickets to show updated assignment
                 fetchTickets();
             } else {
-                console.error('Failed to assign ticket');
+                console.error('❌ Failed to assign ticket:', data);
+                alert(data.error || 'Failed to assign ticket');
             }
         } catch (err) {
             console.error('Error assigning ticket:', err);
+            alert('Error assigning ticket');
         }
     };
 
