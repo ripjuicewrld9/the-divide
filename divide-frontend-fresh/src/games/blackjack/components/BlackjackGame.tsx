@@ -136,14 +136,16 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
   // Sync game balance with AuthContext balance on mount and when user.balance changes
   useEffect(() => {
     if (user?.balance !== undefined && user.balance !== null) {
-      console.log('[Blackjack] Syncing balance from AuthContext:', user.balance);
-      // Only sync if not in middle of a hand to avoid disrupting visual feedback
+      // Always sync balance from AuthContext, but preserve ongoing hand state
       const hasActiveBets = gameState.playerHands.length > 0 && gameState.playerHands[0].bet > 0;
-      if (!hasActiveBets || gameState.gamePhase === 'betting') {
+      const isInMiddleOfHand = hasActiveBets && gameState.gamePhase !== 'betting';
+      
+      if (!isInMiddleOfHand) {
+        // Safe to update balance - not in middle of a hand
         gameState.setInitialBalance(user.balance);
       }
     }
-  }, [user?.balance, gameState.gamePhase]);
+  }, [user?.balance, gameState, gameState.gamePhase]);
 
   // Save game when round ends and refresh user balance from server
   useEffect(() => {

@@ -88,7 +88,7 @@ const WheelSeat: React.FC<WheelSeatProps> = ({
             <>
               {/* Player avatar */}
               <div className="mb-1">
-                <UserAvatar user={{ username, profileImage, _id: userId }} size={28} />
+                <UserAvatar user={{ username, profileImage, _id: userId }} size={28} onClick={() => {}} />
               </div>
               {/* Bet amount */}
               <div className="text-white text-[10px] font-bold bg-black/50 px-1.5 py-0.5 rounded">

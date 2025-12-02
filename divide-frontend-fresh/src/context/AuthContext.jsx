@@ -255,7 +255,9 @@ export const AuthProvider = ({ children }) => {
 
             // 3. If balance was updated, log it for debugging
             if (patch.balance !== undefined) {
-                console.log('[AuthContext] Balance updated to:', patch.balance);
+                // Round balance to avoid floating point errors
+                const roundedBalance = Math.round(patch.balance * 100) / 100;
+                setUser((u) => ({ ...(u || {}), ...patch, balance: roundedBalance }));
             }
         } catch (e) {
             console.error('updateUser failed', e);
@@ -264,12 +266,9 @@ export const AuthProvider = ({ children }) => {
 
     // Update balance locally only (optimistic UI, server will send authoritative value)
     const setBalance = (newBalance) => {
-        console.log('[AuthContext] setBalance called with:', newBalance);
-        setUser((u) => {
-            const updated = { ...(u || {}), balance: newBalance };
-            console.log('[AuthContext] User state updated:', updated);
-            return updated;
-        });
+        // Round to 2 decimal places to avoid floating point errors
+        const roundedBalance = Math.round(newBalance * 100) / 100;
+        setUser((u) => ({ ...(u || {}), balance: roundedBalance }));
     };
 
     return (

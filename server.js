@@ -1402,6 +1402,94 @@ app.get('/api/support/team', auth, moderatorOnly, async (req, res) => {
   }
 });
 
+// Add team member by username (admin only)
+app.post('/api/support/team/add', auth, adminOnly, async (req, res) => {
+  try {
+    const { username, role } = req.body;
+    
+    if (!username || !role) {
+      return res.status(400).json({ error: 'Username and role are required' });
+    }
+    
+    if (role !== 'moderator' && role !== 'admin') {
+      return res.status(400).json({ error: 'Invalid role. Must be moderator or admin.' });
+    }
+    
+    // Find user by username (case-insensitive)
+    const targetUser = await User.findOne({ username: { $regex: new RegExp(`^${username}$`, 'i') } });
+    
+    if (!targetUser) {
+      return res.status(404).json({ error: `User "${username}" not found` });
+    }
+    
+    if (targetUser.role === role) {
+      return res.status(400).json({ error: `${username} is already a ${role}` });
+    }
+    
+    // Update user role
+    targetUser.role = role;
+    await targetUser.save();
+    
+    console.log(`✅ User ${username} promoted to ${role} by ${req.userId}`);
+    
+    res.json({ 
+      success: true, 
+      message: `${username} has been promoted to ${role}`,
+      user: {
+        _id: targetUser._id,
+        username: targetUser.username,
+        role: targetUser.role,
+        profileImage: targetUser.profileImage,
+        email: targetUser.email,
+        createdAt: targetUser.createdAt
+      }
+    });
+  } catch (err) {
+    console.error('Error adding team member:', err);
+    res.status(500).json({ error: 'Failed to add team member' });
+  }
+});
+
+// Remove team member (demote to user) - admin only
+app.post('/api/support/team/remove', auth, adminOnly, async (req, res) => {
+  try {
+    const { userId } = req.body;
+    
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
+    
+    const targetUser = await User.findById(userId);
+    
+    if (!targetUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    if (targetUser.role === 'user') {
+      return res.status(400).json({ error: 'User is not a team member' });
+    }
+    
+    // Prevent removing yourself
+    if (targetUser._id.toString() === req.userId) {
+      return res.status(400).json({ error: 'You cannot remove yourself' });
+    }
+    
+    const oldRole = targetUser.role;
+    targetUser.role = 'user';
+    await targetUser.save();
+    
+    console.log(`⚠️ User ${targetUser.username} demoted from ${oldRole} to user by ${req.userId}`);
+    
+    res.json({ 
+      success: true, 
+      message: `${targetUser.username} has been removed from the team`
+    });
+  } catch (err) {
+    console.error('Error removing team member:', err);
+    res.status(500).json({ error: 'Failed to remove team member' });
+  }
+});
+
 // ========================================
 // MODERATOR PANEL - CHAT MODERATION
 // ========================================
@@ -1521,6 +1609,79 @@ app.post('/api/moderator/unmute-user', auth, moderatorOnly, async (req, res) => 
   } catch (err) {
     console.error('Error unmuting user:', err);
     res.status(500).json({ error: 'Failed to unmute user' });
+  }
+});
+
+// Get active divides for moderation
+app.get('/api/moderator/active-divides', auth, moderatorOnly, async (req, res) => {
+  try {
+    const divides = await Divide.find({ status: 'active' })
+      .sort({ createdAt: -1 })
+      .lean();
+    res.json({ divides });
+  } catch (err) {
+    console.error('Error fetching active divides:', err);
+    res.status(500).json({ error: 'Failed to fetch active divides' });
+  }
+});
+
+// Cancel a divide and refund all participants
+app.post('/api/moderator/cancel-divide', auth, moderatorOnly, async (req, res) => {
+  try {
+    const { divideId, reason } = req.body;
+
+    if (!divideId || !reason) {
+      return res.status(400).json({ error: 'Divide ID and reason required' });
+    }
+
+    const divide = await Divide.findById(divideId);
+    if (!divide) {
+      return res.status(404).json({ error: 'Divide not found' });
+    }
+
+    if (divide.status !== 'active') {
+      return res.status(400).json({ error: 'Divide is not active' });
+    }
+
+    const moderator = await User.findById(req.userId);
+
+    // Refund all participants
+    let refundedCount = 0;
+    for (const short of divide.shorts) {
+      if (short.shortAmount > 0 && short.userId) {
+        const user = await User.findById(short.userId);
+        if (user) {
+          user.balance += short.shortAmount;
+          await user.save();
+          refundedCount++;
+
+          // Notify user of refund
+          await Notification.create({
+            userId: user._id,
+            type: 'system',
+            title: 'Divide Cancelled',
+            message: `The divide "${divide.title}" was cancelled by a moderator. Your $${toDollars(short.shortAmount)} has been refunded. Reason: ${reason}`,
+            icon: '⚠️'
+          });
+        }
+      }
+    }
+
+    // Mark divide as cancelled
+    divide.status = 'cancelled';
+    divide.loserSide = null; // no winner/loser since cancelled
+    await divide.save();
+
+    console.log(`⚠️ Divide "${divide.title}" cancelled by ${moderator.username}. Reason: ${reason}. Refunded ${refundedCount} players.`);
+
+    res.json({ 
+      message: 'Divide cancelled and players refunded',
+      refundedCount,
+      reason
+    });
+  } catch (err) {
+    console.error('Error cancelling divide:', err);
+    res.status(500).json({ error: 'Failed to cancel divide' });
   }
 });
 
@@ -4761,6 +4922,20 @@ app.get('/admin/finance', auth, adminOnly, async (req, res) => {
       return res.status(500).json({ error: 'House document not found' });
     }
 
+    // Calculate total deposits across all users
+    const userStats = await User.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalDeposited: { $sum: '$totalDeposited' },
+          totalWithdrawn: { $sum: '$totalWithdrawn' }
+        }
+      }
+    ]);
+
+    const totalDeposited = userStats.length > 0 ? (userStats[0].totalDeposited || 0) : 0;
+    const totalWithdrawn = userStats.length > 0 ? (userStats[0].totalWithdrawn || 0) : 0;
+
     // Build per-game stats from house document (amounts in cents, convert to dollars)
     const games = {
       plinko: {
@@ -4806,7 +4981,9 @@ app.get('/admin/finance', auth, adminOnly, async (req, res) => {
         jackpotAmount: toDollars(jackpot?.amount || 0),
         houseTotal: (house.houseTotal || 0) / 100,
         totalRedemptions: house.totalRedemptions || 0,
-        totalRedemptionAmount: toDollars(house.totalRedemptionAmount || 0)
+        totalRedemptionAmount: toDollars(house.totalRedemptionAmount || 0),
+        totalDeposited: toDollars(totalDeposited),
+        totalWithdrawn: toDollars(totalWithdrawn)
       },
       games
     });

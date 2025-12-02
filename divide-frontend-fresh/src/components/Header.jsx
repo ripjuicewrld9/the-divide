@@ -23,13 +23,6 @@ export default function Header() {
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [showSupportModal, setShowSupportModal] = useState(false);
 
-  // Track balance for debugging
-  useEffect(() => {
-    if (user) {
-      console.log('[Header] Balance updated:', user.balance);
-    }
-  }, [user?.balance]);
-
   const handleUserButton = () => {
     if (!user) {
       setIsRegister(false);

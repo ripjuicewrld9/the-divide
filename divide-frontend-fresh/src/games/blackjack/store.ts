@@ -21,7 +21,7 @@ import {
 
 interface GameStore extends GameState {
   // Setup actions
-  initGame: () => void;
+  initGame: (initialBalance?: number) => void;
   resetGame: () => void;
   setInitialBalance: (amount: number) => void;
   getBalance: () => number;
@@ -72,9 +72,10 @@ const INITIAL_STATE: GameState = {
 export const useGameStore = create<GameStore>((set, get) => ({
   ...INITIAL_STATE,
 
-  initGame: () => {
+  initGame: (initialBalance) => {
     set({
       ...INITIAL_STATE,
+      balance: initialBalance ?? 0, // Use provided balance or default to 0
       deck: createDeck(),
     });
   },

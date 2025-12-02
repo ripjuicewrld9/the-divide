@@ -155,6 +155,40 @@ export default function AdminFinance() {
         </div>
       </div>
 
+      {/* Player Transactions Table */}
+      <div className="bg-[#151515] border border-white/10 rounded-2xl overflow-hidden mt-8">
+        <div className="p-6 border-b border-white/10">
+          <h3 className="text-xl font-bold">Player Transactions</h3>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
+          <div className="bg-white/5 rounded-xl p-6 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <span className="text-5xl">💳</span>
+            </div>
+            <h4 className="text-gray-400 font-medium mb-2">Total GC Buys</h4>
+            <div className="text-3xl font-bold text-cyan-400">
+              ${formatCurrency(global.totalDeposited || 0, 2)}
+            </div>
+            <div className="text-sm text-gray-500 mt-2">
+              Gold Coin purchases by players
+            </div>
+          </div>
+
+          <div className="bg-white/5 rounded-xl p-6 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <span className="text-5xl">💸</span>
+            </div>
+            <h4 className="text-gray-400 font-medium mb-2">Total Redemptions</h4>
+            <div className="text-3xl font-bold text-purple-400">
+              ${formatCurrency(global.totalRedemptionAmount || 0, 2)}
+            </div>
+            <div className="text-sm text-gray-500 mt-2">
+              {global.totalRedemptions || 0} total withdrawals
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="mt-8 bg-[#151515] border border-white/10 rounded-xl p-6">
         <h3 className="font-bold text-gray-300 mb-2">How It Works</h3>
         <ul className="list-disc list-inside text-sm text-gray-500 space-y-1">

@@ -61,12 +61,14 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({ onOpenChat }) => {
   const [isPlayingRound, setIsPlayingRound] = useState(false);
   const [showProvablyFair, setShowProvablyFair] = useState(false);
   const [showLiveChart, setShowLiveChart] = useState(false);
+  const hasPendingRoundRef = useRef(false);
 
   // Sync balance from AuthContext on mount and when user.balance changes
+  // BUT skip if we have a pending round (optimistic deduction in progress)
   useEffect(() => {
-    if (user?.balance !== undefined && user.balance !== null) {
-      console.log('[Plinko] Syncing balance from AuthContext:', user.balance);
-      setBalance(user.balance);
+    if (user?.balance !== undefined && user.balance !== null && !hasPendingRoundRef.current) {
+      const roundedBalance = Math.round(user.balance * 100) / 100;
+      setBalance(roundedBalance);
     }
   }, [user?.balance, setBalance]);
 
@@ -138,8 +140,10 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({ onOpenChat }) => {
 
       // Ball landed - update balance to the server's calculated balanceAfter
       if (gameResult && typeof gameResult.balanceAfter === 'number') {
-        setBalance(gameResult.balanceAfter);
-        if (updateUser) updateUser({ balance: gameResult.balanceAfter });
+        const roundedBalance = Math.round(gameResult.balanceAfter * 100) / 100;
+        setBalance(roundedBalance);
+        if (updateUser) updateUser({ balance: roundedBalance });
+        hasPendingRoundRef.current = false; // Clear pending flag
 
         // Add win record for visual feedback
         addWinRecord({
@@ -232,11 +236,13 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({ onOpenChat }) => {
     // Update throttle tracking
     lastDropTimeRef.current = now;
 
-    // Optimistic UI: deduct bet immediately (like Keno does)
+    // Mark that we have a pending round
+    hasPendingRoundRef.current = true;
+
+    // Optimistic UI: deduct bet immediately (rounded to 2 decimals)
     const prevBalance = currentBalance;
-    const optimisticBalance = Number((currentBalance - betAmount).toFixed(2));
+    const optimisticBalance = Math.round((currentBalance - betAmount) * 100) / 100;
     setBalance(optimisticBalance);
-    console.log('[Plinko] Optimistic deduction:', currentBalance, '->', optimisticBalance);
 
     try {
       lastBetAmountRef.current = betAmount;
@@ -269,6 +275,7 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({ onOpenChat }) => {
         console.error('Error from backend:', errorData);
         // Restore balance on API error
         setBalance(prevBalance);
+        hasPendingRoundRef.current = false;
         return;
       }
 
@@ -299,6 +306,7 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({ onOpenChat }) => {
       console.error('Error playing round:', error);
       // Restore balance on error
       setBalance(prevBalance);
+      hasPendingRoundRef.current = false;
     }
   };
 

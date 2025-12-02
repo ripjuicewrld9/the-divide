@@ -3,11 +3,13 @@
 ## Option 1: Run Locally (Recommended)
 
 1. **Update your local `.env` file** with your MongoDB Atlas connection string:
+
    ```bash
    MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/divide?retryWrites=true&w=majority
    ```
 
 2. **Run the backfill script**:
+
    ```bash
    npm run backfill-xp
    ```
@@ -26,6 +28,7 @@
 2. **Click "Shell" tab** (top right)
 
 3. **Run the backfill command**:
+
    ```bash
    node scripts/backfill-xp-levels.js
    ```
@@ -64,14 +67,17 @@
 ## Troubleshooting
 
 **Error: "MONGODB_URI not found"**
+
 - Make sure `.env` file exists with `MONGODB_URI` set
 - For Render shell, check environment variables in dashboard
 
 **Error: "connect ECONNREFUSED"**
+
 - Local MongoDB not running OR wrong connection string
 - Use MongoDB Atlas URI instead of `localhost:27017`
 
 **Error: "Authentication failed"**
+
 - Check MongoDB Atlas username/password in connection string
 - Ensure IP whitelist includes `0.0.0.0/0` (or your current IP)
 

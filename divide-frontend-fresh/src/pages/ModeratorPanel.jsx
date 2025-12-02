@@ -11,8 +11,12 @@ export default function ModeratorPanel() {
     const [activeTab, setActiveTab] = useState('chat');
     const [chatMessages, setChatMessages] = useState([]);
     const [mutedUsers, setMutedUsers] = useState([]);
+    const [activeDivides, setActiveDivides] = useState([]);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
+    const [showCancelModal, setShowCancelModal] = useState(false);
+    const [selectedDivide, setSelectedDivide] = useState(null);
+    const [cancelReason, setCancelReason] = useState('player_request');
 
     const isModerator = user && (user.role === 'moderator' || user.role === 'admin');
 
@@ -27,6 +31,7 @@ export default function ModeratorPanel() {
         if (user && isModerator) {
             fetchChatMessages();
             fetchMutedUsers();
+            fetchActiveDivides();
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user, isModerator]);
@@ -54,6 +59,18 @@ export default function ModeratorPanel() {
             setMutedUsers(data.mutedUsers || []);
         } catch (err) {
             console.error('Failed to fetch muted users:', err);
+        }
+    };
+
+    const fetchActiveDivides = async () => {
+        try {
+            const res = await fetch(`${API_BASE}/api/moderator/active-divides`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            setActiveDivides(data.divides || []);
+        } catch (err) {
+            console.error('Failed to fetch active divides:', err);
         }
     };
 
@@ -138,6 +155,41 @@ export default function ModeratorPanel() {
         }
     };
 
+    const handleCancelDivide = async () => {
+        if (!selectedDivide) return;
+
+        setActionLoading(true);
+        try {
+            const res = await fetch(`${API_BASE}/api/moderator/cancel-divide`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    divideId: selectedDivide._id,
+                    reason: cancelReason
+                })
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                await fetchActiveDivides();
+                setShowCancelModal(false);
+                setSelectedDivide(null);
+                alert(`Divide cancelled. ${data.refundedCount} players refunded.`);
+            } else {
+                alert(data.error || 'Failed to cancel divide');
+            }
+        } catch (err) {
+            console.error('Error cancelling divide:', err);
+            alert('Error cancelling divide');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
     return (
         <SupportLayout>
             <div className="p-4 md:p-8">
@@ -173,6 +225,16 @@ export default function ModeratorPanel() {
                             }`}
                         >
                             Muted Users {mutedUsers.length > 0 && `(${mutedUsers.length})`}
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('divides')}
+                            className={`px-4 py-2 font-semibold transition ${
+                                activeTab === 'divides'
+                                    ? 'text-cyan-400 border-b-2 border-cyan-400'
+                                    : 'text-gray-400 hover:text-white'
+                            }`}
+                        >
+                            Active Divides {activeDivides.length > 0 && `(${activeDivides.length})`}
                         </button>
                     </div>
 
@@ -304,10 +366,125 @@ export default function ModeratorPanel() {
                                     </div>
                                 </div>
                             )}
+
+                            {/* Active Divides Tab */}
+                            {activeTab === 'divides' && (
+                                <div className="bg-white/5 rounded-lg border border-white/10 overflow-hidden">
+                                    <div className="p-4 bg-white/5 border-b border-white/10">
+                                        <h3 className="font-semibold">Active Divides</h3>
+                                        <p className="text-sm text-gray-400 mt-1">Cancel divides that violate rules. All shorts will be refunded.</p>
+                                    </div>
+                                    <div className="divide-y divide-white/5 max-h-[600px] overflow-y-auto">
+                                        {activeDivides.length === 0 ? (
+                                            <div className="p-8 text-center text-gray-400">
+                                                No active divides
+                                            </div>
+                                        ) : (
+                                            activeDivides.map((divide) => (
+                                                <div key={divide._id} className="p-4 hover:bg-white/5 transition">
+                                                    <div className="flex items-start justify-between gap-4">
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="font-semibold text-lg mb-2">{divide.title}</div>
+                                                            <div className="grid grid-cols-2 gap-4 mb-3">
+                                                                <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+                                                                    <div className="text-sm text-gray-400 mb-1">Option A</div>
+                                                                    <div className="font-medium">{divide.optionA}</div>
+                                                                    <div className="text-sm text-cyan-400 mt-1">${(divide.shortsA / 100).toFixed(2)} shorted</div>
+                                                                </div>
+                                                                <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+                                                                    <div className="text-sm text-gray-400 mb-1">Option B</div>
+                                                                    <div className="font-medium">{divide.optionB}</div>
+                                                                    <div className="text-sm text-cyan-400 mt-1">${(divide.shortsB / 100).toFixed(2)} shorted</div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-center gap-4 text-sm text-gray-400">
+                                                                <span>Total Pot: <strong className="text-white">${(divide.pot / 100).toFixed(2)}</strong></span>
+                                                                <span>Participants: <strong className="text-white">{divide.shorts.length}</strong></span>
+                                                                {divide.endTime && (
+                                                                    <span>Ends: <strong className="text-white">{new Date(divide.endTime).toLocaleString()}</strong></span>
+                                                                )}
+                                                            </div>
+                                                            {divide.isUserCreated && (
+                                                                <div className="mt-2 text-xs text-purple-400">
+                                                                    User-created by {divide.creatorId}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <button
+                                                            onClick={() => {
+                                                                setSelectedDivide(divide);
+                                                                setShowCancelModal(true);
+                                                            }}
+                                                            disabled={actionLoading}
+                                                            className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded font-semibold transition border border-red-500/30 whitespace-nowrap"
+                                                        >
+                                                            Cancel Divide
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                         </>
                     )}
                 </div>
             </div>
+
+            {/* Cancel Divide Modal */}
+            {showCancelModal && selectedDivide && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowCancelModal(false)}>
+                    <div className="bg-[#1a1a1a] border border-white/10 rounded-lg p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+                        <h2 className="text-xl font-bold mb-4 text-red-400">Cancel Divide</h2>
+                        <div className="mb-4">
+                            <p className="text-gray-300 mb-2"><strong>{selectedDivide.title}</strong></p>
+                            <p className="text-sm text-gray-400">
+                                This will cancel the divide and refund all {selectedDivide.shorts.length} participants.
+                            </p>
+                        </div>
+                        
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium mb-2 text-gray-300">
+                                Cancellation Reason
+                            </label>
+                            <select
+                                value={cancelReason}
+                                onChange={(e) => setCancelReason(e.target.value)}
+                                className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:border-cyan-500 outline-none"
+                                disabled={actionLoading}
+                            >
+                                <option value="player_request">Player Request</option>
+                                <option value="inappropriate_content">Inappropriate Content / Topics</option>
+                                <option value="suspected_abuse">Suspected Abuse</option>
+                                <option value="technical_issue">Technical Issue</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        
+                        <div className="flex gap-3">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setShowCancelModal(false);
+                                    setSelectedDivide(null);
+                                }}
+                                className="flex-1 py-2 bg-white/10 hover:bg-white/20 rounded-lg font-semibold transition"
+                                disabled={actionLoading}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleCancelDivide}
+                                className="flex-1 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 rounded-lg font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled={actionLoading}
+                            >
+                                {actionLoading ? 'Cancelling...' : 'Confirm Cancel'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </SupportLayout>
     );
 }
