@@ -92,7 +92,10 @@ export default function registerWheelRoutes(app, io, { auth }) {
     const { gameId, seatNumber, betAmount } = req.body;
     const userId = req.userId;
 
+    console.log('[Wheel] Reserve seat request:', { gameId, seatNumber, betAmount, userId });
+
     if (!gameId || seatNumber === undefined || !betAmount) {
+      console.log('[Wheel] Missing fields:', { gameId: !!gameId, seatNumber, betAmount });
       return res.status(400).json({ error: 'Missing required fields' });
     }
 

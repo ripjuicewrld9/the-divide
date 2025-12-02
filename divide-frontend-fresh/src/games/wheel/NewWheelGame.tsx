@@ -211,6 +211,7 @@ export const NewWheelGame: React.FC<NewWheelGameProps> = ({ gameId, onOpenChat }
       setIsReservingSeat(true);
       const apiUrl = (import.meta as any).env.VITE_API_URL || '';
       console.log('[NewWheelGame] Sending reserve request to:', `${apiUrl}/api/wheel/reserve-seat`);
+      console.log('[NewWheelGame] Request body:', { gameId, seatNumber: selectedSeat, betAmount });
       
       const response = await fetch(`${apiUrl}/api/wheel/reserve-seat`, {
         method: 'POST',
