@@ -90,18 +90,18 @@ const wheelGameSchema = new mongoose.Schema({
     isBoosted: Boolean,
   }],
   
-  // Timing
+  // Timing (nullable when game is idle/waiting for players)
   roundStartTime: {
     type: Date,
-    required: true,
+    default: null,
   },
   roundEndTime: {
     type: Date,
-    required: true,
+    default: null,
   },
   bettingEndTime: {
     type: Date,
-    required: true,
+    default: null,
   },
   
   verified: {
