@@ -306,7 +306,7 @@ export default function Divides({ onOpenChat }) {
         <div className="top-stats flex justify-center mb-2">
           <div className="stat-wrapper bg-gray-900 rounded-lg px-4 py-2">
             <div className="stat-title text-sm text-gray-300">Jackpot</div>
-            <div className="stat-value text-lg font-bold text-yellow-400">${formatCurrency(jackpot.amount, 2)}</div>
+            <div className="stat-value text-lg font-bold text-yellow-400">${formatCurrency(jackpot.amount / 100, 2)}</div>
           </div>
         </div>
         <div className="create-divide-section flex justify-center mb-4">
@@ -423,7 +423,7 @@ export default function Divides({ onOpenChat }) {
         <div className="top-stats flex justify-center mb-6">
           <div className="stat-wrapper bg-gray-900 rounded-lg px-6 py-4">
             <div className="stat-title text-base text-gray-300">Jackpot</div>
-            <div className="stat-value text-2xl font-bold text-yellow-400">${formatCurrency(jackpot.amount, 2)}</div>
+            <div className="stat-value text-2xl font-bold text-yellow-400">${formatCurrency(jackpot.amount / 100, 2)}</div>
           </div>
         </div>
         <div className="create-divide-section flex justify-center mb-8">

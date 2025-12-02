@@ -27,7 +27,8 @@
     "test:trace": "node --trace-warnings node_modules/mocha/bin/_mocha --exit tests/integration/**/*.js",
     "start": "node server.js",
     "build": "cd divide-frontend-fresh && npm install && npm run build",
-    "postinstall": "cd divide-frontend-fresh && npm install"
+    "postinstall": "cd divide-frontend-fresh && npm install",
+    "backfill-xp": "node scripts/backfill-xp-levels.js"
   },
   "keywords": [],
   "author": "",

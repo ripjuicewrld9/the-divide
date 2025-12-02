@@ -69,16 +69,35 @@ export default function ProfilePage({ onOpenChat }) {
 
                         <div className="text-center md:text-left flex-1">
                             <h1 className="text-3xl font-bold mb-1">{user.username}</h1>
+                            <div className="flex items-center justify-center md:justify-start gap-2 mb-2">
+                                <span className="px-3 py-1 rounded-full text-sm font-bold" style={{ backgroundColor: '#1a1a2e', border: '2px solid #FFD700', color: '#FFD700' }}>
+                                    Level {user.level || 1}
+                                </span>
+                                <span className="text-purple-400 text-sm font-semibold">
+                                    {user.currentBadge || 'Sheep'}
+                                </span>
+                                <span className="text-gray-500 text-sm">
+                                    {(user.xp || 0).toLocaleString()} XP
+                                </span>
+                            </div>
                             <p className="text-gray-400 text-sm mb-4">Member since {new Date(user.createdAt || Date.now()).toLocaleDateString()}</p>
 
                             <div className="flex flex-wrap justify-center md:justify-start gap-3">
                                 <div className="bg-black/30 px-4 py-2 rounded-lg border border-white/10">
                                     <div className="text-xs text-gray-500 uppercase font-bold">Balance</div>
-                                    <div className="text-xl font-mono text-cyan-400">${formatCurrency(user.balance || 0)}</div>
+                                    <div className="text-xl font-mono text-cyan-400">${formatCurrency(user.balance / 100 || 0)}</div>
                                 </div>
                                 <div className="bg-black/30 px-4 py-2 rounded-lg border border-white/10">
                                     <div className="text-xs text-gray-500 uppercase font-bold">Wagered</div>
-                                    <div className="text-xl font-mono text-purple-400">${formatCurrency(user.wagered || 0)}</div>
+                                    <div className="text-xl font-mono text-purple-400">${formatCurrency(user.wagered / 100 || 0)}</div>
+                                </div>
+                                <div className="bg-black/30 px-4 py-2 rounded-lg border border-white/10">
+                                    <div className="text-xs text-gray-500 uppercase font-bold">Deposited</div>
+                                    <div className="text-xl font-mono text-green-400">${formatCurrency((user.totalDeposited || 0) / 100)}</div>
+                                </div>
+                                <div className="bg-black/30 px-4 py-2 rounded-lg border border-white/10">
+                                    <div className="text-xs text-gray-500 uppercase font-bold">Withdrawn</div>
+                                    <div className="text-xl font-mono text-orange-400">${formatCurrency((user.totalWithdrawn || 0) / 100)}</div>
                                 </div>
                             </div>
                         </div>
