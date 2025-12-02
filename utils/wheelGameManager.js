@@ -228,7 +228,7 @@ class WheelGameManager {
       }
 
       // Check if betting period is still open
-      if (new Date() > game.bettingEndTime) {
+      if (game.bettingEndTime && new Date() > game.bettingEndTime) {
         throw new Error('Betting period has ended');
       }
 

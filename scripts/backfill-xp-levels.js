@@ -26,19 +26,18 @@ async function backfillXPLevels() {
       let needsUpdate = false;
       const updates = {};
 
-      // Calculate XP from wagered amount if user has no XP yet
-      if (!user.xp || user.xp === 0) {
-        // Grant XP based on historical wagering: 2 XP per $1 wagered
-        const wagerCents = user.wagered || 0;
-        const calculatedXP = Math.floor(wagerCents / 100) * XP_RATES.usdWager;
-        
-        if (calculatedXP > 0) {
-          updates.xp = calculatedXP;
-          updates.xpThisWeek = 0; // Don't backfill weekly stats
-          updates.xpThisMonth = 0; // Don't backfill monthly stats
-          needsUpdate = true;
-          console.log(`  ${user.username}: Calculated ${calculatedXP} XP from $${(wagerCents / 100).toFixed(2)} wagered`);
-        }
+      // Calculate XP from wagered amount (user.wagered is in cents)
+      // Grant 2 XP per $1 wagered
+      const wagerCents = user.wagered || 0;
+      const calculatedXP = Math.floor(wagerCents / 100) * XP_RATES.usdWager;
+      
+      // Always update XP based on wagered amount (this is the authoritative source)
+      if (calculatedXP !== user.xp) {
+        updates.xp = calculatedXP;
+        updates.xpThisWeek = 0; // Don't backfill weekly stats
+        updates.xpThisMonth = 0; // Don't backfill monthly stats
+        needsUpdate = true;
+        console.log(`  ${user.username}: Calculated ${calculatedXP} XP from $${(wagerCents / 100).toFixed(2)} wagered`);
       } else {
         updates.xp = user.xp;
       }
