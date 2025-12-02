@@ -7,11 +7,17 @@ dotenv.config();
 
 async function backfillXPLevels() {
   try {
+    if (!process.env.MONGODB_URI) {
+      console.error('❌ MONGODB_URI not found in environment variables');
+      process.exit(1);
+    }
+
+    console.log('🔌 Connecting to MongoDB...');
     await mongoose.connect(process.env.MONGODB_URI);
     console.log('✅ Connected to MongoDB');
 
     const users = await User.find({});
-    console.log(`Found ${users.length} users to process`);
+    console.log(`📊 Found ${users.length} users to process`);
 
     let updated = 0;
     let skipped = 0;
