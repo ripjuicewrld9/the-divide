@@ -239,10 +239,7 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({ onOpenChat }) => {
     // Mark that we have a pending round
     hasPendingRoundRef.current = true;
 
-    // Optimistic UI: deduct bet immediately (rounded to 2 decimals)
-    const prevBalance = currentBalance;
-    const optimisticBalance = Math.round((currentBalance - betAmount) * 100) / 100;
-    setBalance(optimisticBalance);
+    // DON'T deduct optimistically - server will deduct and return new balance immediately
 
     try {
       lastBetAmountRef.current = betAmount;
@@ -251,12 +248,10 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({ onOpenChat }) => {
       const token = localStorage.getItem('token');
       if (!token) {
         console.error('No token found');
-        // Restore balance on error
-        setBalance(prevBalance);
         return;
       }
 
-      // Call backend API to play a round
+      // Call backend API to play a round (server deducts bet immediately)
       const response = await fetch(`${(import.meta as any).env.VITE_API_URL || ''}/api/plinko/play`, {
         method: 'POST',
         headers: {
@@ -273,13 +268,16 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({ onOpenChat }) => {
       if (!response.ok) {
         const errorData = await response.json();
         console.error('Error from backend:', errorData);
-        // Restore balance on API error
-        setBalance(prevBalance);
         hasPendingRoundRef.current = false;
         return;
       }
 
       const result = await response.json();
+
+      // Update balance from server response (bet already deducted)
+      if (typeof result.balanceAfter !== 'undefined') {
+        setBalance(result.balanceAfter);
+      }
 
       // Increment nonce in localStorage to match backend
       try {

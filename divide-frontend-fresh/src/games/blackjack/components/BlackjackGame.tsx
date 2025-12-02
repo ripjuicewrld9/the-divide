@@ -293,6 +293,66 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
       // Store gameId for later save
       (gameState as any).currentGameId = sessionData.gameId;
 
+      // Get current bets from gameState
+      const currentHand = gameState.playerHands[0];
+      if (!currentHand || currentHand.bet === 0) {
+        console.error('[Blackjack] No bet placed');
+        return;
+      }
+
+      // First, track bet on server (doesn't deduct balance yet)
+      const betResponse = await fetch(`${apiUrl}/api/blackjack/game/place-bet`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          gameId: sessionData.gameId,
+          mainBet: currentHand.bet,
+          perfectPairsBet: currentHand.sideBets.perfectPairs,
+          twentyPlusThreeBet: currentHand.sideBets.twentyPlusThree,
+          blazingSevensBet: currentHand.sideBets.blazingSevens,
+        }),
+      });
+
+      if (!betResponse.ok) {
+        const errorData = await betResponse.json();
+        console.error('[Blackjack] Failed to place bet:', errorData.error);
+        alert(errorData.error || 'Failed to place bet');
+        return;
+      }
+
+      console.log('[Blackjack] Bet validated and tracked on server');
+
+      // Now deduct bet by calling /game/deal endpoint
+      const dealResponse = await fetch(`${apiUrl}/api/blackjack/game/deal`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          gameId: sessionData.gameId,
+        }),
+      });
+
+      if (!dealResponse.ok) {
+        const errorData = await dealResponse.json();
+        console.error('[Blackjack] Failed to deal:', errorData.error);
+        alert(errorData.error || 'Failed to deal');
+        return;
+      }
+
+      const dealData = await dealResponse.json();
+      console.log('[Blackjack] Bet deducted, cards dealt. New balance:', dealData.balance);
+
+      // Update balance from server response (bet now deducted)
+      if (setBalance) {
+        setBalance(dealData.balance);
+      }
+      gameState.setBalance(dealData.balance);
+
       // Increment nonce in localStorage to match backend
       try {
         const currentNonce = localStorage.getItem('blackjack_nonce');
@@ -303,12 +363,12 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
         console.error('[Blackjack] Error incrementing nonce:', err);
       }
 
-      // Deal cards
+      // Deal cards (locally only, balance already deducted server-side)
       gameState.deal();
     } catch (error) {
       console.error('[Blackjack] Error starting session:', error);
     }
-  }, [gameState, token]);
+  }, [gameState, token, setBalance]);
 
   // Whenever local gameState.balance changes (bet deduction or win), sync to global AuthContext
   useEffect(() => {

@@ -128,6 +128,50 @@ export default function registerWheelRoutes(app, io, { auth }) {
 });
 
 /**
+ * POST /api/wheel/place-bet - Place bet on reserved seat (REQUIRES AUTH)
+ */
+router.post('/place-bet', auth, async (req, res) => {
+  try {
+    const { gameId, seatNumber, betAmount } = req.body;
+    const userId = req.userId;
+
+    console.log('[Wheel] Place bet request:', { gameId, seatNumber, betAmount, userId });
+
+    if (!gameId || seatNumber === undefined || !betAmount) {
+      console.log('[Wheel] Missing fields:', { gameId: !!gameId, seatNumber, betAmount });
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    if (seatNumber < 0 || seatNumber > 7) {
+      return res.status(400).json({ error: 'Invalid seat number' });
+    }
+
+    if (betAmount <= 0) {
+      return res.status(400).json({ error: 'Invalid bet amount' });
+    }
+
+    const wheelGameManager = req.app.locals.wheelGameManager;
+    
+    if (!wheelGameManager) {
+      return res.status(500).json({ error: 'Game manager not initialized' });
+    }
+
+    const result = await wheelGameManager.placeBet(gameId, userId, seatNumber, betAmount);
+
+    res.json({
+      success: true,
+      gameId,
+      seatNumber,
+      betAmount,
+      balance: result.balance,
+    });
+  } catch (error) {
+    console.error('[WheelAPI] Error placing bet:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+/**
  * GET /api/wheel/history/:gameId - Get game history
  */
 router.get('/history/:gameId', async (req, res) => {

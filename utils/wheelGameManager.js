@@ -256,23 +256,18 @@ class WheelGameManager {
         throw new Error('User not found');
       }
 
-      const betInCents = Math.round(betAmount * 100);
-      if (user.balance < betInCents) {
-        throw new Error('Insufficient balance');
-      }
-
-      // DO NOT deduct bet here - will be deducted after spin completes
-      // Just verify they have the balance
+      // NO bet deduction here - just validate they could afford a minimum bet if they want to place one
+      // Betting happens separately via placeBet() function
 
       // Fetch user details for broadcast
       const username = user.username;
       const profileImage = user.profileImage;
 
-      // Reserve seat
+      // Reserve seat (no bet placed yet)
       seat.userId = userId;
       seat.username = username;
       seat.profileImage = profileImage;
-      seat.betAmount = betInCents;
+      seat.betAmount = 0; // No bet placed yet
       seat.reservedAt = new Date();
 
       await game.save();
@@ -311,6 +306,82 @@ class WheelGameManager {
       return { success: true, game };
     } catch (error) {
       console.error(`[WheelGame] Error reserving seat:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Place bet on reserved seat
+   * @param {string} gameId
+   * @param {string} userId
+   * @param {number} seatNumber
+   * @param {number} betAmount - In dollars
+   */
+  async placeBet(gameId, userId, seatNumber, betAmount) {
+    try {
+      const game = await WheelGame.findOne({ gameId, status: 'betting' });
+      
+      if (!game) {
+        throw new Error('Game not found or betting closed');
+      }
+
+      // Check if betting period is still open
+      const isIdle = !game.roundStartTime || !game.bettingEndTime;
+      if (!isIdle && game.bettingEndTime && new Date() > game.bettingEndTime) {
+        throw new Error('Betting period has ended');
+      }
+
+      const seat = game.seats.find(s => s.seatNumber === seatNumber);
+      
+      if (!seat) {
+        throw new Error('Invalid seat number');
+      }
+
+      if (!seat.userId || seat.userId.toString() !== userId.toString()) {
+        throw new Error('You must reserve this seat first');
+      }
+
+      // Get user
+      const user = await User.findById(userId);
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      const betInCents = Math.round(betAmount * 100);
+      if (user.balance < betInCents) {
+        throw new Error('Insufficient balance');
+      }
+
+      // Deduct bet immediately
+      user.balance -= betInCents;
+      
+      // Update user stats for bet placement
+      user.totalBets = (user.totalBets || 0) + 1;
+      user.wagered = (user.wagered || 0) + betInCents;
+      
+      await user.save();
+
+      // Update seat with bet amount
+      seat.betAmount = betInCents;
+      await game.save();
+
+      // Broadcast bet placed
+      this.io.to(`wheel-${gameId}`).emit('wheel:betPlaced', {
+        seatNumber,
+        userId,
+        betAmount: betInCents,
+        balance: user.balance / 100,
+      });
+
+      console.log(`[WheelGame] Bet placed: user=${userId}, seat=${seatNumber}, bet=$${betAmount}, balance=$${(user.balance / 100).toFixed(2)}`);
+
+      return {
+        success: true,
+        balance: user.balance / 100,
+        betAmount: betInCents,
+      };
+    } catch (error) {
+      console.error(`[WheelGame] Error placing bet:`, error);
       throw error;
     }
   }
@@ -523,16 +594,10 @@ class WheelGameManager {
         if (isOccupied && seat.userId) {
           const user = await User.findById(seat.userId);
           if (user) {
-            // Deduct the bet amount first
-            user.balance -= seat.betAmount;
-            
-            // Then apply payout (can be positive or negative)
+            // Bet already deducted when seat was reserved, only credit payout now
             user.balance += payout;
             
-            // Update stats
-            user.totalBets = (user.totalBets || 0) + 1;
-            user.wagered = (user.wagered || 0) + seat.betAmount;
-            
+            // Update win/loss stats
             if (finalMultiplier > 0) {
               user.totalWins = (user.totalWins || 0) + 1;
               user.totalWon = (user.totalWon || 0) + payout;

@@ -153,7 +153,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         };
         set({
           playerHands: [newHand],
-          balance: state.balance - amount,
+          // DON'T deduct balance here - server will deduct when Deal is clicked
         });
       } else {
         const hands = [...state.playerHands];
@@ -161,7 +161,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         hands[0].betPlacementOrder.push(['main', amount]);
         set({
           playerHands: hands,
-          balance: state.balance - amount,
+          // DON'T deduct balance here - server will deduct when Deal is clicked
         });
       }
     } else if (state.playerHands.length > 0) {
@@ -176,7 +176,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       hands[0].betPlacementOrder.push([mode as 'perfectPairs' | 'twentyPlusThree' | 'blazingSevens', amount]);
       set({
         playerHands: hands,
-        balance: state.balance - amount,
+        // DON'T deduct balance here - server will deduct when Deal is clicked
       });
     } else {
       // Need main bet first before side bets
@@ -185,22 +185,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   clearBets: () => {
-    const state = get();
-
-    // Calculate total bets to return to balance (already in dollars)
-    let totalBetsToReturn = 0;
-    if (state.playerHands.length > 0) {
-      const hand = state.playerHands[0];
-      totalBetsToReturn = hand.bet +
-        hand.sideBets.perfectPairs +
-        hand.sideBets.twentyPlusThree +
-        hand.sideBets.blazingSevens;
-    }
-
+    // Just clear the bets - no money was deducted yet, so nothing to return
     set({
       playerHands: [],
       dealerHand: { cards: [], bet: 0, sideBets: { perfectPairs: 0, twentyPlusThree: 0, blazingSevens: 0 }, betPlacementOrder: [], isDealerHand: true },
-      balance: state.balance + totalBetsToReturn,
     });
   },
 
@@ -461,7 +449,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
   },
 
-  doubleDown: () => {
+  doubleDown: async () => {
     const state = get();
     if (state.gamePhase !== 'playing') return;
 
@@ -472,36 +460,70 @@ export const useGameStore = create<GameStore>((set, get) => ({
       return;
     }
 
-    let deck = [...state.deck];
-    const hands = [...state.playerHands];
-    const currentHand = hands[state.currentHandIndex];
+    // Call backend to deduct additional bet
+    try {
+      const token = localStorage.getItem('token');
+      const apiUrl = (import.meta as any).env?.VITE_API_URL || '';
+      const gameId = (state as any).currentGameId;
 
-    const card = deck.pop();
-    if (card) currentHand.cards.push(card);
+      const response = await fetch(`${apiUrl}/api/blackjack/game/double`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          gameId,
+          additionalBet: hand.bet,
+        }),
+      });
 
-    // Create a new hand object with doubled bet to ensure Zustand detects the change
-    const newBet = currentHand.bet * 2;
-    const updatedHand: Hand = {
-      ...currentHand,
-      bet: newBet,
-      cards: currentHand.cards,
-    };
-    hands[state.currentHandIndex] = updatedHand;
-    set({ deck, playerHands: hands, balance: state.balance - hand.bet });
-
-    if (isBust(updatedHand.cards)) {
-      if (state.currentHandIndex < hands.length - 1) {
-        set({ currentHandIndex: state.currentHandIndex + 1, message: 'Bust! Next hand' });
-      } else {
-        set({ gamePhase: 'settling', message: 'Dealer\'s turn' });
-        setTimeout(() => get().playDealer(), 500);
+      if (!response.ok) {
+        const errorData = await response.json();
+        set({ message: errorData.error || 'Cannot double down' });
+        return;
       }
-    } else {
-      get().stand();
+
+      const data = await response.json();
+      
+      // Update balance from server
+      set({ balance: data.balance });
+
+      // Continue with double down logic locally
+      let deck = [...state.deck];
+      const hands = [...state.playerHands];
+      const currentHand = hands[state.currentHandIndex];
+
+      const card = deck.pop();
+      if (card) currentHand.cards.push(card);
+
+      // Create a new hand object with doubled bet
+      const newBet = currentHand.bet * 2;
+      const updatedHand: Hand = {
+        ...currentHand,
+        bet: newBet,
+        cards: currentHand.cards,
+      };
+      hands[state.currentHandIndex] = updatedHand;
+      set({ deck, playerHands: hands });
+
+      if (isBust(updatedHand.cards)) {
+        if (state.currentHandIndex < hands.length - 1) {
+          set({ currentHandIndex: state.currentHandIndex + 1, message: 'Bust! Next hand' });
+        } else {
+          set({ gamePhase: 'settling', message: 'Dealer\\'s turn' });
+          setTimeout(() => get().playDealer(), 500);
+        }
+      } else {
+        get().stand();
+      }
+    } catch (error) {
+      console.error('[Blackjack] Double down error:', error);
+      set({ message: 'Failed to double down' });
     }
   },
 
-  split: () => {
+  split: async () => {
     const state = get();
     if (state.gamePhase !== 'playing') return;
 
@@ -512,40 +534,73 @@ export const useGameStore = create<GameStore>((set, get) => ({
       return;
     }
 
-    let deck = [...state.deck];
-    const hands = [...state.playerHands];
+    // Call backend to deduct additional bet
+    try {
+      const token = localStorage.getItem('token');
+      const apiUrl = (import.meta as any).env?.VITE_API_URL || '';
+      const gameId = (state as any).currentGameId;
 
-    const card1 = hand.cards[0];
-    const card2 = hand.cards[1];
+      const response = await fetch(`${apiUrl}/api/blackjack/game/split`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          gameId,
+          additionalBet: hand.bet,
+        }),
+      });
 
-    const card1New = deck.pop();
-    const card2New = deck.pop();
+      if (!response.ok) {
+        const errorData = await response.json();
+        set({ message: errorData.error || 'Cannot split' });
+        return;
+      }
 
-    // Create two new hands
-    const newHand1: Hand = {
-      cards: card1New ? [card1, card1New] : [card1],
-      bet: hand.bet,
-      sideBets: hand.sideBets,
-      betPlacementOrder: hand.betPlacementOrder,
-      isDealerHand: false,
-    };
+      const data = await response.json();
+      
+      // Update balance from server
+      set({ balance: data.balance });
 
-    const newHand2: Hand = {
-      cards: card2New ? [card2, card2New] : [card2],
-      bet: hand.bet,
-      sideBets: { perfectPairs: 0, twentyPlusThree: 0, blazingSevens: 0 },
-      betPlacementOrder: hand.betPlacementOrder,
-      isDealerHand: false,
-    };
+      // Continue with split logic locally
+      let deck = [...state.deck];
+      const hands = [...state.playerHands];
 
-    hands.splice(state.currentHandIndex, 1, newHand1, newHand2);
+      const card1 = hand.cards[0];
+      const card2 = hand.cards[1];
 
-    set({
-      deck,
-      playerHands: hands,
-      balance: state.balance - hand.bet,
-      message: 'Hand split',
-    });
+      const card1New = deck.pop();
+      const card2New = deck.pop();
+
+      // Create two new hands
+      const newHand1: Hand = {
+        cards: card1New ? [card1, card1New] : [card1],
+        bet: hand.bet,
+        sideBets: hand.sideBets,
+        betPlacementOrder: hand.betPlacementOrder,
+        isDealerHand: false,
+      };
+
+      const newHand2: Hand = {
+        cards: card2New ? [card2, card2New] : [card2],
+        bet: hand.bet,
+        sideBets: { perfectPairs: 0, twentyPlusThree: 0, blazingSevens: 0 },
+        betPlacementOrder: hand.betPlacementOrder,
+        isDealerHand: false,
+      };
+
+      hands.splice(state.currentHandIndex, 1, newHand1, newHand2);
+
+      set({
+        deck,
+        playerHands: hands,
+        message: 'Hand split',
+      });
+    } catch (error) {
+      console.error('[Blackjack] Split error:', error);
+      set({ message: 'Failed to split' });
+    }
   },
 
   takeInsurance: () => {

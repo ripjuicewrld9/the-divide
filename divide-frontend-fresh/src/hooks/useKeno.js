@@ -350,19 +350,18 @@ export default function useKeno() {
     }
     if (picks.length === 0) { setMessage('Select at least one number'); return; }
     if (betAmount <= 0) { setMessage('Invalid bet'); return; }
-    // optimistic UI: deduct bet immediately so players see the balance decrease
+    
+    // Validate balance but don't deduct - server will deduct and return new balance
     const prevBalance = balance;
     if (autoplaySkipOptimisticRef.current) {
       if (autoReserveRoundsRef.current <= 0) { setMessage('Autoplay reserve exhausted'); return; }
       autoReserveRoundsRef.current = Math.max(0, autoReserveRoundsRef.current - 1);
-      console.log('[KENO] autoplay: skipping per-round optimistic deduct (anim), reserve remaining', autoReserveRoundsRef.current);
+      console.log('[KENO] autoplay: reserve remaining', autoReserveRoundsRef.current);
     } else {
       if (prevBalance < betAmount) { playGuncock(); setMessage('Insufficient balance'); return; }
-      const newBalance = Number((prevBalance - betAmount).toFixed(2));
-      setBalance(newBalance);
-      // Don't update global balance here - it conflicts with other games
-      // Server will send authoritative balance after round completes
+      // Don't deduct optimistically - server will deduct and return new balance immediately
     }
+    
     // mark request in-flight synchronously to avoid double submissions
     inFlightRef.current = true;
     setIsDrawing(true);
@@ -388,20 +387,20 @@ export default function useKeno() {
       console.log('[KENO] API response received:', data);
       if (!data || typeof data.drawnNumbers === 'undefined') {
         setMessage(data?.error || 'Play failed');
-        // restore optimistic balance
-        setBalance(prevBalance);
         // clear drawing flag since this round did not start properly
         setIsDrawing(false);
         inFlightRef.current = false;
         clearTimeout(safetyTimeout);
         return;
       }
-      // Prefer authoritative server-provided 'balanceAfterBet' for UI hold state
+      // Get authoritative balance from server (bet already deducted)
       try {
         if (typeof data.balanceAfterBet !== 'undefined') {
           const serverBalance = Number(data.balanceAfterBet);
           setBalance(serverBalance);
-          // Don't update global balance here - it will sync via refreshUser() after animation
+        } else if (typeof data.balance !== 'undefined') {
+          const serverBalance = Number(data.balance);
+          setBalance(serverBalance);
         }
       } catch { /* ignore */ }
       // store server result but don't apply payout yet — wait for animations to finish

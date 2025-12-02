@@ -5906,10 +5906,20 @@ setTimeout(() => {
 // Catch-all route: serve index.html for client-side routing (must be LAST)
 // This will only be reached if no previous middleware/route handled the request
 app.use((req, res, next) => {
-  // Don't override API routes that return 404s or errors
-  if (req.path.startsWith('/api') || req.path.startsWith('/socket.io')) {
+  // Don't override API routes or backend-only routes
+  if (req.path.startsWith('/api') || 
+      req.path.startsWith('/socket.io') ||
+      req.path.startsWith('/uploads') ||
+      req.path.startsWith('/sounds')) {
     return next();
   }
-  // Serve index.html for all other routes (React Router)
+  
+  // For GET requests to backend data routes, check if Accept header wants JSON
+  // This allows API clients to get JSON while browsers get the SPA
+  if (req.method === 'GET' && req.accepts('json') && !req.accepts('html')) {
+    return next(); // Let backend routes handle JSON requests
+  }
+  
+  // Serve index.html for all other routes (React Router handles client-side routing)
   res.sendFile(path.join(__dirname, 'divide-frontend-fresh', 'dist', 'index.html'));
 });

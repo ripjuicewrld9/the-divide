@@ -81,7 +81,275 @@ router.post('/session/start', authMiddleware, async (req, res) => {
 });
 
 // ============================================================================
-// 2. SAVE GAME - Store game result with RNG data
+// 2. PLACE BET - Deduct bet from balance before dealing
+// ============================================================================
+
+router.post('/game/place-bet', authMiddleware, async (req, res) => {
+  try {
+    const { gameId, mainBet, perfectPairsBet, twentyPlusThreeBet, blazingSevensBet } = req.body;
+    const { userId } = req;
+
+    if (!gameId) {
+      return res.status(400).json({ error: 'gameId required' });
+    }
+
+    // Verify game belongs to user
+    const game = await BlackjackGame.findById(gameId);
+    if (!game || game.userId.toString() !== userId) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    // Verify game is in betting phase
+    if (game.gamePhase !== 'betting') {
+      return res.status(400).json({ error: 'Game already in progress' });
+    }
+
+    // Calculate total bet
+    const totalBet = (mainBet || 0) + (perfectPairsBet || 0) + (twentyPlusThreeBet || 0) + (blazingSevensBet || 0);
+    
+    if (totalBet <= 0) {
+      return res.status(400).json({ error: 'Total bet must be greater than 0' });
+    }
+
+    const totalBetCents = Math.round(totalBet * 100);
+
+    // Get user and validate balance
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (user.balance < totalBetCents) {
+      return res.status(400).json({ 
+        error: 'Insufficient balance',
+        required: totalBet,
+        available: user.balance / 100
+      });
+    }
+
+    // DON'T deduct bet here - just validate and track it
+    // Bet will be deducted when deal endpoint is called
+
+    // Update game with bet amounts (track but don't deduct)
+    game.mainBet = mainBet || 0;
+    game.perfectPairsBet = perfectPairsBet || 0;
+    game.twentyPlusThreeBet = twentyPlusThreeBet || 0;
+    game.blazingSevensBet = blazingSevensBet || 0;
+    game.gamePhase = 'betting'; // Keep in betting until deal is called
+    await game.save();
+
+    const updatedBalance = user.balance / 100;
+
+    console.log(`[BlackjackAPI] Bet validated and tracked: user=${userId}, totalBet=$${totalBet}, balance=$${updatedBalance.toFixed(2)}`);
+
+    res.json({
+      success: true,
+      balance: updatedBalance,
+      totalBet
+    });
+  } catch (error) {
+    console.error('[BlackjackAPI] Error placing bet:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================================
+// 2B. DEAL - Deduct bet from balance when cards are dealt
+// ============================================================================
+
+router.post('/game/deal', authMiddleware, async (req, res) => {
+  try {
+    const { gameId } = req.body;
+    const { userId } = req;
+
+    if (!gameId) {
+      return res.status(400).json({ error: 'gameId required' });
+    }
+
+    // Verify game belongs to user
+    const game = await BlackjackGame.findById(gameId);
+    if (!game || game.userId.toString() !== userId) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    // Verify game is in betting phase
+    if (game.gamePhase !== 'betting') {
+      return res.status(400).json({ error: 'Game already dealt or in progress' });
+    }
+
+    // Calculate total bet from game record
+    const totalBet = (game.mainBet || 0) + (game.perfectPairsBet || 0) + 
+                     (game.twentyPlusThreeBet || 0) + (game.blazingSevensBet || 0);
+    
+    if (totalBet <= 0) {
+      return res.status(400).json({ error: 'No bet placed' });
+    }
+
+    const totalBetCents = Math.round(totalBet * 100);
+
+    // Get user and deduct bet
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (user.balance < totalBetCents) {
+      return res.status(400).json({ 
+        error: 'Insufficient balance',
+        required: totalBet,
+        available: user.balance / 100
+      });
+    }
+
+    // Deduct bet from balance NOW (when deal is clicked)
+    user.balance = user.balance - totalBetCents;
+
+    // Reduce wager requirement (1x playthrough)
+    if (user.wagerRequirement > 0) {
+      user.wagerRequirement = Math.max(0, user.wagerRequirement - totalBetCents);
+    }
+
+    await user.save();
+
+    // Update game phase to playing
+    game.gamePhase = 'playing';
+    await game.save();
+
+    const updatedBalance = user.balance / 100;
+
+    console.log(`[BlackjackAPI] Bet deducted on deal: user=${userId}, totalBet=$${totalBet}, newBalance=$${updatedBalance.toFixed(2)}`);
+
+    res.json({
+      success: true,
+      balance: updatedBalance,
+      totalBet
+    });
+  } catch (error) {
+    console.error('[BlackjackAPI] Error dealing:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================================
+// 2C. DOUBLE DOWN - Deduct additional bet for double down
+// ============================================================================
+
+router.post('/game/double', authMiddleware, async (req, res) => {
+  try {
+    const { gameId, additionalBet } = req.body;
+    const { userId } = req;
+
+    if (!gameId || !additionalBet) {
+      return res.status(400).json({ error: 'gameId and additionalBet required' });
+    }
+
+    // Verify game belongs to user
+    const game = await BlackjackGame.findById(gameId);
+    if (!game || game.userId.toString() !== userId) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    const additionalBetCents = Math.round(additionalBet * 100);
+
+    // Get user and deduct additional bet
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (user.balance < additionalBetCents) {
+      return res.status(400).json({ 
+        error: 'Insufficient balance for double down',
+        required: additionalBet,
+        available: user.balance / 100
+      });
+    }
+
+    // Deduct additional bet
+    user.balance = user.balance - additionalBetCents;
+
+    // Update wager
+    if (user.wagerRequirement > 0) {
+      user.wagerRequirement = Math.max(0, user.wagerRequirement - additionalBetCents);
+    }
+
+    await user.save();
+
+    const updatedBalance = user.balance / 100;
+
+    console.log(`[BlackjackAPI] Double down: user=${userId}, additionalBet=$${additionalBet}, newBalance=$${updatedBalance.toFixed(2)}`);
+
+    res.json({
+      success: true,
+      balance: updatedBalance
+    });
+  } catch (error) {
+    console.error('[BlackjackAPI] Error on double down:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================================
+// 2D. SPLIT - Deduct additional bet for split
+// ============================================================================
+
+router.post('/game/split', authMiddleware, async (req, res) => {
+  try {
+    const { gameId, additionalBet } = req.body;
+    const { userId } = req;
+
+    if (!gameId || !additionalBet) {
+      return res.status(400).json({ error: 'gameId and additionalBet required' });
+    }
+
+    // Verify game belongs to user
+    const game = await BlackjackGame.findById(gameId);
+    if (!game || game.userId.toString() !== userId) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    const additionalBetCents = Math.round(additionalBet * 100);
+
+    // Get user and deduct additional bet
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (user.balance < additionalBetCents) {
+      return res.status(400).json({ 
+        error: 'Insufficient balance for split',
+        required: additionalBet,
+        available: user.balance / 100
+      });
+    }
+
+    // Deduct additional bet
+    user.balance = user.balance - additionalBetCents;
+
+    // Update wager
+    if (user.wagerRequirement > 0) {
+      user.wagerRequirement = Math.max(0, user.wagerRequirement - additionalBetCents);
+    }
+
+    await user.save();
+
+    const updatedBalance = user.balance / 100;
+
+    console.log(`[BlackjackAPI] Split: user=${userId}, additionalBet=$${additionalBet}, newBalance=$${updatedBalance.toFixed(2)}`);
+
+    res.json({
+      success: true,
+      balance: updatedBalance
+    });
+  } catch (error) {
+    console.error('[BlackjackAPI] Error on split:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================================
+// 3. SAVE GAME - Store game result with RNG data and pay winnings
 // ============================================================================
 
 router.post('/game/save', authMiddleware, async (req, res) => {
@@ -182,35 +450,19 @@ router.post('/game/save', authMiddleware, async (req, res) => {
       await updateHouseStats('blackjack', totalBetCents, totalPayoutCents);
     }
 
-    // Update user balance server-side (SECURITY FIX)
-    // Deduct total bet and add total payout
+    // Pay out winnings (bet was already deducted in place-bet endpoint)
     let updatedBalance = balance; // Fallback to client-provided balance if update fails
     try {
       const user = await User.findById(userId);
       if (user) {
-        const totalBetCents = Math.round(totalBet * 100);
         const totalPayoutCents = Math.round(totalPayout * 100);
 
-        // SECURITY: Validate user has enough balance for the bet
-        if (user.balance < totalBetCents) {
-          return res.status(400).json({ 
-            error: 'Insufficient balance',
-            required: totalBet,
-            available: user.balance / 100
-          });
-        }
-
-        // Deduct bet and add payout
-        user.balance = user.balance - totalBetCents + totalPayoutCents;
-
-        // Reduce wager requirement (1x playthrough)
-        if (user.wagerRequirement > 0) {
-          user.wagerRequirement = Math.max(0, user.wagerRequirement - totalBetCents);
-        }
+        // Add payout (bet was already deducted when placed)
+        user.balance = user.balance + totalPayoutCents;
 
         // Update user statistics
         user.totalBets = (user.totalBets || 0) + 1;
-        user.wagered = (user.wagered || 0) + totalBetCents;
+        user.wagered = (user.wagered || 0) + Math.round(totalBet * 100);
         user.totalWon = (user.totalWon || 0) + totalPayoutCents;
         if (profit > 0) {
           user.totalWins = (user.totalWins || 0) + 1;
@@ -221,10 +473,10 @@ router.post('/game/save', authMiddleware, async (req, res) => {
         await user.save();
         updatedBalance = user.balance / 100; // Convert cents to dollars
 
-        console.log(`[BlackjackAPI] Balance updated: user=${userId}, bet=$${totalBet}, payout=$${totalPayout}, newBalance=$${updatedBalance.toFixed(2)}`);
+        console.log(`[BlackjackAPI] Payout credited: user=${userId}, payout=$${totalPayout}, newBalance=$${updatedBalance.toFixed(2)}`);
       }
     } catch (e) {
-      console.error('[BlackjackAPI] Failed to update user balance/statistics', e);
+      console.error('[BlackjackAPI] Failed to credit payout', e);
       // Don't fail the request if balance update fails - game is already saved
     }
 
