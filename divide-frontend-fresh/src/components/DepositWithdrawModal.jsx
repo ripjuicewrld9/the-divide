@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 
 export default function DepositWithdrawModal({ isOpen, onClose }) {
-    const { addFunds, user } = useAuth();
+    const { addFunds, withdrawFunds, user } = useAuth();
     const [activeTab, setActiveTab] = useState('deposit');
     const [selectedMethod, setSelectedMethod] = useState(null);
     const [selectedPackage, setSelectedPackage] = useState(null);
@@ -160,14 +160,19 @@ export default function DepositWithdrawModal({ isOpen, onClose }) {
         processRedeem();
     };
 
-    const processRedeem = () => {
+    const processRedeem = async () => {
         const amt = pendingAction?.amount || Number(amount);
 
-        // Simulate withdrawal by deducting from balance
-        if (addFunds) {
-            addFunds(-amt);
+        // Call proper withdraw endpoint (checks wager requirement, updates totalWithdrawn)
+        const result = await withdrawFunds(amt);
+        
+        if (result.success) {
             setAmount('');
+            setShow2FAPrompt(false);
+            setPendingAction(null);
             onClose();
+        } else {
+            setError(result.error || 'Withdrawal failed');
         }
     };
 

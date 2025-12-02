@@ -126,6 +126,7 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
   const [winBreakdown, setWinBreakdown] = useState<any>(null);
   const balanceInitializedRef = useRef(false);
   const gameSavedRef = useRef(false);
+  const lastSyncedBalanceRef = useRef<number | null>(null);
 
   // Handler to show fairness modal
   const handleShowFairness = () => {
@@ -307,13 +308,19 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
 
   // Whenever local gameState.balance changes (bet deduction or win), sync to global AuthContext
   useEffect(() => {
-    if (updateUser && typeof gameState.balance === 'number') {
-      updateUser({ balance: gameState.balance });
-    }
-    // Also update balance immediately for instant UI feedback in header
-    if (setBalance && typeof gameState.balance === 'number') {
-      console.log('[Blackjack] Updating balance instantly:', gameState.balance);
-      setBalance(gameState.balance);
+    // Only update if balance actually changed to prevent infinite loop
+    if (typeof gameState.balance === 'number' && gameState.balance !== lastSyncedBalanceRef.current) {
+      console.log('[Blackjack] Balance changed from', lastSyncedBalanceRef.current, 'to', gameState.balance);
+      lastSyncedBalanceRef.current = gameState.balance;
+      
+      if (updateUser) {
+        updateUser({ balance: gameState.balance });
+      }
+      // Also update balance immediately for instant UI feedback in header
+      if (setBalance) {
+        console.log('[Blackjack] Updating balance instantly:', gameState.balance);
+        setBalance(gameState.balance);
+      }
     }
   }, [gameState.balance, updateUser, setBalance]);
 

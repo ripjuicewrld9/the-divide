@@ -173,6 +173,29 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    // WITHDRAW FUNDS
+    const withdrawFunds = async (amount) => {
+        try {
+            const res = await fetch(`${API_BASE}/api/withdraw`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ amount }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Failed to withdraw");
+
+            // server returns { balance, withdrawn }
+            setUser((u) => ({ ...u, balance: data.balance }));
+            return { success: true };
+        } catch (err) {
+            console.error("Withdraw error:", err);
+            return { success: false, error: err.message };
+        }
+    };
+
     // LOGOUT
     const logout = () => {
         setToken(null);
@@ -251,7 +274,7 @@ export const AuthProvider = ({ children }) => {
 
     return (
         <AuthContext.Provider
-            value={{ user, balance: user?.balance ?? 0, token, setToken, login, register, logout, addFunds, deductForVote, refreshUser, updateUser, setBalance }}
+            value={{ user, balance: user?.balance ?? 0, token, setToken, login, register, logout, addFunds, withdrawFunds, deductForVote, refreshUser, updateUser, setBalance }}
         >
             {children}
         </AuthContext.Provider>
