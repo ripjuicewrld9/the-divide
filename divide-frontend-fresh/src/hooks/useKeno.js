@@ -24,8 +24,15 @@ export default function useKeno() {
   const [drawnNumbers, setDrawnNumbers] = useState([]);
   const [matches, setMatches] = useState([]);
   const [isDrawing, setIsDrawing] = useState(false);
-  const { user, refreshUser } = useAuth();
-  const [balance, setBalance] = useState(() => (user ? Number(user.balance || 0) : 0));
+  const { user, refreshUser, setBalance: setAuthBalance } = useAuth();
+  // Use local balance state that syncs with auth, but also update auth for header display
+  const [balance, setLocalBalance] = useState(() => (user ? Number(user.balance || 0) : 0));
+  // Wrapper to update both local and auth balance
+  const setBalance = useCallback((newBalance) => {
+    const val = typeof newBalance === 'function' ? newBalance(balance) : newBalance;
+    setLocalBalance(val);
+    setAuthBalance(val); // Update header balance immediately
+  }, [balance, setAuthBalance]);
   const [message, setMessage] = useState('Select numbers and bet');
   const [pendingResult, setPendingResult] = useState(null); // server result held until animations finish
   const [popupData, setPopupData] = useState(null); // { multiplier, win }
@@ -55,9 +62,9 @@ export default function useKeno() {
   const bellAudioRef = useRef(null);
   const guncockAudioRef = useRef(null);
   const isMountedRef = useRef(true);
-  // ensure local balance follows global auth user when it changes
+  // ensure local balance follows global auth user when it changes (one-way sync)
   useEffect(() => {
-    if (user && typeof user.balance === 'number') setBalance(Number(user.balance));
+    if (user && typeof user.balance === 'number') setLocalBalance(Number(user.balance));
   }, [user]);
 
   // initialize nonce from localStorage if present

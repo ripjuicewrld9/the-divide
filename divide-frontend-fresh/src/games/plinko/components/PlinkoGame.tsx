@@ -52,7 +52,7 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({ onOpenChat }) => {
     loadBalanceFromBackend,
     addWinRecord,
   } = usePlinkoStore();
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, setBalance: setAuthBalance } = useAuth();
 
   const [betMode, setBetMode] = useState<'manual' | 'auto'>('manual');
   const [autoBetCount, setAutoBetCount] = useState(0);
@@ -275,8 +275,10 @@ export const PlinkoGame: React.FC<PlinkoGameProps> = ({ onOpenChat }) => {
       const result = await response.json();
 
       // Update balance from server response (bet already deducted)
+      // Update both local store AND AuthContext so header reflects change immediately
       if (typeof result.balanceAfter !== 'undefined') {
         setBalance(result.balanceAfter);
+        setAuthBalance(result.balanceAfter);
       }
 
       // Increment nonce in localStorage to match backend
