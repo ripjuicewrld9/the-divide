@@ -345,10 +345,10 @@ export default function Divides({ onOpenChat }) {
               endTime={d.endTime}
               status={d.status}
               winner={d.winnerSide}
-              likesA={d.likesA}
-              likesB={d.likesB}
-              dislikesA={d.dislikesA}
-              dislikesB={d.dislikesB}
+              likes={d.likes}
+              dislikes={d.dislikes}
+              likedBy={d.likedBy}
+              dislikedBy={d.dislikedBy}
               isUserCreated={d.isUserCreated}
               onVote={(side, boostAmount) => handleVote(d.id || d._id, side, boostAmount)}
               allExpanded={allExpanded}
@@ -379,10 +379,10 @@ export default function Divides({ onOpenChat }) {
                   endTime={d.endTime}
                   status={d.status}
                   winner={d.winnerSide}
-                  likesA={d.likesA}
-                  likesB={d.likesB}
-                  dislikesA={d.dislikesA}
-                  dislikesB={d.dislikesB}
+                  likes={d.likes}
+                  dislikes={d.dislikes}
+                  likedBy={d.likedBy}
+                  dislikedBy={d.dislikedBy}
                   onVote={() => { }}
                   imageA={d.imageA}
                   imageB={d.imageB}
@@ -475,10 +475,10 @@ export default function Divides({ onOpenChat }) {
               endTime={d.endTime}
               status={d.status}
               winner={d.winnerSide}
-              likesA={d.likesA}
-              likesB={d.likesB}
-              dislikesA={d.dislikesA}
-              dislikesB={d.dislikesB}
+              likes={d.likes}
+              dislikes={d.dislikes}
+              likedBy={d.likedBy}
+              dislikedBy={d.dislikedBy}
               isUserCreated={d.isUserCreated}
               onVote={(side, boostAmount) => handleVote(d.id || d._id, side, boostAmount)}
               allExpanded={allExpanded}
@@ -509,10 +509,10 @@ export default function Divides({ onOpenChat }) {
                   endTime={d.endTime}
                   status={d.status}
                   winner={d.winnerSide}
-                  likesA={d.likesA}
-                  likesB={d.likesB}
-                  dislikesA={d.dislikesA}
-                  dislikesB={d.dislikesB}
+                  likes={d.likes}
+                  dislikes={d.dislikes}
+                  likedBy={d.likedBy}
+                  dislikedBy={d.dislikedBy}
                   onVote={() => { }}
                   imageA={d.imageA}
                   imageB={d.imageB}

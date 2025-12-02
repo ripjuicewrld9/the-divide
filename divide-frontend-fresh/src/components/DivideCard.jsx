@@ -16,10 +16,10 @@ export default function DivideCard({
   endTime = null,
   status = 'active',
   winner = null,
-  likesA = 0,
-  likesB = 0,
-  dislikesA = 0,
-  dislikesB = 0,
+  likes = 0,
+  dislikes = 0,
+  likedBy = [],
+  dislikedBy = [],
   onVote,
   onRequestExpand,
   colorA = "#ff0044",
@@ -30,10 +30,10 @@ export default function DivideCard({
   const [r, setR] = useState(Number(rightVotes) || 0);
   const [editingSide, setEditingSide] = useState(null);
   const [betAmount, setBetAmount] = useState('');
-  const [localLikesA, setLocalLikesA] = useState(Number(likesA) || 0);
-  const [localLikesB, setLocalLikesB] = useState(Number(likesB) || 0);
-  const [localDislikesA, setLocalDislikesA] = useState(Number(dislikesA) || 0);
-  const [localDislikesB, setLocalDislikesB] = useState(Number(dislikesB) || 0);
+  const [localLikes, setLocalLikes] = useState(Number(likes) || 0);
+  const [localDislikes, setLocalDislikes] = useState(Number(dislikes) || 0);
+  const [userLiked, setUserLiked] = useState(false);
+  const [userDisliked, setUserDisliked] = useState(false);
   const [seconds, setSeconds] = useState(() => {
     if (!endTime) return 0;
     const delta = Math.floor((new Date(endTime) - Date.now()) / 1000);
@@ -45,10 +45,16 @@ export default function DivideCard({
 
   useEffect(() => { setL(Number(leftVotes) || 0); }, [leftVotes]);
   useEffect(() => { setR(Number(rightVotes) || 0); }, [rightVotes]);
-  useEffect(() => { setLocalLikesA(Number(likesA) || 0); }, [likesA]);
-  useEffect(() => { setLocalLikesB(Number(likesB) || 0); }, [likesB]);
-  useEffect(() => { setLocalDislikesA(Number(dislikesA) || 0); }, [dislikesA]);
-  useEffect(() => { setLocalDislikesB(Number(dislikesB) || 0); }, [dislikesB]);
+  useEffect(() => { setLocalLikes(Number(likes) || 0); }, [likes]);
+  useEffect(() => { setLocalDislikes(Number(dislikes) || 0); }, [dislikes]);
+  
+  // Check if current user has already liked/disliked
+  useEffect(() => {
+    if (user && user.id) {
+      setUserLiked((likedBy || []).includes(user.id));
+      setUserDisliked((dislikedBy || []).includes(user.id));
+    }
+  }, [user, likedBy, dislikedBy]);
 
   useEffect(() => {
     if (!endTime) return;
@@ -94,27 +100,35 @@ export default function DivideCard({
     setBetAmount('');
   };
 
-  const handleLike = async (side, e) => {
+  const handleLike = async (e) => {
     e.stopPropagation();
     if (!user) return alert('Please log in to react');
+    if (userLiked) return; // Already liked
     try {
-      const res = await api.post(`/api/divides/${divideId}/like/${side}`);
-      if (side === 'A') setLocalLikesA(res.likesA || localLikesA + 1);
-      else setLocalLikesB(res.likesB || localLikesB + 1);
+      const res = await api.post(`/api/divides/${divideId}/like`);
+      setLocalLikes(res.likes || localLikes + 1);
+      if (userDisliked) setLocalDislikes(prev => Math.max(0, prev - 1));
+      setUserLiked(true);
+      setUserDisliked(false);
     } catch (err) {
       console.error('Like failed:', err);
+      // Don't show alert for common cases like "already liked"
     }
   };
 
-  const handleDislike = async (side, e) => {
+  const handleDislike = async (e) => {
     e.stopPropagation();
     if (!user) return alert('Please log in to react');
+    if (userDisliked) return; // Already disliked
     try {
-      const res = await api.post(`/api/divides/${divideId}/dislike/${side}`);
-      if (side === 'A') setLocalDislikesA(res.dislikesA || localDislikesA + 1);
-      else setLocalDislikesB(res.dislikesB || localDislikesB + 1);
+      const res = await api.post(`/api/divides/${divideId}/dislike`);
+      setLocalDislikes(res.dislikes || localDislikes + 1);
+      if (userLiked) setLocalLikes(prev => Math.max(0, prev - 1));
+      setUserDisliked(true);
+      setUserLiked(false);
     } catch (err) {
       console.error('Dislike failed:', err);
+      // Don't show alert for common cases like "already disliked"
     }
   };
 
@@ -452,98 +466,56 @@ export default function DivideCard({
       {/* Social Engagement Row */}
       <div style={{
         display: 'flex',
-        justifyContent: 'space-between',
+        justifyContent: 'center',
         alignItems: 'center',
+        gap: '16px',
         marginBottom: '12px',
         padding: '8px 0',
       }}>
-        {/* Left side reactions */}
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <button
-            onClick={(e) => handleLike('A', e)}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '4px 8px',
-              borderRadius: '6px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              color: '#888',
-              fontSize: '12px',
-              transition: 'all 0.2s ease',
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(0,255,136,0.1)'; e.currentTarget.style.color = '#00ff88'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#888'; }}
-          >
-            👍 <span>{localLikesA}</span>
-          </button>
-          <button
-            onClick={(e) => handleDislike('A', e)}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '4px 8px',
-              borderRadius: '6px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              color: '#888',
-              fontSize: '12px',
-              transition: 'all 0.2s ease',
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,68,68,0.1)'; e.currentTarget.style.color = '#ff6b6b'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#888'; }}
-          >
-            👎 <span>{localDislikesA}</span>
-          </button>
-        </div>
-
-        {/* Right side reactions */}
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <button
-            onClick={(e) => handleLike('B', e)}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '4px 8px',
-              borderRadius: '6px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              color: '#888',
-              fontSize: '12px',
-              transition: 'all 0.2s ease',
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(0,255,136,0.1)'; e.currentTarget.style.color = '#00ff88'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#888'; }}
-          >
-            👍 <span>{localLikesB}</span>
-          </button>
-          <button
-            onClick={(e) => handleDislike('B', e)}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '4px 8px',
-              borderRadius: '6px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              color: '#888',
-              fontSize: '12px',
-              transition: 'all 0.2s ease',
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,68,68,0.1)'; e.currentTarget.style.color = '#ff6b6b'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#888'; }}
-          >
-            👎 <span>{localDislikesB}</span>
-          </button>
-        </div>
+        <button
+          onClick={handleLike}
+          disabled={userLiked}
+          style={{
+            background: userLiked ? 'rgba(0,255,136,0.15)' : 'none',
+            border: userLiked ? '1px solid rgba(0,255,136,0.3)' : 'none',
+            cursor: userLiked ? 'default' : 'pointer',
+            padding: '6px 12px',
+            borderRadius: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            color: userLiked ? '#00ff88' : '#888',
+            fontSize: '13px',
+            transition: 'all 0.2s ease',
+            opacity: userLiked ? 0.8 : 1,
+          }}
+          onMouseEnter={(e) => { if (!userLiked) { e.currentTarget.style.background = 'rgba(0,255,136,0.1)'; e.currentTarget.style.color = '#00ff88'; }}}
+          onMouseLeave={(e) => { if (!userLiked) { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#888'; }}}
+        >
+          👍 <span>{localLikes}</span>
+        </button>
+        <button
+          onClick={handleDislike}
+          disabled={userDisliked}
+          style={{
+            background: userDisliked ? 'rgba(255,68,68,0.15)' : 'none',
+            border: userDisliked ? '1px solid rgba(255,68,68,0.3)' : 'none',
+            cursor: userDisliked ? 'default' : 'pointer',
+            padding: '6px 12px',
+            borderRadius: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            color: userDisliked ? '#ff6b6b' : '#888',
+            fontSize: '13px',
+            transition: 'all 0.2s ease',
+            opacity: userDisliked ? 0.8 : 1,
+          }}
+          onMouseEnter={(e) => { if (!userDisliked) { e.currentTarget.style.background = 'rgba(255,68,68,0.1)'; e.currentTarget.style.color = '#ff6b6b'; }}}
+          onMouseLeave={(e) => { if (!userDisliked) { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#888'; }}}
+        >
+          👎 <span>{localDislikes}</span>
+        </button>
       </div>
 
       {/* Footer: Pot */}

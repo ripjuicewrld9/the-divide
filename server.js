@@ -599,14 +599,10 @@ app.get('/api/leaderboard', async (req, res) => {
   }
 });
 
-// Like a divide side (awards XP to creator)
-app.post('/api/divides/:id/like/:side', auth, async (req, res) => {
+// Like a divide (awards XP to reactor and creator)
+app.post('/api/divides/:id/like', auth, async (req, res) => {
   try {
-    const { id, side } = req.params;
-
-    if (!['A', 'B'].includes(side.toUpperCase())) {
-      return res.status(400).json({ error: 'Invalid side. Must be A or B' });
-    }
+    const { id } = req.params;
 
     const divide = await Divide.findOne({ $or: [{ id }, { _id: id }] });
     if (!divide) {
@@ -618,27 +614,44 @@ app.post('/api/divides/:id/like/:side', auth, async (req, res) => {
       return res.status(400).json({ error: 'You cannot react to your own divide' });
     }
 
-    // Increment like counter
-    const likesField = side.toUpperCase() === 'A' ? 'likesA' : 'likesB';
-    divide[likesField] = (divide[likesField] || 0) + 1;
+    // Initialize arrays if they don't exist
+    if (!divide.likedBy) divide.likedBy = [];
+    if (!divide.dislikedBy) divide.dislikedBy = [];
+
+    // Check if user already liked
+    if (divide.likedBy.includes(req.userId)) {
+      return res.status(400).json({ error: 'You already liked this divide' });
+    }
+
+    // Remove from dislikedBy if present (switching reaction)
+    const wasDisliked = divide.dislikedBy.includes(req.userId);
+    if (wasDisliked) {
+      divide.dislikedBy = divide.dislikedBy.filter(u => u !== req.userId);
+      divide.dislikes = Math.max(0, (divide.dislikes || 0) - 1);
+    }
+
+    // Add like
+    divide.likedBy.push(req.userId);
+    divide.likes = (divide.likes || 0) + 1;
     await divide.save();
 
     // Award XP to liker (encourages engagement)
-    await awardXp(req.userId, 'likeGiven', 0, { divideId: divide._id, side });
+    await awardXp(req.userId, 'likeGiven', 0, { divideId: divide._id });
 
     // Award XP to divide creator (if user-created)
     if (divide.isUserCreated && divide.creatorId) {
       await awardXp(divide.creatorId, 'likeReceived', 0, { 
         divideId: divide._id, 
-        side,
         fromUser: req.userId 
       });
     }
 
     res.json({ 
       success: true,
-      likesA: divide.likesA,
-      likesB: divide.likesB
+      likes: divide.likes,
+      dislikes: divide.dislikes,
+      userLiked: true,
+      userDisliked: false
     });
   } catch (err) {
     console.error('Like error:', err);
@@ -646,14 +659,10 @@ app.post('/api/divides/:id/like/:side', auth, async (req, res) => {
   }
 });
 
-// Dislike a divide side (awards XP to creator, but less than like)
-app.post('/api/divides/:id/dislike/:side', auth, async (req, res) => {
+// Dislike a divide (awards XP to reactor and creator)
+app.post('/api/divides/:id/dislike', auth, async (req, res) => {
   try {
-    const { id, side } = req.params;
-
-    if (!['A', 'B'].includes(side.toUpperCase())) {
-      return res.status(400).json({ error: 'Invalid side. Must be A or B' });
-    }
+    const { id } = req.params;
 
     const divide = await Divide.findOne({ $or: [{ id }, { _id: id }] });
     if (!divide) {
@@ -665,27 +674,44 @@ app.post('/api/divides/:id/dislike/:side', auth, async (req, res) => {
       return res.status(400).json({ error: 'You cannot react to your own divide' });
     }
 
-    // Increment dislike counter
-    const dislikesField = side.toUpperCase() === 'A' ? 'dislikesA' : 'dislikesB';
-    divide[dislikesField] = (divide[dislikesField] || 0) + 1;
+    // Initialize arrays if they don't exist
+    if (!divide.likedBy) divide.likedBy = [];
+    if (!divide.dislikedBy) divide.dislikedBy = [];
+
+    // Check if user already disliked
+    if (divide.dislikedBy.includes(req.userId)) {
+      return res.status(400).json({ error: 'You already disliked this divide' });
+    }
+
+    // Remove from likedBy if present (switching reaction)
+    const wasLiked = divide.likedBy.includes(req.userId);
+    if (wasLiked) {
+      divide.likedBy = divide.likedBy.filter(u => u !== req.userId);
+      divide.likes = Math.max(0, (divide.likes || 0) - 1);
+    }
+
+    // Add dislike
+    divide.dislikedBy.push(req.userId);
+    divide.dislikes = (divide.dislikes || 0) + 1;
     await divide.save();
 
     // Award XP to disliker (encourages engagement)
-    await awardXp(req.userId, 'likeGiven', 0, { divideId: divide._id, side, type: 'dislike' });
+    await awardXp(req.userId, 'likeGiven', 0, { divideId: divide._id, type: 'dislike' });
 
     // Award XP to divide creator (engagement is engagement)
     if (divide.isUserCreated && divide.creatorId) {
       await awardXp(divide.creatorId, 'dislikeReceived', 0, { 
         divideId: divide._id, 
-        side,
         fromUser: req.userId 
       });
     }
 
     res.json({ 
       success: true,
-      dislikesA: divide.dislikesA,
-      dislikesB: divide.dislikesB
+      likes: divide.likes,
+      dislikes: divide.dislikes,
+      userLiked: false,
+      userDisliked: true
     });
   } catch (err) {
     console.error('Dislike error:', err);

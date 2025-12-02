@@ -52,11 +52,11 @@ const divideSchema = new mongoose.Schema({
   creatorSide: { type: String }, // 'A' or 'B' - which side creator is shorting
   isUserCreated: { type: Boolean, default: false }, // true if created by user, false if admin-created
   loserSide: { type: String }, // the side that got shorted and lost (renamed from winnerSide for clarity)
-  // Social engagement (free, awards XP to creator)
-  likesA: { type: Number, default: 0 }, // likes for side A
-  likesB: { type: Number, default: 0 }, // likes for side B
-  dislikesA: { type: Number, default: 0 }, // dislikes for side A
-  dislikesB: { type: Number, default: 0 }, // dislikes for side B
+  // Social engagement (free, awards XP to reactor and creator)
+  likes: { type: Number, default: 0 },
+  dislikes: { type: Number, default: 0 },
+  likedBy: [{ type: String }], // userIds who liked
+  dislikedBy: [{ type: String }], // userIds who disliked
   createdAt: { type: Date, default: Date.now },
 });
 
