@@ -214,6 +214,23 @@ export default function DivideCard({
       )}
       {/* removed blind voting label UI - buttons already hide content during active user-created divides */}
 
+      {/* Short betting explanation for active divides */}
+      {status === 'active' && (
+        <div style={{
+          background: 'rgba(255, 107, 107, 0.15)',
+          border: '1px solid rgba(255, 107, 107, 0.4)',
+          borderRadius: '6px',
+          padding: '8px 12px',
+          marginBottom: '12px',
+          fontSize: '12px',
+          color: '#ff9999',
+          fontWeight: '600',
+          textAlign: 'center'
+        }}>
+          📉 SHORT BET: Bet on the side you think will <strong>LOSE</strong>. Losing side wins the pot!
+        </div>
+      )}
+
       <div className="vote-section">
         <div
           role="button"
@@ -223,7 +240,7 @@ export default function DivideCard({
           onMouseEnter={() => setHoverSide("left")}
           onMouseLeave={() => setHoverSide(null)}
           className="vote-btn"
-          title={`Vote for ${left}`}
+          title={`SHORT ${left} - Bet this will LOSE`}
         >
           <div className="vote-colored-top vote-colored-top-left"></div>
           <div className="vote-box-front"></div>
@@ -254,7 +271,7 @@ export default function DivideCard({
           onMouseEnter={() => setHoverSide("right")}
           onMouseLeave={() => setHoverSide(null)}
           className="vote-btn"
-          title={`Vote for ${right}`}
+          title={`SHORT ${right} - Bet this will LOSE`}
         >
           <div className="vote-colored-top vote-colored-top-right"></div>
           <div className="vote-box-front"></div>

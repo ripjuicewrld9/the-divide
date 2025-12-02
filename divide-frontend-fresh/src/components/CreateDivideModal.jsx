@@ -98,6 +98,25 @@ export default function CreateDivideModal({ isOpen, onClose, onDivideCreated }) 
           <button className="close-btn" onClick={onClose}>✕</button>
         </div>
 
+        {/* Explanation Banner */}
+        <div style={{
+          background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)',
+          color: 'white',
+          padding: '12px 16px',
+          borderRadius: '8px',
+          marginBottom: '20px',
+          border: '2px solid rgba(255,255,255,0.3)',
+          fontWeight: '600',
+          fontSize: '14px',
+          lineHeight: '1.5'
+        }}>
+          ⚠️ <strong>IMPORTANT:</strong> Divides are SHORT BETS. You bet on the side you think will LOSE.
+          <br />
+          <span style={{ fontSize: '13px', opacity: 0.95 }}>
+            The losing side gets the pot. If you pick the winner, you lose your bet!
+          </span>
+        </div>
+
         <form onSubmit={handleSubmit} className="create-divide-form">
           {error && <div className="error-message">{error}</div>}
 
@@ -153,24 +172,36 @@ export default function CreateDivideModal({ isOpen, onClose, onDivideCreated }) 
           </div>
 
           <div className="form-group">
-            <label>Choose Your Side</label>
+            <label>
+              <strong>SHORT This Side</strong> (Bet this will LOSE)
+            </label>
             <div className="side-selector">
               <button
                 type="button"
                 className={`side-btn ${side === 'A' ? 'active' : ''}`}
                 onClick={() => setSide('A')}
+                style={{
+                  border: side === 'A' ? '3px solid #ff6b6b' : '2px solid #444',
+                  background: side === 'A' ? 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)' : '#2a2a2a'
+                }}
               >
-                {optionA || 'Option A'}
+                📉 SHORT {optionA || 'Option A'}
               </button>
               <button
                 type="button"
                 className={`side-btn ${side === 'B' ? 'active' : ''}`}
                 onClick={() => setSide('B')}
+                style={{
+                  border: side === 'B' ? '3px solid #ff6b6b' : '2px solid #444',
+                  background: side === 'B' ? 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)' : '#2a2a2a'
+                }}
               >
-                {optionB || 'Option B'}
+                📉 SHORT {optionB || 'Option B'}
               </button>
             </div>
-            <small>You will be locked to this side and cannot change your vote</small>
+            <small style={{ color: '#ff9999', fontWeight: '600' }}>
+              ⚠️ You are betting that this side will LOSE. If it wins, you lose your bet!
+            </small>
           </div>
 
           <div className="form-row">

@@ -145,7 +145,9 @@ export const BlackjackGame: React.FC<BlackjackGameProps> = ({ onOpenChat }) => {
         gameState.setInitialBalance(user.balance);
       }
     }
-  }, [user?.balance, gameState, gameState.gamePhase]);
+    // Only depend on user.balance and gamePhase - not the entire gameState object
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.balance, gameState.gamePhase]);
 
   // Save game when round ends and refresh user balance from server
   useEffect(() => {

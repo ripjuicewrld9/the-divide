@@ -24,12 +24,12 @@ export default function MobileMainLayout({ onOpenChat }) {
     {
       id: 'divides',
       title: 'Divides',
-      description: 'Community-driven voting games with real-time updates',
+      description: 'SHORT BETS: Bet on what will LOSE. Losing side wins!',
       icon: '/elections-poll-svgrepo-com.svg',
-      color: '#00ffff',
-      gradient: 'linear-gradient(135deg, #00ffff 0%, #0088ff 100%)',
+      color: '#ff6b6b',
+      gradient: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)',
       path: '/divides',
-      tagline: 'Vote & Win'
+      tagline: '📉 Short & Win'
     },
     {
       id: 'keno',

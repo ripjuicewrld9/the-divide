@@ -228,7 +228,9 @@ class WheelGameManager {
       }
 
       // Check if betting period is still open
-      if (game.bettingEndTime && new Date() > game.bettingEndTime) {
+      // Game is idle (waiting for players) if bettingEndTime is null or roundStartTime is null
+      const isIdle = !game.roundStartTime || !game.bettingEndTime;
+      if (!isIdle && game.bettingEndTime && new Date() > game.bettingEndTime) {
         throw new Error('Betting period has ended');
       }
 

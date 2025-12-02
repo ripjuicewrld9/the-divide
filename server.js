@@ -5310,7 +5310,7 @@ setInterval(async () => {
 // GET CURRENT USER (for frontend refresh)
 app.get("/api/me", auth, async (req, res) => {
   try {
-    const user = await User.findById(req.userId).select("_id username balance role holdingsDC holdingsInvested profileImage wagered totalWon totalDeposited totalWithdrawn totalRedemptions totalBets totalWins totalLosses createdAt discordId discordUsername");
+    const user = await User.findById(req.userId).select("_id username balance role holdingsDC holdingsInvested profileImage wagered totalWon totalDeposited totalWithdrawn totalRedemptions totalBets totalWins totalLosses createdAt discordId discordUsername xp level currentBadge xpThisWeek xpThisMonth");
     if (!user) return res.status(404).json({ error: "User not found" });
     res.json({
       id: user._id,
@@ -5330,7 +5330,12 @@ app.get("/api/me", auth, async (req, res) => {
       totalLosses: user.totalLosses || 0,
       createdAt: user.createdAt,
       discordId: user.discordId || null,
-      discordUsername: user.discordUsername || null
+      discordUsername: user.discordUsername || null,
+      xp: user.xp || 0,
+      level: user.level || 1,
+      currentBadge: user.currentBadge || 'newbie',
+      xpThisWeek: user.xpThisWeek || 0,
+      xpThisMonth: user.xpThisMonth || 0
     });
   } catch (err) {
     res.status(500).json({ error: "Server error" });
@@ -5582,14 +5587,17 @@ app.patch("/api/me", auth, async (req, res) => {
 
     if (Object.keys(safeFields).length === 0) {
       // No valid fields to update, but don't error - just return current user
-      const user = await User.findById(req.userId).select("_id username balance role profileImage");
+      const user = await User.findById(req.userId).select("_id username balance role profileImage xp level currentBadge");
       if (!user) return res.status(404).json({ error: "User not found" });
       return res.json({
         id: user._id,
         username: user.username,
         balance: toDollars(user.balance),
         role: user.role,
-        profileImage: user.profileImage
+        profileImage: user.profileImage,
+        xp: user.xp || 0,
+        level: user.level || 1,
+        currentBadge: user.currentBadge || 'newbie'
       });
     }
 
@@ -5597,7 +5605,7 @@ app.patch("/api/me", auth, async (req, res) => {
       req.userId,
       { $set: safeFields },
       { new: true }
-    ).select("_id username balance role profileImage");
+    ).select("_id username balance role profileImage xp level currentBadge");
 
     if (!user) return res.status(404).json({ error: "User not found" });
 
@@ -5606,7 +5614,10 @@ app.patch("/api/me", auth, async (req, res) => {
       username: user.username,
       balance: toDollars(user.balance),
       role: user.role,
-      profileImage: user.profileImage
+      profileImage: user.profileImage,
+      xp: user.xp || 0,
+      level: user.level || 1,
+      currentBadge: user.currentBadge || 'newbie'
     });
   } catch (err) {
     console.error('[PATCH /api/me] error:', err);
