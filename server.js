@@ -2566,15 +2566,16 @@ app.post('/divides/vote', auth, async (req, res) => {
     // divide.pot stored in dollars in DB (legacy); keep pot arithmetic in dollars
     divide.pot = Number((divide.pot + boostAmount).toFixed(2));
 
-    // Update user statistics for paid votes (track engagement)
-    if (!isFree && boostAmount > 0) {
+    // Update user statistics for ALL votes (including base $0.50 minimum)
+    const totalWageredCents = isFree ? 0 : (50 * voteCount + boostCents); // $0.50 base + boost
+    if (!isFree && totalWageredCents > 0) {
       user.totalBets = (user.totalBets || 0) + 1;
-      user.wagered = (user.wagered || 0) + boostCents;
+      user.wagered = (user.wagered || 0) + totalWageredCents;
       // Divides voting is a bet - outcome (win/loss) determined when divide ends
       // For now, count all paid votes as "bets" without immediate win/loss classification
       
       // Award XP for wagering (2 XP per $1)
-      await awardXp(req.userId, 'usdWager', boostCents, { 
+      await awardXp(req.userId, 'usdWager', totalWageredCents, { 
         divideId: divide.id || divide._id, 
         side,
         amount: boostAmount 
