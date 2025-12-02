@@ -24,8 +24,8 @@ export default function MobileMainLayout({ onOpenChat }) {
     {
       id: 'divides',
       title: 'Divides',
-      description: 'OPINION MARKETS: Players decide with blind shorts!',
-      icon: '/blind-short-divide.svg',
+      description: 'OPINION MARKETS: Players decide with blind fades!',
+      icon: '/elections-poll-svgrepo-com.svg',
       color: '#ff6b6b',
       gradient: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)',
       path: '/divides',
@@ -60,16 +60,6 @@ export default function MobileMainLayout({ onOpenChat }) {
       gradient: 'linear-gradient(135deg, #a78bfa 0%, #ec4899 100%)',
       path: '/plinko',
       tagline: 'Drop & Win'
-    },
-    {
-      id: 'battles',
-      title: 'Case Battles',
-      description: 'Create custom cases and battle players',
-      icon: '/swords-power-svgrepo-com.svg',
-      color: '#f59e0b',
-      gradient: 'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)',
-      path: '/case-battles',
-      tagline: 'Compete & Conquer'
     },
     {
       id: 'pump',

@@ -6,8 +6,6 @@ import Home from "./pages/Home.jsx";
 import AuthModal from "./components/AuthModal.jsx";
 import KenoPage from "./pages/Keno.jsx";
 import RuggedPage from "./pages/Rugged.jsx";
-import ActiveBattlesPage from "./components/ActiveBattlesPage.jsx";
-import CreateBattlePage from "./components/CreateBattlePage.jsx";
 import BlackjackPage from "./games/blackjack/index.tsx";
 import PlinkoPage from "./games/plinko/index.tsx";
 import WheelPage from "./games/wheel/index.tsx";

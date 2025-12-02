@@ -21,15 +21,11 @@ export default function DivideCard({
   colorA = "#ff0044",
   colorB = "#0ff",
   active = true,
-  // imageA, imageB, soundA, soundB removed (no charts / labels)
 }) {
-  // images removed for simplified cards
-  // always reflect server values passed as props
   const [l, setL] = useState(Number(leftVotes) || 0);
   const [r, setR] = useState(Number(rightVotes) || 0);
-  const [hoverSide, setHoverSide] = useState(null);
-  const [editingSide, setEditingSide] = useState(null); // 'left' | 'right' | null
-  const [betAmount, setBetAmount] = useState('1');
+  const [editingSide, setEditingSide] = useState(null);
+  const [betAmount, setBetAmount] = useState('');
   const [userVotedSide, setUserVotedSide] = useState(() => {
     try { return localStorage.getItem(`divideVote:${divideId}`); } catch { return null; }
   });
@@ -40,44 +36,11 @@ export default function DivideCard({
   });
 
   const { user } = useAuth();
-
   const isAdmin = user && user.role === 'admin';
 
-  // Update local vote counts when server props change
-  useEffect(() => {
-    console.debug('[DivideCard] leftVotes changed', {
-      title,
-      old: l,
-      new: Number(leftVotes) || 0,
-      delta: (Number(leftVotes) || 0) - l,
-      time: new Date().toISOString()
-    });
-    setL(Number(leftVotes) || 0);
-  }, [leftVotes, title, l]);
+  useEffect(() => { setL(Number(leftVotes) || 0); }, [leftVotes]);
+  useEffect(() => { setR(Number(rightVotes) || 0); }, [rightVotes]);
 
-  useEffect(() => {
-    console.debug('[DivideCard] rightVotes changed', {
-      title,
-      old: r,
-      new: Number(rightVotes) || 0,
-      delta: (Number(rightVotes) || 0) - r,
-      time: new Date().toISOString()
-    });
-    setR(Number(rightVotes) || 0);
-  }, [rightVotes, title, r]);
-  
-  useEffect(() => {
-    console.debug('[DivideCard] state update', {
-      title,
-      leftVotes,
-      rightVotes,
-      l,
-      r,
-      time: new Date().toISOString()
-    });
-  }, [leftVotes, rightVotes, l, r, title]);
-
-  // Timer: compute from server `endTime`
   useEffect(() => {
     if (!endTime) return;
     const update = () => {
@@ -93,7 +56,6 @@ export default function DivideCard({
   const leftPct = Math.round((l / total) * 100);
   const rightPct = Math.round((r / total) * 100);
 
-  // derive a human-friendly winner label when the divide ends
   const winnerLabel = (() => {
     if (!winner) return null;
     const w = String(winner).toUpperCase();
@@ -103,48 +65,40 @@ export default function DivideCard({
   })();
 
   const handleVote = async (side, boostAmount) => {
-    if (!active) return alert('This divide is no longer active');
-    if (!user) return alert("Please log in to vote");
+    if (!active) return alert('This market is no longer active');
+    if (!user) return alert("Please log in to place a position");
     try {
-      // prefer parent handler (calls backend). If none, update locally.
       if (onVote) {
-        // allow parent handler to accept an optional boostAmount param
         await onVote(side === "left" ? "A" : "B", boostAmount);
-        // persist choice so user cannot vote opposite side in this session
-        try { localStorage.setItem(`divideVote:${divideId}`, side === 'left' ? 'A' : 'B'); } catch (e) { console.debug('localStorage set item failed', e); }
+        try { localStorage.setItem(`divideVote:${divideId}`, side === 'left' ? 'A' : 'B'); } catch (e) {}
         setUserVotedSide(side === 'left' ? 'A' : 'B');
         return;
       }
-
-      // local fallback: increment counts
       if (side === "left") setL((p) => p + 1);
       else setR((p) => p + 1);
     } catch (err) {
-      console.error("Vote error:", err);
-      alert(err.message || "Vote failed");
+      console.error("Position error:", err);
+      alert(err.message || "Failed to place position");
     }
   };
 
   const handleStartEdit = (side) => {
-    // Prevent selecting opposite side if already voted for one side
     if (userVotedSide && ((userVotedSide === 'A' && side === 'right') || (userVotedSide === 'B' && side === 'left'))) {
-      alert('You have already placed a bet on the other side and cannot bet the opposite side.');
+      alert('You already have a position on the other side.');
       return;
     }
     setEditingSide(side);
-    setBetAmount(''); // Start with empty input for custom amount
+    setBetAmount('');
   };
 
   const handleSubmitBet = async (side) => {
     const amount = Number(betAmount) || 0;
-    if (amount <= 0) return alert('Enter a positive bet amount');
+    if (amount <= 0) return alert('Enter a valid amount');
     try {
       await handleVote(side, amount);
-      // optimistic local counts (server will emit update)
       if (side === 'left') setL((p) => p + amount);
       else setR((p) => p + amount);
     } catch (err) {
-      // errors are handled/propagated in handleVote; log for debugging
       console.debug('handleSubmitBet error', err);
     } finally {
       setEditingSide(null);
@@ -152,12 +106,11 @@ export default function DivideCard({
   };
 
   const formatTime = (s) => {
-    // Show human-friendly Dd Hh Mm when large
-    if (s <= 0) return "00:00";
+    if (s <= 0) return "0:00";
     const days = Math.floor(s / 86400);
     const hours = Math.floor((s % 86400) / 3600);
     const minutes = Math.floor((s % 3600) / 60);
-    if (days > 0) return `${days}d ${hours}h ${minutes}m`;
+    if (days > 0) return `${days}d ${hours}h`;
     if (hours > 0) return `${hours}h ${minutes}m`;
     const sec = (s % 60).toString().padStart(2, "0");
     const min = minutes.toString().padStart(2, "0");
@@ -165,150 +118,340 @@ export default function DivideCard({
   };
 
   const toggleExpand = () => {
-    // delegate expansion handling to parent
     if (typeof onRequestExpand === 'function') onRequestExpand();
   };
+
+  // Determine urgency based on time
+  const isUrgent = seconds > 0 && seconds <= 60;
+  const isEnding = seconds > 0 && seconds <= 300;
       
   return (
     <div
-      className="divide-card"
+      className="fade-card"
       style={{
+        background: 'linear-gradient(180deg, #0d1117 0%, #161b22 100%)',
+        border: status === 'ended' && winner 
+          ? `2px solid ${String(winner).toUpperCase() === 'A' ? colorA : colorB}`
+          : '1px solid rgba(255,255,255,0.1)',
+        borderRadius: '16px',
+        padding: '20px',
+        color: '#fff',
         position: 'relative',
         cursor: 'pointer',
-        // show winner glow when divide has ended and a winner exists
-        border: `2px solid ${status === 'ended' && winner ? (String(winner).toUpperCase() === 'A' ? colorA : (String(winner).toUpperCase() === 'B' ? colorB : '#223')) : '#223'}`,
-        boxShadow: status === 'ended' && winner ? `0 0 18px ${String(winner).toUpperCase() === 'A' ? colorA : (String(winner).toUpperCase() === 'B' ? colorB : '#223')}, 0 0 36px ${String(winner).toUpperCase() === 'A' ? colorA : (String(winner).toUpperCase() === 'B' ? colorB : '#223')} inset` : 'none'
+        transition: 'all 0.3s ease',
+        boxShadow: status === 'ended' && winner 
+          ? `0 0 20px ${String(winner).toUpperCase() === 'A' ? colorA : colorB}40`
+          : '0 4px 20px rgba(0,0,0,0.3)',
       }}
       onClick={toggleExpand}
+      onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-4px)'}
+      onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
     >
-      {status !== 'active' && (
-        <div className="status-badge">{status === 'ended' ? `Ended${winnerLabel ? ` • Winner: ${winnerLabel}` : ''}` : status}</div>
-      )}
-  <h2 style={{ cursor: 'pointer' }}>{title}</h2>
+      {/* Header: Status + Timer */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {status === 'active' ? (
+            <>
+              <div style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                background: isUrgent ? '#ff4444' : '#00ff88',
+                boxShadow: `0 0 8px ${isUrgent ? '#ff4444' : '#00ff88'}`,
+                animation: 'pulse 2s infinite',
+              }} />
+              <span style={{ fontSize: '12px', fontWeight: '600', color: isUrgent ? '#ff6b6b' : '#00ff88', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                {isUrgent ? 'Ending Soon' : 'Live'}
+              </span>
+            </>
+          ) : (
+            <span style={{ fontSize: '12px', fontWeight: '600', color: '#888', textTransform: 'uppercase' }}>
+              {status === 'ended' ? `Settled${winnerLabel ? ` • ${winnerLabel} won` : ''}` : status}
+            </span>
+          )}
+        </div>
+        
+        {status === 'active' && (
+          <div style={{
+            background: isUrgent ? 'rgba(255,68,68,0.15)' : 'rgba(255,255,255,0.05)',
+            padding: '4px 12px',
+            borderRadius: '20px',
+            fontSize: '13px',
+            fontWeight: '600',
+            fontFamily: 'monospace',
+            color: isUrgent ? '#ff6b6b' : '#fff',
+          }}>
+            ⏱ {formatTime(seconds)}
+          </div>
+        )}
+      </div>
+
+      {/* Title */}
+      <h3 style={{
+        margin: '0 0 8px 0',
+        fontSize: '16px',
+        fontWeight: '600',
+        lineHeight: '1.4',
+        color: '#fff',
+      }}>
+        {title}
+      </h3>
 
       {creatorUsername && (
-        <div style={{ fontSize: 12, color: '#9fb', marginBottom: 8 }}>Created by: {creatorUsername}</div>
+        <div style={{ fontSize: '11px', color: '#666', marginBottom: '16px' }}>
+          by {creatorUsername}
+        </div>
       )}
 
       {/* Admin controls */}
       {isAdmin && status === 'active' && (
-        <div style={{ position: 'absolute', top: 8, right: 8 }}>
-          <button
-            className="btn-small"
-            onClick={async (e) => {
-              e.stopPropagation();
-              if (!confirm('Cancel this divide? This will end it immediately without payouts.')) return;
-              try {
-                // use frontend API helper so the request goes to the configured backend (VITE_API_URL or fallback)
-                await api.patch(`/divides/${encodeURIComponent(divideId)}`, { status: 'ended' });
-                // rely on socket update to refresh UI
-                alert('Divide cancelled');
-              } catch (err) {
-                console.error('Cancel divide failed', err);
-                alert(err.message || 'Failed to cancel divide');
-              }
-            }}
-            style={{ background: '#666', color: '#fff', padding: '6px 8px', borderRadius: 6 }}
-          >Cancel</button>
-        </div>
+        <button
+          onClick={async (e) => {
+            e.stopPropagation();
+            if (!confirm('Cancel this market?')) return;
+            try {
+              await api.patch(`/divides/${encodeURIComponent(divideId)}`, { status: 'ended' });
+              alert('Market cancelled');
+            } catch (err) {
+              alert(err.message || 'Failed to cancel');
+            }
+          }}
+          style={{
+            position: 'absolute',
+            top: '12px',
+            right: '12px',
+            background: 'rgba(255,255,255,0.1)',
+            border: 'none',
+            color: '#888',
+            padding: '4px 8px',
+            borderRadius: '4px',
+            fontSize: '11px',
+            cursor: 'pointer',
+          }}
+        >
+          Cancel
+        </button>
       )}
-      {/* removed blind voting label UI - buttons already hide content during active user-created divides */}
 
-      {/* Blind short betting explanation for active divides */}
+      {/* Position Buttons */}
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
+        {/* Left/A Position */}
+        <button
+          onClick={(e) => { e.stopPropagation(); if (editingSide !== 'left') handleStartEdit('left'); }}
+          disabled={status !== 'active'}
+          style={{
+            flex: 1,
+            background: editingSide === 'left' 
+              ? 'linear-gradient(135deg, #ff0044 0%, #cc0033 100%)'
+              : 'linear-gradient(135deg, rgba(255,0,68,0.15) 0%, rgba(255,0,68,0.05) 100%)',
+            border: `1px solid ${editingSide === 'left' ? '#ff0044' : 'rgba(255,0,68,0.3)'}`,
+            borderRadius: '12px',
+            padding: editingSide === 'left' ? '12px' : '16px',
+            cursor: status === 'active' ? 'pointer' : 'default',
+            opacity: status === 'active' ? 1 : 0.5,
+            transition: 'all 0.2s ease',
+          }}
+        >
+          {editingSide === 'left' ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }} onClick={(e) => e.stopPropagation()}>
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                placeholder="$ Amount"
+                value={betAmount}
+                onChange={(e) => setBetAmount(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                autoFocus
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  border: 'none',
+                  borderRadius: '8px',
+                  background: 'rgba(0,0,0,0.3)',
+                  color: '#fff',
+                  fontSize: '14px',
+                  textAlign: 'center',
+                  outline: 'none',
+                }}
+              />
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setEditingSide(null); }}
+                  style={{
+                    flex: 1,
+                    padding: '8px',
+                    background: 'rgba(255,255,255,0.1)',
+                    border: 'none',
+                    borderRadius: '6px',
+                    color: '#fff',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleSubmitBet('left'); }}
+                  style={{
+                    flex: 1,
+                    padding: '8px',
+                    background: '#ff0044',
+                    border: 'none',
+                    borderRadius: '6px',
+                    color: '#fff',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Confirm
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div style={{ fontSize: '10px', fontWeight: '700', color: '#ff6b6b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>
+                Fade
+              </div>
+              <div style={{ fontSize: '14px', fontWeight: '600', color: '#fff', lineHeight: '1.3' }}>
+                {left}
+              </div>
+              {status !== 'active' && (
+                <div style={{ fontSize: '11px', color: '#888', marginTop: '4px' }}>{leftPct}%</div>
+              )}
+            </>
+          )}
+        </button>
+
+        {/* Right/B Position */}
+        <button
+          onClick={(e) => { e.stopPropagation(); if (editingSide !== 'right') handleStartEdit('right'); }}
+          disabled={status !== 'active'}
+          style={{
+            flex: 1,
+            background: editingSide === 'right'
+              ? 'linear-gradient(135deg, #0088ff 0%, #0066cc 100%)'
+              : 'linear-gradient(135deg, rgba(0,136,255,0.15) 0%, rgba(0,136,255,0.05) 100%)',
+            border: `1px solid ${editingSide === 'right' ? '#0088ff' : 'rgba(0,136,255,0.3)'}`,
+            borderRadius: '12px',
+            padding: editingSide === 'right' ? '12px' : '16px',
+            cursor: status === 'active' ? 'pointer' : 'default',
+            opacity: status === 'active' ? 1 : 0.5,
+            transition: 'all 0.2s ease',
+          }}
+        >
+          {editingSide === 'right' ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }} onClick={(e) => e.stopPropagation()}>
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                placeholder="$ Amount"
+                value={betAmount}
+                onChange={(e) => setBetAmount(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                autoFocus
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  border: 'none',
+                  borderRadius: '8px',
+                  background: 'rgba(0,0,0,0.3)',
+                  color: '#fff',
+                  fontSize: '14px',
+                  textAlign: 'center',
+                  outline: 'none',
+                }}
+              />
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setEditingSide(null); }}
+                  style={{
+                    flex: 1,
+                    padding: '8px',
+                    background: 'rgba(255,255,255,0.1)',
+                    border: 'none',
+                    borderRadius: '6px',
+                    color: '#fff',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleSubmitBet('right'); }}
+                  style={{
+                    flex: 1,
+                    padding: '8px',
+                    background: '#0088ff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    color: '#fff',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Confirm
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div style={{ fontSize: '10px', fontWeight: '700', color: '#66b3ff', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>
+                Fade
+              </div>
+              <div style={{ fontSize: '14px', fontWeight: '600', color: '#fff', lineHeight: '1.3' }}>
+                {right}
+              </div>
+              {status !== 'active' && (
+                <div style={{ fontSize: '11px', color: '#888', marginTop: '4px' }}>{rightPct}%</div>
+              )}
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Footer: Pot */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: '12px',
+        background: 'rgba(255,255,255,0.03)',
+        borderRadius: '8px',
+        border: '1px solid rgba(255,255,255,0.05)',
+      }}>
+        <span style={{ fontSize: '12px', color: '#888', marginRight: '6px' }}>Pool</span>
+        <span style={{ fontSize: '16px', fontWeight: '700', color: '#00ff88' }}>
+          ${formatCurrency(pot, 2)}
+        </span>
+      </div>
+
+      {/* Explanation for active markets */}
       {status === 'active' && (
         <div style={{
-          background: 'linear-gradient(135deg, rgba(255, 107, 107, 0.2) 0%, rgba(238, 90, 111, 0.2) 100%)',
-          border: '2px solid rgba(255, 107, 107, 0.5)',
-          borderRadius: '8px',
-          padding: '10px 14px',
-          marginBottom: '14px',
-          fontSize: '13px',
-          color: '#ffb3b3',
-          fontWeight: '700',
+          marginTop: '12px',
+          padding: '8px 12px',
+          background: 'rgba(255,255,255,0.02)',
+          borderRadius: '6px',
+          fontSize: '11px',
+          color: '#666',
           textAlign: 'center',
-          boxShadow: '0 2px 8px rgba(255, 107, 107, 0.2)'
+          lineHeight: '1.4',
         }}>
-          🎭 <strong>OPINION MARKET</strong>: Players decide outcome • Blind shorts • Losing side wins!
+          💡 Fade the option you think will be <strong style={{ color: '#888' }}>more popular</strong>. Minority wins the pot.
         </div>
       )}
 
-      <div className="vote-section">
-        <div
-          role="button"
-          tabIndex={0}
-          onClick={(e) => { e.stopPropagation(); if (editingSide === 'left') return; handleStartEdit('left'); }}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (editingSide !== 'left') handleStartEdit('left'); } }}
-          onMouseEnter={() => setHoverSide("left")}
-          onMouseLeave={() => setHoverSide(null)}
-          className="vote-btn"
-          title={`SHORT ${left} - Bet this will LOSE`}
-        >
-          <div className="vote-colored-top vote-colored-top-left"></div>
-          <div className="vote-box-front"></div>
-          {editingSide === 'left' ? (
-            <span className="vote-input-wrapper">
-              <input
-                className="clean-input vote-input"
-                type="number"
-                min="0.01"
-                step="0.01"
-                placeholder="$ Amount"
-                value={betAmount}
-                onChange={(e) => setBetAmount(e.target.value)}
-                onClick={(e) => e.stopPropagation()}
-                aria-label={`Bet amount for ${left}`}
-                autoFocus
-              />
-              <button type="button" className="vote-submit" onClick={(e) => { e.stopPropagation(); handleSubmitBet('left'); }} aria-label="Submit bet">✔</button>
-            </span>
-          ) : (
-            <span>
-              {(hoverSide === "left" && status !== 'active') ? `${leftPct}%` : left}
-            </span>
-          )}
-        </div>
-        <div
-          role="button"
-          tabIndex={0}
-          onClick={(e) => { e.stopPropagation(); if (editingSide === 'right') return; handleStartEdit('right'); }}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (editingSide !== 'right') handleStartEdit('right'); } }}
-          onMouseEnter={() => setHoverSide("right")}
-          onMouseLeave={() => setHoverSide(null)}
-          className="vote-btn"
-          title={`SHORT ${right} - Bet this will LOSE`}
-        >
-          <div className="vote-colored-top vote-colored-top-right"></div>
-          <div className="vote-box-front"></div>
-          {editingSide === 'right' ? (
-            <span className="vote-input-wrapper">
-              <input
-                className="clean-input vote-input"
-                type="number"
-                min="0.01"
-                step="0.01"
-                placeholder="$ Amount"
-                value={betAmount}
-                onChange={(e) => setBetAmount(e.target.value)}
-                onClick={(e) => e.stopPropagation()}
-                aria-label={`Bet amount for ${right}`}
-                autoFocus
-              />
-              <button type="button" className="vote-submit" onClick={(e) => { e.stopPropagation(); handleSubmitBet('right'); }} aria-label="Submit bet">✔</button>
-            </span>
-          ) : (
-            <span>
-              {(hoverSide === "right" && status !== 'active') ? `${rightPct}%` : right}
-            </span>
-          )}
-        </div>
-      </div>
-
-      <div className="timer-wrapper">
-        <div className={`timer ${seconds <= 30 ? "timer-red" : ""}`}>
-          {formatTime(seconds)}
-        </div>
-  <div className="pot">Pot: ${formatCurrency(pot, 2)}</div>
-      </div>
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+      `}</style>
     </div>
   );
 }

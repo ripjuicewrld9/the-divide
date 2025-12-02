@@ -11,8 +11,6 @@ import AdminCases from "./components/AdminCases.jsx";
 import AuthModal from "./components/AuthModal.jsx";
 import KenoPage from "./pages/Keno.jsx";
 import RuggedPage from "./pages/Rugged.jsx";
-import ActiveBattlesPage from "./components/ActiveBattlesPage.jsx";
-import CreateBattlePage from "./components/CreateBattlePage.jsx";
 import Header from "./components/Header.jsx";
 import Sidebar from "./components/Sidebar.jsx";
 import ChatSidebar from "./components/ChatSidebar.jsx";
