@@ -345,6 +345,10 @@ export default function Divides({ onOpenChat }) {
               endTime={d.endTime}
               status={d.status}
               winner={d.winnerSide}
+              likesA={d.likesA}
+              likesB={d.likesB}
+              dislikesA={d.dislikesA}
+              dislikesB={d.dislikesB}
               isUserCreated={d.isUserCreated}
               onVote={(side, boostAmount) => handleVote(d.id || d._id, side, boostAmount)}
               allExpanded={allExpanded}
@@ -364,6 +368,7 @@ export default function Divides({ onOpenChat }) {
               {previousDivides.map((d) => (
                 <DivideCard
                   key={`prev-${d._id || d.id}`}
+                  divideId={d._id || d.id}
                   title={d.title}
                   creatorUsername={d.creatorUsername}
                   left={d.optionA}
@@ -374,6 +379,10 @@ export default function Divides({ onOpenChat }) {
                   endTime={d.endTime}
                   status={d.status}
                   winner={d.winnerSide}
+                  likesA={d.likesA}
+                  likesB={d.likesB}
+                  dislikesA={d.dislikesA}
+                  dislikesB={d.dislikesB}
                   onVote={() => { }}
                   imageA={d.imageA}
                   imageB={d.imageB}
@@ -466,6 +475,10 @@ export default function Divides({ onOpenChat }) {
               endTime={d.endTime}
               status={d.status}
               winner={d.winnerSide}
+              likesA={d.likesA}
+              likesB={d.likesB}
+              dislikesA={d.dislikesA}
+              dislikesB={d.dislikesB}
               isUserCreated={d.isUserCreated}
               onVote={(side, boostAmount) => handleVote(d.id || d._id, side, boostAmount)}
               allExpanded={allExpanded}
@@ -485,6 +498,7 @@ export default function Divides({ onOpenChat }) {
               {previousDivides.map((d) => (
                 <DivideCard
                   key={`prev-${d._id || d.id}`}
+                  divideId={d._id || d.id}
                   title={d.title}
                   creatorUsername={d.creatorUsername}
                   left={d.optionA}
@@ -495,6 +509,10 @@ export default function Divides({ onOpenChat }) {
                   endTime={d.endTime}
                   status={d.status}
                   winner={d.winnerSide}
+                  likesA={d.likesA}
+                  likesB={d.likesB}
+                  dislikesA={d.dislikesA}
+                  dislikesB={d.dislikesB}
                   onVote={() => { }}
                   imageA={d.imageA}
                   imageB={d.imageB}

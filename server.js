@@ -613,6 +613,11 @@ app.post('/api/divides/:id/like/:side', auth, async (req, res) => {
       return res.status(404).json({ error: 'Divide not found' });
     }
 
+    // Creators cannot like/dislike their own divide
+    if (divide.isUserCreated && divide.creatorId === req.userId) {
+      return res.status(400).json({ error: 'You cannot react to your own divide' });
+    }
+
     // Increment like counter
     const likesField = side.toUpperCase() === 'A' ? 'likesA' : 'likesB';
     divide[likesField] = (divide[likesField] || 0) + 1;
@@ -653,6 +658,11 @@ app.post('/api/divides/:id/dislike/:side', auth, async (req, res) => {
     const divide = await Divide.findOne({ $or: [{ id }, { _id: id }] });
     if (!divide) {
       return res.status(404).json({ error: 'Divide not found' });
+    }
+
+    // Creators cannot like/dislike their own divide
+    if (divide.isUserCreated && divide.creatorId === req.userId) {
+      return res.status(400).json({ error: 'You cannot react to your own divide' });
     }
 
     // Increment dislike counter
