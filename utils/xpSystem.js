@@ -34,7 +34,7 @@ export const LEVEL_THRESHOLDS = [
   { level: 30, xpRequired: 150000, badgeName: 'Propagandist', badgeColorHex: '#E5E4E2', title: 'Propagandist' },
   { level: 31, xpRequired: 180000, badgeName: 'Psyop', badgeColorHex: '#E5E4E2', title: 'Psyop' },
   { level: 32, xpRequired: 215000, badgeName: 'Honeypot', badgeColorHex: '#E5E4E2', title: 'Honeypot' },
-  { level: 33, xpRequired: 255000, badgeName: 'Glowie', badgeColorHex: '#E5E4E2', title: 'Glowie' },
+  { level: 33, xpRequired: 255000, badgeName: 'Divider', badgeColorHex: '#E5E4E2', title: 'Divider' },
   { level: 34, xpRequired: 300000, badgeName: 'Fed', badgeColorHex: '#E5E4E2', title: 'Fed' },
   { level: 35, xpRequired: 350000, badgeName: 'Agent', badgeColorHex: '#E5E4E2', title: 'Agent' },
   { level: 36, xpRequired: 405000, badgeName: 'Operator', badgeColorHex: '#E5E4E2', title: 'Operator' },
