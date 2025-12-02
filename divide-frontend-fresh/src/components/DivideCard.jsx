@@ -139,7 +139,7 @@ export default function DivideCard({
       onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
     >
       {/* Header: Status + Timer */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {status === 'active' ? (
             <>
@@ -147,12 +147,12 @@ export default function DivideCard({
                 width: '8px',
                 height: '8px',
                 borderRadius: '50%',
-                background: isUrgent ? '#ff4444' : '#00ff88',
-                boxShadow: `0 0 8px ${isUrgent ? '#ff4444' : '#00ff88'}`,
+                background: isUrgent ? '#ff4444' : '#ff6600',
+                boxShadow: `0 0 8px ${isUrgent ? '#ff4444' : '#ff6600'}`,
                 animation: 'pulse 2s infinite',
               }} />
-              <span style={{ fontSize: '12px', fontWeight: '600', color: isUrgent ? '#ff6b6b' : '#00ff88', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                {isUrgent ? 'Ending Soon' : 'Live'}
+              <span style={{ fontSize: '11px', fontWeight: '700', color: isUrgent ? '#ff6b6b' : '#ff8833', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                {isUrgent ? '⚡ CLOSING' : 'BLIND WAGER'}
               </span>
             </>
           ) : (
@@ -164,13 +164,14 @@ export default function DivideCard({
         
         {status === 'active' && (
           <div style={{
-            background: isUrgent ? 'rgba(255,68,68,0.15)' : 'rgba(255,255,255,0.05)',
+            background: isUrgent ? 'rgba(255,68,68,0.15)' : 'rgba(255,102,0,0.1)',
             padding: '4px 12px',
             borderRadius: '20px',
             fontSize: '13px',
             fontWeight: '600',
             fontFamily: 'monospace',
-            color: isUrgent ? '#ff6b6b' : '#fff',
+            color: isUrgent ? '#ff6b6b' : '#ff8833',
+            border: `1px solid ${isUrgent ? 'rgba(255,68,68,0.3)' : 'rgba(255,102,0,0.2)'}`,
           }}>
             ⏱ {formatTime(seconds)}
           </div>
@@ -302,9 +303,6 @@ export default function DivideCard({
             </div>
           ) : (
             <>
-              <div style={{ fontSize: '10px', fontWeight: '700', color: '#ff6b6b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>
-                Fade
-              </div>
               <div style={{ fontSize: '14px', fontWeight: '600', color: '#fff', lineHeight: '1.3' }}>
                 {left}
               </div>
@@ -314,6 +312,19 @@ export default function DivideCard({
             </>
           )}
         </button>
+
+        {/* VS Divider */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '10px',
+          fontWeight: '700',
+          color: '#444',
+          letterSpacing: '1px',
+        }}>
+          VS
+        </div>
 
         {/* Right/B Position */}
         <button
@@ -391,9 +402,6 @@ export default function DivideCard({
             </div>
           ) : (
             <>
-              <div style={{ fontSize: '10px', fontWeight: '700', color: '#66b3ff', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>
-                Fade
-              </div>
               <div style={{ fontSize: '14px', fontWeight: '600', color: '#fff', lineHeight: '1.3' }}>
                 {right}
               </div>
@@ -421,19 +429,22 @@ export default function DivideCard({
         </span>
       </div>
 
-      {/* Explanation for active markets */}
+      {/* Warning Banner - Ominous */}
       {status === 'active' && (
         <div style={{
           marginTop: '12px',
-          padding: '8px 12px',
-          background: 'rgba(255,255,255,0.02)',
-          borderRadius: '6px',
-          fontSize: '11px',
-          color: '#666',
+          padding: '10px 12px',
+          background: 'linear-gradient(90deg, rgba(255,68,68,0.08) 0%, rgba(255,136,0,0.08) 100%)',
+          borderRadius: '8px',
+          border: '1px solid rgba(255,68,68,0.2)',
+          fontSize: '12px',
+          color: '#ff9966',
           textAlign: 'center',
-          lineHeight: '1.4',
+          lineHeight: '1.5',
+          fontWeight: '500',
         }}>
-          💡 Fade the option you think will be <strong style={{ color: '#888' }}>more popular</strong>. Minority wins the pot.
+          ⚠️ <strong>Pick. But know this:</strong><br/>
+          <span style={{ color: '#cc6644' }}>If everyone agrees with you, you all lose.</span>
         </div>
       )}
 

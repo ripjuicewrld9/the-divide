@@ -269,15 +269,18 @@ export default function MobileMainLayout({ onOpenChat }) {
                     position: 'relative',
                     zIndex: 1
                   }}>
-                    <img
-                      src={game.icon}
-                      alt={game.title}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        filter: 'brightness(0) invert(1)'
-                      }}
-                    />
+                    <svg style={{ width: '100%', height: '100%' }} viewBox="0 0 56 56">
+                      <defs>
+                        <linearGradient id={`game-gradient-${game.id}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" style={{ stopColor: '#06b6d4', stopOpacity: 1 }} />
+                          <stop offset="100%" style={{ stopColor: '#fbbf24', stopOpacity: 1 }} />
+                        </linearGradient>
+                        <mask id={`game-mask-${game.id}`}>
+                          <image href={game.icon} width="56" height="56" style={{ filter: 'brightness(0) invert(1)' }} />
+                        </mask>
+                      </defs>
+                      <rect width="56" height="56" fill={`url(#game-gradient-${game.id})`} mask={`url(#game-mask-${game.id})`} />
+                    </svg>
                   </div>
 
                   {/* Content */}

@@ -299,10 +299,12 @@ export default function Divides({ onOpenChat }) {
     isMobile() ? (
       <div className="divides-mobile-container px-2 py-2">
         {/* Mobile Header - only shows on mobile */}
-        {/* Mobile Header - only shows on mobile */}
         <MobileGameHeader title="Divides" onOpenChat={onOpenChat} className="md:hidden mb-4" />
 
-        <div className="page-title text-center text-2xl font-bold text-cyan-400 mb-2">THE DIVIDE</div>
+        <div className="page-title text-center text-2xl font-bold mb-1" style={{ color: '#ff6600' }}>THE DIVIDE</div>
+        <div className="text-center text-xs text-gray-500 mb-3" style={{ fontStyle: 'italic' }}>
+          "The popular side loses. Trust no one."
+        </div>
         <div className="top-stats flex justify-center mb-2">
           <div className="stat-wrapper bg-gray-900 rounded-lg px-4 py-2">
             <div className="stat-title text-sm text-gray-300">Jackpot</div>
@@ -311,7 +313,8 @@ export default function Divides({ onOpenChat }) {
         </div>
         <div className="create-divide-section flex justify-center mb-4">
           <button
-            className="btn-create-divide bg-cyan-600 text-white font-bold px-4 py-2 rounded-lg shadow-lg text-lg"
+            className="btn-create-divide text-white font-bold px-4 py-2 rounded-lg shadow-lg text-lg"
+            style={{ background: 'linear-gradient(135deg, #ff6600 0%, #cc4400 100%)' }}
             onClick={() => {
               if (!user) {
                 setShowModal(true);
@@ -419,7 +422,10 @@ export default function Divides({ onOpenChat }) {
     ) : (
       // Desktop layout (adapted from mobile)
       <div className="divides-desktop-container px-8 py-8">
-        <div className="page-title text-center text-3xl font-bold text-cyan-400 mb-6">THE DIVIDE</div>
+        <div className="page-title text-center text-3xl font-bold mb-2" style={{ color: '#ff6600' }}>THE DIVIDE</div>
+        <div className="text-center text-sm text-gray-500 mb-6" style={{ fontStyle: 'italic' }}>
+          "The popular side loses. Trust no one."
+        </div>
         <div className="top-stats flex justify-center mb-6">
           <div className="stat-wrapper bg-gray-900 rounded-lg px-6 py-4">
             <div className="stat-title text-base text-gray-300">Jackpot</div>
@@ -428,7 +434,8 @@ export default function Divides({ onOpenChat }) {
         </div>
         <div className="create-divide-section flex justify-center mb-8">
           <button
-            className="btn-create-divide bg-cyan-600 text-white font-bold px-6 py-3 rounded-lg shadow-lg text-xl"
+            className="btn-create-divide text-white font-bold px-6 py-3 rounded-lg shadow-lg text-xl"
+            style={{ background: 'linear-gradient(135deg, #ff6600 0%, #cc4400 100%)' }}
             onClick={() => {
               if (!user) {
                 setShowModal(true);
