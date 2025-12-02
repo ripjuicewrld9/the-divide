@@ -102,18 +102,21 @@ export default function CreateDivideModal({ isOpen, onClose, onDivideCreated }) 
         <div style={{
           background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)',
           color: 'white',
-          padding: '12px 16px',
-          borderRadius: '8px',
+          padding: '14px 18px',
+          borderRadius: '10px',
           marginBottom: '20px',
-          border: '2px solid rgba(255,255,255,0.3)',
+          border: '2px solid rgba(255,255,255,0.4)',
+          boxShadow: '0 4px 12px rgba(255,107,107,0.3)',
           fontWeight: '600',
-          fontSize: '14px',
-          lineHeight: '1.5'
+          fontSize: '15px',
+          lineHeight: '1.6'
         }}>
-          ⚠️ <strong>IMPORTANT:</strong> Divides are SHORT BETS. You bet on the side you think will LOSE.
+          🎭 <strong>BLIND SHORT BETS</strong> — Never Seen Before!
           <br />
-          <span style={{ fontSize: '13px', opacity: 0.95 }}>
-            The losing side gets the pot. If you pick the winner, you lose your bet!
+          <span style={{ fontSize: '13px', opacity: 0.95, display: 'block', marginTop: '6px' }}>
+            • You bet on what will <strong>LOSE</strong> (short bet)<br />
+            • You can't see what others picked (blind betting)<br />
+            • Losing side splits the pot — winners lose their bets!
           </span>
         </div>
 

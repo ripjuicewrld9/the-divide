@@ -214,20 +214,21 @@ export default function DivideCard({
       )}
       {/* removed blind voting label UI - buttons already hide content during active user-created divides */}
 
-      {/* Short betting explanation for active divides */}
+      {/* Blind short betting explanation for active divides */}
       {status === 'active' && (
         <div style={{
-          background: 'rgba(255, 107, 107, 0.15)',
-          border: '1px solid rgba(255, 107, 107, 0.4)',
-          borderRadius: '6px',
-          padding: '8px 12px',
-          marginBottom: '12px',
-          fontSize: '12px',
-          color: '#ff9999',
-          fontWeight: '600',
-          textAlign: 'center'
+          background: 'linear-gradient(135deg, rgba(255, 107, 107, 0.2) 0%, rgba(238, 90, 111, 0.2) 100%)',
+          border: '2px solid rgba(255, 107, 107, 0.5)',
+          borderRadius: '8px',
+          padding: '10px 14px',
+          marginBottom: '14px',
+          fontSize: '13px',
+          color: '#ffb3b3',
+          fontWeight: '700',
+          textAlign: 'center',
+          boxShadow: '0 2px 8px rgba(255, 107, 107, 0.2)'
         }}>
-          📉 SHORT BET: Bet on the side you think will <strong>LOSE</strong>. Losing side wins the pot!
+          🎭 <strong>BLIND SHORT</strong>: Bet on what will <strong>LOSE</strong> • Can't see others' picks • Losing side wins!
         </div>
       )}
 

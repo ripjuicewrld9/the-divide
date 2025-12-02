@@ -60,13 +60,13 @@ export default function Home() {
     {
       id: 'divides',
       title: 'Divides',
-      description: 'SHORT BETS: Bet on what will LOSE. Losing side wins the pot!',
-      icon: '/elections-poll-svgrepo-com.svg',
+      description: 'BLIND SHORT BETS: Bet on what will LOSE without seeing others\' picks!',
+      icon: '/blind-short-divide.svg',
       color: '#ff6b6b',
       gradient: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)',
       path: '/divides',
-      label: 'Short Now',
-      tagline: '📉 Short & Win'
+      label: 'Blind Short',
+      tagline: '🎭 Blind Shorts'
     },
     {
       id: 'keno',

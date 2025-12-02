@@ -24,12 +24,12 @@ export default function MobileMainLayout({ onOpenChat }) {
     {
       id: 'divides',
       title: 'Divides',
-      description: 'SHORT BETS: Bet on what will LOSE. Losing side wins!',
-      icon: '/elections-poll-svgrepo-com.svg',
+      description: 'BLIND SHORTS: Bet on what will LOSE without seeing picks!',
+      icon: '/blind-short-divide.svg',
       color: '#ff6b6b',
       gradient: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)',
       path: '/divides',
-      tagline: '📉 Short & Win'
+      tagline: '🎭 Blind Shorts'
     },
     {
       id: 'keno',
