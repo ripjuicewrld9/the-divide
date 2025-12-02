@@ -511,7 +511,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         if (state.currentHandIndex < hands.length - 1) {
           set({ currentHandIndex: state.currentHandIndex + 1, message: 'Bust! Next hand' });
         } else {
-          set({ gamePhase: 'settling', message: 'Dealer\\'s turn' });
+          set({ gamePhase: 'settling', message: "Dealer's turn" });
           setTimeout(() => get().playDealer(), 500);
         }
       } else {
