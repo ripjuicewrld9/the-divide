@@ -207,7 +207,7 @@ export default function DivideCard({
             </>
           ) : (
             <span style={{ fontSize: '12px', fontWeight: '600', color: '#888', textTransform: 'uppercase' }}>
-              {status === 'ended' ? `Settled${winnerLabel ? ` • ${winnerLabel} won` : ''}` : status}
+              {status === 'ended' ? `Ended${winnerLabel ? ` • ${winnerLabel} won` : ''}` : status}
             </span>
           )}
         </div>

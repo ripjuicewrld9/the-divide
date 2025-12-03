@@ -18,12 +18,22 @@ import ForgotPassword from "./pages/ForgotPassword.jsx";
 import ResetPassword from "./pages/ResetPassword.jsx";
 import DiscordLinkHandler from "./components/DiscordLinkHandler.jsx";
 import OAuthLoginHandler from "./components/OAuthLoginHandler.jsx";
+import ComingSoon from "./components/ComingSoon.jsx";
 
 function ProtectedRoute({ children, requiredRole = null }) {
     const { user } = React.useContext(AuthContext);
     if (!user) return <Navigate to="/" />;
     if (requiredRole && user.role !== requiredRole) return <Navigate to="/" />;
     return children;
+}
+
+// Mobile Rugged route - Coming Soon for non-admins, accessible for admins
+function MobileRuggedRoute() {
+    const { user } = React.useContext(AuthContext);
+    if (user && user.role === 'admin') {
+        return <RuggedPage />;
+    }
+    return <ComingSoon gameName="Rugged" />;
 }
 
 export default function MobileApp() {
@@ -40,19 +50,11 @@ export default function MobileApp() {
 
                 {/* Games */}
                 <Route path="/keno" element={<KenoPage onOpenChat={() => setIsChatOpen(true)} />} />
-                <Route path="/rugged" element={<RuggedPage />} />
+                <Route path="/rugged" element={<MobileRuggedRoute />} />
                 <Route path="/blackjack" element={<BlackjackPage onOpenChat={() => setIsChatOpen(true)} />} />
                 <Route path="/plinko" element={<PlinkoPage onOpenChat={() => setIsChatOpen(true)} />} />
-                <Route path="/wheel" element={
-                    <ProtectedRoute requiredRole="admin">
-                        <WheelLobby />
-                    </ProtectedRoute>
-                } />
-                <Route path="/wheel/:gameId" element={
-                    <ProtectedRoute requiredRole="admin">
-                        <WheelPage onOpenChat={() => setIsChatOpen(true)} />
-                    </ProtectedRoute>
-                } />
+                <Route path="/wheel" element={<ComingSoon gameName="Wheel" />} />
+                <Route path="/wheel/:gameId" element={<ComingSoon gameName="Wheel" />} />
                 <Route path="/divides" element={<Divides onOpenChat={() => setIsChatOpen(true)} />} />
 
                 {/* Profile */}

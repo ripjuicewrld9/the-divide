@@ -86,7 +86,7 @@ export const BlackjackBetBar: React.FC<BlackjackBetBarProps> = ({
       <div>
         <div className="flex justify-between mb-1">
           <label className={isMobile ? "text-xs font-medium text-slate-300" : "text-sm font-medium text-slate-300"}>Bet Amount</label>
-          {isMobile && <span className="text-xs font-medium text-slate-400">Balance: ${(balance / 100).toFixed(2)}</span>}
+          {isMobile && <span className="text-xs font-medium text-slate-400">Balance: ${balance.toFixed(2)}</span>}
         </div>
         <div className={isMobile ? "flex gap-2" : "flex gap-1 mt-1"}>
           <div className="relative flex-1">

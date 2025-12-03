@@ -14,6 +14,7 @@ export const BinsRow: React.FC<BinsRowProps> = ({ rowCount, riskLevel, binsWidth
   const binRefs = useRef<(HTMLDivElement | null)[]>([]);
   const animationsRef = useRef<Animation[]>([]);
   const [hoveredBin, setHoveredBin] = useState<number | null>(null);
+  const prevWinRecordsLengthRef = useRef(winRecords.length);
 
   const payouts = binPayouts[rowCount][riskLevel];
   const colors = binColorsByRowCount[rowCount];
@@ -43,7 +44,8 @@ export const BinsRow: React.FC<BinsRowProps> = ({ rowCount, riskLevel, binsWidth
   };
 
   useEffect(() => {
-    // Initialize animations
+    // Initialize animations when rowCount changes
+    animationsRef.current = [];
     binRefs.current.forEach((bin) => {
       if (bin) {
         const animation = bin.animate(
@@ -57,16 +59,24 @@ export const BinsRow: React.FC<BinsRowProps> = ({ rowCount, riskLevel, binsWidth
   }, [rowCount]);
 
   useEffect(() => {
-    // Play animation when a new win is recorded
-    if (winRecords.length > 0 && animationEnabled) {
+    // Only animate when a NEW win is recorded (length increases)
+    // Also verify the binIndex matches current rowCount's payouts array
+    if (winRecords.length > prevWinRecordsLengthRef.current && animationEnabled) {
       const lastWin = winRecords[winRecords.length - 1];
       const binIndex = lastWin.binIndex;
-      if (animationsRef.current[binIndex]) {
-        animationsRef.current[binIndex].cancel();
-        animationsRef.current[binIndex].play();
+      
+      // Only animate if this win is for the current rowCount and binIndex is valid
+      if (lastWin.rowCount === rowCount && binIndex >= 0 && binIndex < payouts.length) {
+        if (animationsRef.current[binIndex]) {
+          animationsRef.current[binIndex].cancel();
+          animationsRef.current[binIndex].play();
+        }
       }
     }
-  }, [winRecords, animationEnabled]);
+    
+    // Update the ref to track current length
+    prevWinRecordsLengthRef.current = winRecords.length;
+  }, [winRecords, animationEnabled, rowCount, payouts.length]);
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 600;
   return (
