@@ -195,7 +195,7 @@ export default function ResetPassword() {
               style={{
                 width: '100%',
                 padding: '14px',
-                background: (loading || !token) ? 'rgba(100, 100, 100, 0.3)' : 'linear-gradient(135deg, #ff3232, #cc2828)',
+                background: (loading || !token) ? 'rgba(100, 100, 100, 0.3)' : 'linear-gradient(135deg, #c97586, #a85c6f)',
                 border: 'none',
                 borderRadius: '8px',
                 color: (loading || !token) ? '#666' : '#000',
@@ -236,7 +236,7 @@ export default function ResetPassword() {
               textDecoration: 'none',
               transition: 'all 0.2s ease'
             }}
-            onMouseEnter={(e) => e.target.style.color = '#ff3232'}
+            onMouseEnter={(e) => e.target.style.color = '#c97586'}
             onMouseLeave={(e) => e.target.style.color = '#00ffff'}
           >
             ← Back to Login

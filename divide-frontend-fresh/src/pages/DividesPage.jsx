@@ -32,7 +32,7 @@ export default function DividesPage() {
       <div style={{ marginTop: 40, maxWidth: 1400, margin: '40px auto 0', padding: '0 24px' }}>
         <div style={{
           background: 'rgba(11, 11, 11, 0.8)',
-          border: '1px solid rgba(255, 50, 50, 0.1)',
+          border: '1px solid rgba(139, 69, 88, 0.1)',
           borderRadius: '16px',
           padding: '24px'
         }}>
