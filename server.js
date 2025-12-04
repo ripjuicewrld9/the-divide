@@ -1204,7 +1204,8 @@ try {
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(express.static(path.join(__dirname, 'divide-frontend-fresh', 'dist')));
 
-app.get('*', (req, res) => {
+// SPA fallback - must be last route
+app.use((req, res) => {
   res.sendFile(path.join(__dirname, 'divide-frontend-fresh', 'dist', 'index.html'));
 });
 
