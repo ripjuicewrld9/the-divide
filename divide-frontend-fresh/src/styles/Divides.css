@@ -16,18 +16,19 @@
   color: #d4d4d4;
 }
 
-/* GRID – Polymarket exact: tight grid, compact cards */
+/* GRID – 5 columns, compact cards */
 .divides-grid {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   padding: 0;
-  max-width: 1400px;
+  max-width: 1600px;
   margin: 0 auto;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
 }
 @media (min-width: 640px) { .divides-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (min-width: 1024px) { .divides-grid { grid-template-columns: repeat(3, 1fr); } }
-@media (min-width: 1400px) { .divides-grid { grid-template-columns: repeat(4, 1fr); } }
+@media (min-width: 900px) { .divides-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 1100px) { .divides-grid { grid-template-columns: repeat(4, 1fr); } }
+@media (min-width: 1400px) { .divides-grid { grid-template-columns: repeat(5, 1fr); } }
 
 /* CARD – Handled by inline styles in DivideCard.jsx */
 .divide-card {

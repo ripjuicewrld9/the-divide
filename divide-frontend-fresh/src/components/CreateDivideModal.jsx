@@ -96,33 +96,59 @@ export default function CreateDivideModal({ isOpen, onClose, onDivideCreated }) 
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content create-divide-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>Create a Divide</h2>
-          <button className="close-btn" onClick={onClose}>✕</button>
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      background: 'rgba(0, 0, 0, 0.9)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 9999,
+      padding: '20px',
+    }} onClick={onClose}>
+      <div style={{
+        background: '#111',
+        border: '1px solid #1a1a1a',
+        borderRadius: '12px',
+        width: '100%',
+        maxWidth: '520px',
+        maxHeight: '90vh',
+        overflowY: 'auto',
+        position: 'relative',
+      }} onClick={(e) => e.stopPropagation()}>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '16px 20px',
+          borderBottom: '1px solid #1a1a1a',
+        }}>
+          <h2 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: '#d4d4d4' }}>Create a Divide</h2>
+          <button onClick={onClose} style={{
+            background: 'none',
+            border: 'none',
+            color: '#666',
+            fontSize: '18px',
+            cursor: 'pointer',
+            padding: '4px 8px',
+          }}>✕</button>
         </div>
 
         {/* Explanation Banner */}
         <div style={{
-          background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)',
-          color: 'white',
-          padding: '14px 18px',
-          borderRadius: '10px',
-          marginBottom: '20px',
-          border: '2px solid rgba(255,255,255,0.4)',
-          boxShadow: '0 4px 12px rgba(255,107,107,0.3)',
-          fontWeight: '600',
-          fontSize: '15px',
-          lineHeight: '1.6'
+          background: 'rgba(107, 28, 28, 0.15)',
+          color: '#a33',
+          padding: '12px 14px',
+          borderRadius: '8px',
+          margin: '16px 20px',
+          border: '1px solid rgba(107, 28, 28, 0.3)',
+          fontSize: '12px',
+          lineHeight: '1.5'
         }}>
-          🎭 <strong>BLIND SHORT OPINION MARKETS</strong> — Never Seen Before!
-          <br />
-          <span style={{ fontSize: '13px', opacity: 0.95, display: 'block', marginTop: '6px' }}>
-            • <strong>Opinion-based</strong>: Outcome decided by player shorts, not external events<br />
-            • <strong>Blind betting</strong>: Can't see what others picked until it ends<br />
-            • <strong>Short mechanism</strong>: Bet on what will LOSE — losing side wins the pot!
-          </span>
+          <strong>⚠️ BLIND VOTING</strong> — Pick the side you think will LOSE. If everyone agrees with you, you all lose.
         </div>
 
         <form onSubmit={handleSubmit} className="create-divide-form">
@@ -173,22 +199,21 @@ export default function CreateDivideModal({ isOpen, onClose, onDivideCreated }) 
               required
               style={{
                 padding: '10px 12px',
-                fontSize: '14px',
-                borderRadius: '8px',
-                border: '1px solid rgba(255,255,255,0.2)',
-                background: 'rgba(0,0,0,0.3)',
-                color: '#fff',
+                fontSize: '13px',
+                borderRadius: '6px',
+                border: '1px solid #1a1a1a',
+                background: '#0a0a0a',
+                color: '#d4d4d4',
                 width: '100%',
                 cursor: 'pointer'
               }}
             >
               {CATEGORIES.map(cat => (
-                <option key={cat} value={cat} style={{ background: '#1a1a1a', color: '#fff' }}>
+                <option key={cat} value={cat} style={{ background: '#111', color: '#d4d4d4' }}>
                   {cat}
                 </option>
               ))}
             </select>
-            <small>Choose the category that best fits your divide</small>
           </div>
 
           <div className="form-group">
@@ -206,35 +231,35 @@ export default function CreateDivideModal({ isOpen, onClose, onDivideCreated }) 
           </div>
 
           <div className="form-group">
-            <label>
-              <strong>SHORT This Side</strong> (Bet this will LOSE)
-            </label>
+            <label>Pick a Side</label>
             <div className="side-selector">
               <button
                 type="button"
                 className={`side-btn ${side === 'A' ? 'active' : ''}`}
                 onClick={() => setSide('A')}
                 style={{
-                  border: side === 'A' ? '3px solid #ff6b6b' : '2px solid #444',
-                  background: side === 'A' ? 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)' : '#2a2a2a'
+                  border: side === 'A' ? '1px solid #6b1c1c' : '1px solid #1a1a1a',
+                  background: side === 'A' ? 'rgba(107, 28, 28, 0.2)' : '#0a0a0a',
+                  color: side === 'A' ? '#a33' : '#666'
                 }}
               >
-                📉 SHORT {optionA || 'Option A'}
+                {optionA || 'Option A'}
               </button>
               <button
                 type="button"
                 className={`side-btn ${side === 'B' ? 'active' : ''}`}
                 onClick={() => setSide('B')}
                 style={{
-                  border: side === 'B' ? '3px solid #ff6b6b' : '2px solid #444',
-                  background: side === 'B' ? 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)' : '#2a2a2a'
+                  border: side === 'B' ? '1px solid #6b1c1c' : '1px solid #1a1a1a',
+                  background: side === 'B' ? 'rgba(107, 28, 28, 0.2)' : '#0a0a0a',
+                  color: side === 'B' ? '#a33' : '#666'
                 }}
               >
-                📉 SHORT {optionB || 'Option B'}
+                {optionB || 'Option B'}
               </button>
             </div>
-            <small style={{ color: '#ff9999', fontWeight: '600' }}>
-              ⚠️ You are betting that this side will LOSE. If it wins, you lose your bet!
+            <small style={{ color: '#666' }}>
+              Pick the side you think will lose
             </small>
           </div>
 
