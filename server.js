@@ -28,7 +28,6 @@ import speakeasy from 'speakeasy';
 import qrcode from 'qrcode';
 import nodemailer from 'nodemailer';
 import rateLimit from 'express-rate-limit';
-import { paytables, configured } from './paytable-data.js';
 import http from 'http';
 
 // Utils
