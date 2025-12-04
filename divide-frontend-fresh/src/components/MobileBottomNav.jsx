@@ -5,8 +5,7 @@ export default function MobileBottomNav({ onOpenChat }) {
     const location = useLocation();
 
     const navItems = [
-        { id: 'home', label: 'Browse', icon: '/home-alt-svgrepo-com.svg', path: '/' },
-        { id: 'divides', label: 'Divides', icon: '/elections-poll-svgrepo-com.svg', path: '/divides' },
+        { id: 'divides', label: 'Markets', icon: '/elections-poll-svgrepo-com.svg', path: '/' },
         { id: 'chat', label: 'Chat', icon: '💬', path: '/chat' },
         { id: 'profile', label: 'Profile', icon: '👤', path: '/profile' },
     ];

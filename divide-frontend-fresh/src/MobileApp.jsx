@@ -2,7 +2,6 @@ import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthContext } from "./context/AuthContext.jsx";
 import Divides from "./components/Divides.jsx";
-import MobileMainLayout from "./components/MobileMainLayout.jsx";
 import MobileChatOverlay from "./components/MobileChatOverlay.jsx";
 import MobileBottomNav from "./components/MobileBottomNav.jsx";
 import ProfilePage from "./pages/ProfileNew.jsx";
@@ -27,10 +26,8 @@ export default function MobileApp() {
             <OAuthLoginHandler />
             
             <Routes>
-                {/* Home */}
-                <Route path="/" element={<MobileMainLayout onOpenChat={() => setIsChatOpen(true)} />} />
-
-                {/* Divides - The only game */}
+                {/* Divides - Default landing page */}
+                <Route path="/" element={<Divides onOpenChat={() => setIsChatOpen(true)} />} />
                 <Route path="/divides" element={<Divides onOpenChat={() => setIsChatOpen(true)} />} />
 
                 {/* Profile */}

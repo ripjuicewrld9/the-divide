@@ -2,7 +2,6 @@ import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthContext } from "./context/AuthContext.jsx";
 import Divides from "./components/Divides.jsx";
-import Home from "./pages/Home.jsx";
 import Admin from "./components/Admin.jsx";
 import AdminFinance from "./pages/AdminFinance.jsx";
 import AdminLedger from "./pages/AdminLedger.jsx";
@@ -10,7 +9,6 @@ import AdminItems from "./components/AdminItems.jsx";
 import AdminCases from "./components/AdminCases.jsx";
 import AuthModal from "./components/AuthModal.jsx";
 import Header from "./components/Header.jsx";
-import Sidebar from "./components/Sidebar.jsx";
 import ChatSidebar from "./components/ChatSidebar.jsx";
 import ProfilePage from "./pages/ProfileNew.jsx";
 import Support from "./pages/Support.jsx";
@@ -52,15 +50,12 @@ export default function DesktopApp() {
         onOpenAdmin={() => setShowAdminModal(true)}
       />
 
-      {/* Main content area with sidebar */}
+      {/* Main content area */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left sidebar */}
-        <Sidebar />
-
         {/* Main content */}
         <main className="flex-1 overflow-y-auto">
           <Routes>
-            <Route path="/" element={<Home />} />
+            <Route path="/" element={<Divides />} />
             <Route path="/divides" element={<Divides />} />
             <Route path="/profile" element={<ProfilePage />} />
             
