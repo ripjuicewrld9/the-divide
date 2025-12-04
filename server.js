@@ -4,7 +4,6 @@ dotenv.config();
 
 // Models
 import Divide from './models/Divide.js';
-import Jackpot from './models/Jackpot.js';
 import House from './models/House.js';
 import Ledger from './models/Ledger.js';
 import User from './models/User.js';
@@ -14,7 +13,6 @@ import ChatMute from './models/ChatMute.js';
 import ModeratorChatMessage from './models/ModeratorChatMessage.js';
 import Notification from './models/Notification.js';
 import UserEngagement from './models/UserEngagement.js';
-import CaseBattle from './models/CaseBattle.js';
 
 // Core dependencies
 import express from 'express';
@@ -32,11 +30,6 @@ import nodemailer from 'nodemailer';
 import rateLimit from 'express-rate-limit';
 import { paytables, configured } from './paytable-data.js';
 import http from 'http';
-
-// Routes
-import registerCaseBattles from './routes/caseBattles.js';
-import registerCases from './routes/cases.js';
-import { setupItemRoutes } from './routes/items.js';
 
 // Utils
 import { fileURLToPath } from 'url';
@@ -127,38 +120,6 @@ async function moderatorOnly(req, res, next) {
     return next();
   } catch (e) {
     return res.status(500).json({ error: 'Server error' });
-  }
-}
-
-// House stats helper
-async function updateHouseStats(game, betAmount, payout) {
-  try {
-    const jackpotFee = Math.floor(betAmount * 0.01);
-    const houseNet = betAmount - payout - jackpotFee;
-
-    await House.findOneAndUpdate(
-      { id: 'global' },
-      {
-        $inc: {
-          [`${game}.totalBets`]: betAmount,
-          [`${game}.totalPayouts`]: payout,
-          [`${game}.jackpotFees`]: jackpotFee,
-          [`${game}.houseProfit`]: houseNet,
-          houseTotal: houseNet
-        }
-      },
-      { upsert: true }
-    );
-
-    await Jackpot.findOneAndUpdate(
-      { id: 'global' },
-      { $inc: { amount: jackpotFee } },
-      { upsert: true }
-    );
-
-    console.log(`[House Stats] ${game}: bet=${betAmount}, payout=${payout}, jackpotFee=${jackpotFee}, houseNet=${houseNet}`);
-  } catch (err) {
-    console.error(`Failed to update house stats for ${game}:`, err);
   }
 }
 
@@ -1906,33 +1867,6 @@ app.patch('/api/users/:id/avatar', auth, upload.single('avatar'), async (req, re
 });
 
 // ==========================================
-// CASE BATTLES ROUTES (if needed)
-// ==========================================
-
-try {
-  console.log('Registering case battles routes');
-  registerCaseBattles(app, io, { auth, adminOnly });
-  console.log('Case battles routes registered');
-} catch (e) {
-  console.error('Failed to register case battles routes', e);
-}
-
-try {
-  console.log('Registering cases routes');
-  registerCases(app, io, { auth, adminOnly });
-  console.log('Cases routes registered');
-} catch (e) {
-  console.error('Failed to register cases routes', e);
-}
-
-try {
-  console.log('Registering items routes');
-  setupItemRoutes(app, auth, adminOnly);
-  console.log('Items routes registered');
-} catch (e) {
-  console.error('Failed to register items routes', e);
-}
-
 // ==========================================
 // STATIC FILES & SPA
 // ==========================================
