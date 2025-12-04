@@ -10,7 +10,7 @@
   gap: 1.5rem;
   padding: 1.5rem;
   background: linear-gradient(135deg, rgba(26, 10, 10, 0.8) 0%, rgba(15, 5, 5, 0.8) 100%);
-  border: 1px solid rgba(255, 50, 50, 0.15);
+  border: 1px solid rgba(139, 69, 88, 0.15);
 }
 
 .form-group {
@@ -28,7 +28,7 @@
 .form-group input,
 .form-group select {
   padding: 0.75rem;
-  border: 1px solid rgba(255, 50, 50, 0.2);
+  border: 1px solid rgba(139, 69, 88, 0.2);
   border-radius: 0.5rem;
   background: rgba(10, 10, 20, 0.8);
   color: #fff;
@@ -39,8 +39,8 @@
 .form-group input:focus,
 .form-group select:focus {
   outline: none;
-  border-color: #ff3232;
-  box-shadow: 0 0 0 3px rgba(255, 50, 50, 0.1);
+  border-color: #c97586;
+  box-shadow: 0 0 0 3px rgba(139, 69, 88, 0.1);
 }
 
 .form-group small {
@@ -62,7 +62,7 @@
 
 .side-btn {
   padding: 0.75rem 1rem;
-  border: 2px solid rgba(255, 50, 50, 0.2);
+  border: 2px solid rgba(139, 69, 88, 0.2);
   border-radius: 0.5rem;
   background: rgba(10, 10, 20, 0.8);
   color: #b0b0b0;
@@ -72,22 +72,22 @@
 }
 
 .side-btn:hover {
-  border-color: rgba(255, 50, 50, 0.4);
+  border-color: rgba(139, 69, 88, 0.4);
   color: #e0e0e0;
 }
 
 .side-btn.active {
-  border-color: #ff3232;
-  background: rgba(255, 50, 50, 0.15);
-  color: #ff3232;
+  border-color: #c97586;
+  background: rgba(139, 69, 88, 0.15);
+  color: #c97586;
 }
 
 .error-message {
   padding: 0.75rem 1rem;
-  background: rgba(255, 50, 50, 0.1);
-  border: 1px solid #ff3232;
+  background: rgba(139, 69, 88, 0.1);
+  border: 1px solid #c97586;
   border-radius: 0.5rem;
-  color: #ff6b6b;
+  color: #c97586;
   font-size: 0.9rem;
 }
 
@@ -120,14 +120,14 @@
 }
 
 .btn-create {
-  background: linear-gradient(135deg, #ff3232, #cc2828);
+  background: linear-gradient(135deg, #c97586, #a85c6f);
   color: #fff;
 }
 
 .btn-create:hover:not(:disabled) {
-  background: linear-gradient(135deg, #ff5050, #ff3232);
+  background: linear-gradient(135deg, #d98597, #c97586);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(255, 50, 50, 0.3);
+  box-shadow: 0 4px 12px rgba(139, 69, 88, 0.3);
 }
 
 .btn-create:disabled {

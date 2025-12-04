@@ -12,7 +12,7 @@
   overflow-x: auto;
   padding: 8px 4px;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 50, 50, 0.3) rgba(0, 0, 0, 0.1);
+  scrollbar-color: rgba(139, 69, 88, 0.3) rgba(0, 0, 0, 0.1);
 }
 
 .category-nav-scroll::-webkit-scrollbar {
@@ -25,12 +25,12 @@
 }
 
 .category-nav-scroll::-webkit-scrollbar-thumb {
-  background: rgba(255, 50, 50, 0.3);
+  background: rgba(139, 69, 88, 0.3);
   border-radius: 3px;
 }
 
 .category-nav-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 50, 50, 0.5);
+  background: rgba(139, 69, 88, 0.5);
 }
 
 .category-pill {
