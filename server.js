@@ -424,6 +424,413 @@ app.get('/api/me', auth, async (req, res) => {
 });
 
 // ==========================================
+// PASSWORD RESET
+// ==========================================
+
+// POST /api/auth/forgot-password - Request password reset email
+app.post('/api/auth/forgot-password', async (req, res) => {
+  try {
+    const { username } = req.body || {};
+    
+    if (!username) {
+      return res.status(400).json({ error: 'Username is required' });
+    }
+
+    const user = await User.findOne({ username: username.trim() });
+    
+    // Always return success to prevent username enumeration
+    if (!user) {
+      return res.json({ success: true, message: 'If that username exists, a reset link has been sent to the associated email' });
+    }
+
+    // Check if user has an email
+    if (!user.email) {
+      return res.json({ success: true, message: 'If that username exists, a reset link has been sent to the associated email' });
+    }
+
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+    // Save hashed token and expiration (1 hour)
+    user.resetPasswordToken = hashedToken;
+    user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    await user.save();
+
+    // Send email
+    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
+    
+    try {
+      await emailTransporter.sendMail({
+        from: process.env.SMTP_FROM || process.env.SMTP_USER,
+        to: user.email,
+        subject: 'Password Reset Request - The Divide',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #00ffff;">Password Reset Request</h2>
+            <p>Hi ${user.username},</p>
+            <p>You requested to reset your password. Click the link below to create a new password:</p>
+            <a href="${resetUrl}" style="display: inline-block; padding: 12px 24px; background: #00ffff; color: #000; text-decoration: none; border-radius: 4px; font-weight: bold; margin: 16px 0;">
+              Reset Password
+            </a>
+            <p>This link will expire in 1 hour.</p>
+            <p>If you didn't request this, please ignore this email.</p>
+            <hr style="margin: 24px 0; border: none; border-top: 1px solid #ddd;">
+            <p style="color: #666; font-size: 12px;">The Divide - Prediction Market Platform</p>
+          </div>
+        `
+      });
+      
+      console.log(`Password reset email sent to ${user.email} for user ${user.username}`);
+    } catch (emailError) {
+      console.error('Failed to send reset email:', emailError);
+      // Don't expose email errors to client
+    }
+
+    res.json({ success: true, message: 'If that username exists, a reset link has been sent to the associated email' });
+  } catch (err) {
+    console.error('Forgot password error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// POST /api/auth/reset-password - Reset password with token
+app.post('/api/auth/reset-password', async (req, res) => {
+  try {
+    const { token, newPassword } = req.body || {};
+    
+    if (!token || !newPassword) {
+      return res.status(400).json({ error: 'Token and new password are required' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    // Hash the token to compare with stored hash
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    // Find user with valid token
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: new Date() }
+    });
+
+    if (!user) {
+      return res.status(400).json({ error: 'Invalid or expired reset token' });
+    }
+
+    // Hash new password
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    res.json({ success: true, message: 'Password reset successful' });
+  } catch (err) {
+    console.error('Reset password error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ==========================================
+// DISCORD OAUTH FOR ACCOUNT LINKING
+// ==========================================
+
+// Step 1: Redirect to Discord OAuth
+app.get('/auth/discord', (req, res) => {
+  const clientId = process.env.DISCORD_CLIENT_ID;
+  const redirectUri = encodeURIComponent(process.env.DISCORD_REDIRECT_URI || 'http://localhost:3000/auth/discord/callback');
+  const scope = encodeURIComponent('identify');
+  
+  const discordAuthUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
+  res.redirect(discordAuthUrl);
+});
+
+// Step 2: Handle Discord OAuth callback
+app.get('/auth/discord/callback', async (req, res) => {
+  const { code } = req.query;
+  
+  if (!code) {
+    return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=discord_auth_failed`);
+  }
+
+  try {
+    // Exchange code for access token
+    const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        client_id: process.env.DISCORD_CLIENT_ID,
+        client_secret: process.env.DISCORD_CLIENT_SECRET,
+        grant_type: 'authorization_code',
+        code: code,
+        redirect_uri: process.env.DISCORD_REDIRECT_URI || 'http://localhost:3000/auth/discord/callback',
+      }),
+    });
+
+    const tokenData = await tokenResponse.json();
+
+    if (!tokenData.access_token) {
+      console.error('Discord OAuth error:', tokenData);
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=discord_token_failed`);
+    }
+
+    // Get user info from Discord
+    const userResponse = await fetch('https://discord.com/api/users/@me', {
+      headers: {
+        Authorization: `Bearer ${tokenData.access_token}`,
+      },
+    });
+
+    const discordUser = await userResponse.json();
+
+    if (!discordUser.id) {
+      console.error('Failed to get Discord user:', discordUser);
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=discord_user_failed`);
+    }
+
+    // Create a temporary token to link this Discord account to website account
+    const linkToken = jwt.sign(
+      { 
+        discordId: discordUser.id,
+        discordUsername: `${discordUser.username}#${discordUser.discriminator}`,
+        type: 'discord_link'
+      },
+      JWT_SECRET,
+      { expiresIn: '5m' }
+    );
+
+    // Redirect back to frontend with the link token
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/profile?discord_link=${linkToken}`);
+  } catch (error) {
+    console.error('Discord OAuth error:', error);
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=discord_oauth_error`);
+  }
+});
+
+// Step 3: Link Discord account to website account
+app.post('/api/link-discord', auth, async (req, res) => {
+  try {
+    const { linkToken } = req.body;
+
+    if (!linkToken) {
+      return res.status(400).json({ error: 'Link token required' });
+    }
+
+    // Verify the link token
+    let linkData;
+    try {
+      linkData = jwt.verify(linkToken, JWT_SECRET);
+    } catch (err) {
+      return res.status(400).json({ error: 'Invalid or expired link token' });
+    }
+
+    if (linkData.type !== 'discord_link') {
+      return res.status(400).json({ error: 'Invalid link token type' });
+    }
+
+    // Update user with Discord info
+    const user = await User.findById(req.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    user.discordId = linkData.discordId;
+    user.discordUsername = linkData.discordUsername;
+    await user.save();
+
+    res.json({
+      success: true,
+      discordId: linkData.discordId,
+      discordUsername: linkData.discordUsername
+    });
+  } catch (error) {
+    console.error('Link Discord error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ==========================================
+// DISCORD OAUTH FOR LOGIN/SIGNUP
+// ==========================================
+
+// Step 1: Redirect to Discord OAuth for login
+app.get('/auth/discord/login', (req, res) => {
+  const clientId = process.env.DISCORD_CLIENT_ID;
+  const redirectUri = encodeURIComponent(process.env.DISCORD_REDIRECT_URI_LOGIN || 'https://the-divide.onrender.com/auth/discord/login/callback');
+  const scope = encodeURIComponent('identify email');
+  
+  const discordAuthUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
+  res.redirect(discordAuthUrl);
+});
+
+// Step 2: Handle Discord login callback
+app.get('/auth/discord/login/callback', async (req, res) => {
+  const { code } = req.query;
+  
+  if (!code) {
+    return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=discord_login_failed`);
+  }
+
+  try {
+    // Exchange code for access token
+    const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        client_id: process.env.DISCORD_CLIENT_ID,
+        client_secret: process.env.DISCORD_CLIENT_SECRET,
+        grant_type: 'authorization_code',
+        code: code,
+        redirect_uri: process.env.DISCORD_REDIRECT_URI_LOGIN || 'https://the-divide.onrender.com/auth/discord/login/callback',
+      }),
+    });
+
+    const tokenData = await tokenResponse.json();
+
+    if (!tokenData.access_token) {
+      console.error('Discord login error:', tokenData);
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=discord_token_failed`);
+    }
+
+    // Get user info from Discord
+    const userResponse = await fetch('https://discord.com/api/users/@me', {
+      headers: {
+        Authorization: `Bearer ${tokenData.access_token}`,
+      },
+    });
+
+    const discordUser = await userResponse.json();
+
+    if (!discordUser.id) {
+      console.error('Failed to get Discord user:', discordUser);
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=discord_user_failed`);
+    }
+
+    // Check if user exists with this Discord ID
+    let user = await User.findOne({ discordId: discordUser.id });
+
+    if (!user) {
+      // Create new user
+      const username = discordUser.username + '_' + discordUser.discriminator;
+      user = new User({
+        username,
+        email: discordUser.email || '',
+        password: crypto.randomBytes(32).toString('hex'), // Random password (they'll use Discord login)
+        balance: 1000, // Starting balance in cents
+        discordId: discordUser.id,
+        discordUsername: `${discordUser.username}#${discordUser.discriminator}`
+      });
+      await user.save();
+      console.log(`✓ New user created via Discord: ${username} (${discordUser.id})`);
+    }
+
+    // Create JWT token
+    const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '30d' });
+
+    // Redirect to frontend with token
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?discord_login=${token}`);
+  } catch (error) {
+    console.error('Discord login error:', error);
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=discord_login_error`);
+  }
+});
+
+// ==========================================
+// GOOGLE OAUTH FOR LOGIN/SIGNUP
+// ==========================================
+
+// Step 1: Redirect to Google OAuth for login
+app.get('/auth/google/login', (req, res) => {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const redirectUri = encodeURIComponent(process.env.GOOGLE_REDIRECT_URI || 'https://the-divide.onrender.com/auth/google/login/callback');
+  const scope = encodeURIComponent('openid email profile');
+  
+  const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
+  res.redirect(googleAuthUrl);
+});
+
+// Step 2: Handle Google login callback
+app.get('/auth/google/login/callback', async (req, res) => {
+  const { code, error } = req.query;
+  
+  if (!code) {
+    console.error('❌ No authorization code received from Google');
+    return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=google_login_failed`);
+  }
+
+  try {
+    // Exchange code for access token
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        client_id: process.env.GOOGLE_CLIENT_ID,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET,
+        grant_type: 'authorization_code',
+        code: code,
+        redirect_uri: process.env.GOOGLE_REDIRECT_URI || 'https://the-divide.onrender.com/auth/google/login/callback',
+      }),
+    });
+
+    const tokenData = await tokenResponse.json();
+
+    if (!tokenData.access_token) {
+      console.error('❌ Google login error:', tokenData);
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=google_token_failed`);
+    }
+
+    // Get user info from Google
+    const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: {
+        Authorization: `Bearer ${tokenData.access_token}`,
+      },
+    });
+
+    const googleUser = await userResponse.json();
+
+    if (!googleUser.id) {
+      console.error('❌ Failed to get Google user:', googleUser);
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=google_user_failed`);
+    }
+
+    // Check if user exists with this Google ID
+    let user = await User.findOne({ googleId: googleUser.id });
+
+    if (!user) {
+      // Create new user
+      const username = googleUser.email.split('@')[0] + '_google';
+      user = new User({
+        username,
+        email: googleUser.email,
+        password: crypto.randomBytes(32).toString('hex'), // Random password (they'll use Google login)
+        balance: 1000, // Starting balance in cents
+        googleId: googleUser.id,
+        googleEmail: googleUser.email
+      });
+      await user.save();
+      console.log(`✓ New user created via Google: ${username} (${googleUser.email})`);
+    }
+
+    // Create JWT token
+    const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '30d' });
+
+    // Redirect to frontend with token
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?google_login=${token}`);
+  } catch (error) {
+    console.error('❌ Google login error:', error);
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=google_login_error`);
+  }
+});
+
+// ==========================================
 // DEPOSIT/WITHDRAW & BALANCE
 // ==========================================
 
