@@ -1,7 +1,0 @@
-{
-  "betAmount": 1,
-  "playerNumbers": [1, 2, 3, 4, 5],
-  "clientSeed": "test123",
-  "nonce": 0,
-  "risk": "classic"
-}
