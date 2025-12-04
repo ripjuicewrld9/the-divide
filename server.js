@@ -794,8 +794,9 @@ app.post('/divides/vote', auth, async (req, res) => {
     io.emit('voteUpdate', divide);
     res.json({ balance: toDollars(user.balance), votesA: divide.votesA, votesB: divide.votesB, pot: divide.pot });
   } catch (err) {
-    console.error('POST /divides/vote', err);
-    res.status(500).json({ error: 'Server error' });
+    console.error('POST /divides/vote ERROR:', err);
+    console.error('Error stack:', err.stack);
+    res.status(500).json({ error: 'Server error', details: err.message });
   }
 });
 
