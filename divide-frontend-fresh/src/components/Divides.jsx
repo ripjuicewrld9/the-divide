@@ -4,6 +4,7 @@ import { formatCurrency } from '../utils/format';
 import { Link } from 'react-router-dom';
 import { io } from "socket.io-client";
 import DivideCard from "./DivideCard";
+import CategoryNav from "./CategoryNav";
 // Wide modal removed: no pop-out live duet card
 import CreateDivideModal from './CreateDivideModal';
 import VoteWithBetModal from './VoteWithBetModal';
@@ -30,6 +31,8 @@ export default function Divides({ onOpenChat }) {
   const [showModal, setShowModal] = useState(false);
   const [isRegister, setIsRegister] = useState(false);
   const [divides, setDivides] = useState([]);
+  const [filteredDivides, setFilteredDivides] = useState([]);
+  const [activeCategory, setActiveCategory] = useState('All');
   const [allExpanded, setAllExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [jackpot, setJackpot] = useState({ amount: 0, houseTotal: 0, kenoReserve: 0 });
@@ -96,9 +99,12 @@ export default function Divides({ onOpenChat }) {
   };
 
   // 🟢 Fetch Divides from backend
-  const fetchDivides = async () => {
+  const fetchDivides = async (category = 'All') => {
     try {
-      const res = await fetch(`${API_BASE}/Divides`);
+      const url = category === 'All' 
+        ? `${API_BASE}/Divides`
+        : `${API_BASE}/Divides?category=${encodeURIComponent(category)}`;
+      const res = await fetch(url);
       const data = await res.json();
       // dedupe by id/_id and ensure colors
       const map = new Map();
@@ -108,6 +114,7 @@ export default function Divides({ onOpenChat }) {
       }
       const arr = Array.from(map.values());
       setDivides(arr);
+      setFilteredDivides(arr);
       // preload any sounds referenced by divides
       for (const dd of arr) {
         if (dd.soundA) preloadAudio(dd.soundA);
@@ -118,6 +125,21 @@ export default function Divides({ onOpenChat }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Filter divides by category
+  useEffect(() => {
+    if (activeCategory === 'All') {
+      setFilteredDivides(divides);
+    } else {
+      setFilteredDivides(divides.filter(d => d.category === activeCategory));
+    }
+  }, [activeCategory, divides]);
+
+  const handleCategoryChange = (category) => {
+    setActiveCategory(category);
+    setLoading(true);
+    fetchDivides(category);
   };
 
   useEffect(() => {
@@ -288,8 +310,8 @@ export default function Divides({ onOpenChat }) {
 
   if (loading) return <div className="loading">Loading Divides...</div>;
 
-  const activeDivides = divides.filter((d) => d.status === 'active');
-  const previousDivides = divides.filter((d) => d.status !== 'active').sort((a, b) => {
+  const activeDivides = filteredDivides.filter((d) => d.status === 'active');
+  const previousDivides = filteredDivides.filter((d) => d.status !== 'active').sort((a, b) => {
     const ta = a.endTime ? new Date(a.endTime).getTime() : 0;
     const tb = b.endTime ? new Date(b.endTime).getTime() : 0;
     return tb - ta; // newest first
@@ -305,6 +327,10 @@ export default function Divides({ onOpenChat }) {
         <div className="text-center text-xs text-gray-500 mb-3" style={{ fontStyle: 'italic' }}>
           "The popular side loses. Trust no one."
         </div>
+        
+        {/* Category Navigation */}
+        <CategoryNav activeCategory={activeCategory} onCategoryChange={handleCategoryChange} />
+        
         <div className="top-stats flex justify-center mb-2">
           <div className="stat-wrapper bg-gray-900 rounded-lg px-4 py-2">
             <div className="stat-title text-sm text-gray-300">Jackpot</div>
@@ -332,6 +358,7 @@ export default function Divides({ onOpenChat }) {
               key={d._id || d.id}
               divideId={d._id || d.id}
               title={d.title}
+              category={d.category || 'Other'}
               creatorUsername={d.creatorUsername}
               left={d.optionA}
               right={d.optionB}
@@ -370,6 +397,7 @@ export default function Divides({ onOpenChat }) {
                   key={`prev-${d._id || d.id}`}
                   divideId={d._id || d.id}
                   title={d.title}
+                  category={d.category || 'Other'}
                   creatorUsername={d.creatorUsername}
                   left={d.optionA}
                   right={d.optionB}
@@ -435,6 +463,10 @@ export default function Divides({ onOpenChat }) {
         <div className="text-center text-sm text-gray-500 mb-6" style={{ fontStyle: 'italic' }}>
           "The popular side loses. Trust no one."
         </div>
+        
+        {/* Category Navigation */}
+        <CategoryNav activeCategory={activeCategory} onCategoryChange={handleCategoryChange} />
+        
         <div className="top-stats flex justify-center mb-6">
           <div className="stat-wrapper bg-gray-900 rounded-lg px-6 py-4">
             <div className="stat-title text-base text-gray-300">Jackpot</div>
@@ -462,6 +494,7 @@ export default function Divides({ onOpenChat }) {
               key={d._id || d.id}
               divideId={d._id || d.id}
               title={d.title}
+              category={d.category || 'Other'}
               creatorUsername={d.creatorUsername}
               left={d.optionA}
               right={d.optionB}
@@ -500,6 +533,7 @@ export default function Divides({ onOpenChat }) {
                   key={`prev-${d._id || d.id}`}
                   divideId={d._id || d.id}
                   title={d.title}
+                  category={d.category || 'Other'}
                   creatorUsername={d.creatorUsername}
                   left={d.optionA}
                   right={d.optionB}

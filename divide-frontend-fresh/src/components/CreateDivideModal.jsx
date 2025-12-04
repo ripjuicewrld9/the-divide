@@ -4,11 +4,14 @@ import '../styles/CreateDivideModal.css';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
+const CATEGORIES = ['Politics', 'Sports', 'Crypto', 'Entertainment', 'Science', 'Business', 'Other'];
+
 export default function CreateDivideModal({ isOpen, onClose, onDivideCreated }) {
   const { user, refreshUser } = useContext(AuthContext);
   const [title, setTitle] = useState('');
   const [optionA, setOptionA] = useState('');
   const [optionB, setOptionB] = useState('');
+  const [category, setCategory] = useState('Other');
   const [bet, setBet] = useState('1');
   const [side, setSide] = useState('A');
   const [duration, setDuration] = useState('10');
@@ -53,6 +56,7 @@ export default function CreateDivideModal({ isOpen, onClose, onDivideCreated }) 
           title,
           optionA,
           optionB,
+          category,
           bet: betAmount,
           side,
           durationValue: parseInt(duration),
@@ -76,6 +80,7 @@ export default function CreateDivideModal({ isOpen, onClose, onDivideCreated }) 
       setTitle('');
       setOptionA('');
       setOptionB('');
+      setCategory('Other');
       setBet('1');
       setSide('A');
       setDuration('10');
@@ -158,6 +163,32 @@ export default function CreateDivideModal({ isOpen, onClose, onDivideCreated }) 
                 maxLength={50}
               />
             </div>
+          </div>
+
+          <div className="form-group">
+            <label>Category</label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              required
+              style={{
+                padding: '10px 12px',
+                fontSize: '14px',
+                borderRadius: '8px',
+                border: '1px solid rgba(255,255,255,0.2)',
+                background: 'rgba(0,0,0,0.3)',
+                color: '#fff',
+                width: '100%',
+                cursor: 'pointer'
+              }}
+            >
+              {CATEGORIES.map(cat => (
+                <option key={cat} value={cat} style={{ background: '#1a1a1a', color: '#fff' }}>
+                  {cat}
+                </option>
+              ))}
+            </select>
+            <small>Choose the category that best fits your divide</small>
           </div>
 
           <div className="form-group">

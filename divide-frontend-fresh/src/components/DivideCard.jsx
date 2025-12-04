@@ -4,9 +4,23 @@ import { useAuth } from "../context/AuthContext";
 import { formatCurrency } from '../utils/format';
 import api from '../services/api';
 
+const getCategoryColor = (category) => {
+  const colors = {
+    'Politics': '#ff0044',
+    'Sports': '#00ff88',
+    'Crypto': '#f7931a',
+    'Entertainment': '#ff44aa',
+    'Science': '#44aaff',
+    'Business': '#ffaa00',
+    'Other': '#888888'
+  };
+  return colors[category] || '#888888';
+};
+
 export default function DivideCard({
   divideId,
   title,
+  category = 'Other',
   creatorUsername = null,
   left,
   right,
@@ -165,85 +179,85 @@ export default function DivideCard({
   // Determine urgency based on time
   const isUrgent = seconds > 0 && seconds <= 60;
   const isEnding = seconds > 0 && seconds <= 300;
+  const categoryColor = getCategoryColor(category);
       
   return (
     <div
-      className="fade-card"
+      className="divide-market-card"
       style={{
-        background: 'linear-gradient(180deg, #0d1117 0%, #161b22 100%)',
+        background: 'linear-gradient(135deg, rgba(17, 17, 17, 0.98) 0%, rgba(25, 25, 25, 0.95) 100%)',
         border: status === 'ended' && winner 
           ? `2px solid ${String(winner).toUpperCase() === 'A' ? colorA : colorB}`
-          : '1px solid rgba(255,255,255,0.1)',
-        borderRadius: '16px',
+          : '1px solid rgba(255,255,255,0.08)',
+        borderRadius: '12px',
         padding: '20px',
         color: '#fff',
         position: 'relative',
         cursor: 'pointer',
         transition: 'all 0.3s ease',
         boxShadow: status === 'ended' && winner 
-          ? `0 0 20px ${String(winner).toUpperCase() === 'A' ? colorA : colorB}40`
-          : '0 4px 20px rgba(0,0,0,0.3)',
+          ? `0 0 24px ${String(winner).toUpperCase() === 'A' ? colorA : colorB}30`
+          : '0 2px 12px rgba(0,0,0,0.5)',
       }}
       onClick={toggleExpand}
-      onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-4px)'}
-      onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = 'translateY(-2px)';
+        e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.6)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = 'translateY(0)';
+        e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.5)';
+      }}
     >
-      {/* Header: Status + Timer */}
+      {/* Category Badge + Status */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {status === 'active' ? (
-            <>
-              <div style={{
-                width: '8px',
-                height: '8px',
-                borderRadius: '50%',
-                background: isUrgent ? '#ff4444' : '#ff6600',
-                boxShadow: `0 0 8px ${isUrgent ? '#ff4444' : '#ff6600'}`,
-                animation: 'pulse 2s infinite',
-              }} />
-              <span style={{ fontSize: '11px', fontWeight: '700', color: isUrgent ? '#ff6b6b' : '#ff8833', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                {isUrgent ? '⚡ CLOSING' : 'BLIND WAGER'}
-              </span>
-            </>
-          ) : (
-            <span style={{ fontSize: '12px', fontWeight: '600', color: '#888', textTransform: 'uppercase' }}>
-              {status === 'ended' ? `Ended${winnerLabel ? ` • ${winnerLabel} won` : ''}` : status}
-            </span>
-          )}
+        <div style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '6px',
+          padding: '4px 12px',
+          background: `${categoryColor}18`,
+          border: `1px solid ${categoryColor}40`,
+          borderRadius: '16px',
+          fontSize: '11px',
+          fontWeight: '600',
+          color: categoryColor,
+          textTransform: 'uppercase',
+          letterSpacing: '0.5px',
+        }}>
+          {category}
         </div>
         
         {status === 'active' && (
           <div style={{
-            background: isUrgent ? 'rgba(255,68,68,0.15)' : 'rgba(255,102,0,0.1)',
-            padding: '4px 12px',
-            borderRadius: '20px',
-            fontSize: '13px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '4px 10px',
+            background: isUrgent ? 'rgba(255,68,68,0.12)' : 'rgba(0,170,255,0.08)',
+            borderRadius: '16px',
+            fontSize: '11px',
             fontWeight: '600',
             fontFamily: 'monospace',
-            color: isUrgent ? '#ff6b6b' : '#ff8833',
-            border: `1px solid ${isUrgent ? 'rgba(255,68,68,0.3)' : 'rgba(255,102,0,0.2)'}`,
+            color: isUrgent ? '#ff6b6b' : '#00aaff',
+            border: `1px solid ${isUrgent ? 'rgba(255,68,68,0.25)' : 'rgba(0,170,255,0.2)'}`,
           }}>
-            ⏱ {formatTime(seconds)}
+            {isUrgent && '⚡'} {formatTime(seconds)}
           </div>
         )}
       </div>
 
       {/* Title */}
       <h3 style={{
-        margin: '0 0 8px 0',
-        fontSize: '16px',
+        margin: '0 0 16px 0',
+        fontSize: '15px',
         fontWeight: '600',
-        lineHeight: '1.4',
+        lineHeight: '1.5',
         color: '#fff',
+        letterSpacing: '0.2px',
       }}>
         {title}
       </h3>
-
-      {creatorUsername && (
-        <div style={{ fontSize: '11px', color: '#666', marginBottom: '16px' }}>
-          by {creatorUsername}
-        </div>
-      )}
 
       {/* Admin controls */}
       {isAdmin && status === 'active' && (
@@ -518,20 +532,53 @@ export default function DivideCard({
         </button>
       </div>
 
-      {/* Footer: Pot */}
+      {/* Footer: Probabilities + Pot */}
       <div style={{
         display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
+        flexDirection: 'column',
+        gap: '12px',
         padding: '12px',
-        background: 'rgba(255,255,255,0.03)',
+        background: 'rgba(255,255,255,0.02)',
         borderRadius: '8px',
         border: '1px solid rgba(255,255,255,0.05)',
       }}>
-        <span style={{ fontSize: '12px', color: '#888', marginRight: '6px' }}>Pool</span>
-        <span style={{ fontSize: '16px', fontWeight: '700', color: '#00ff88' }}>
-          ${formatCurrency(pot, 2)}
-        </span>
+        {/* Probability Bar */}
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <div style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '8px 12px',
+            background: 'rgba(255,0,68,0.1)',
+            borderRadius: '6px',
+            border: '1px solid rgba(255,0,68,0.2)',
+          }}>
+            <span style={{ fontSize: '12px', color: '#fff', fontWeight: '500' }}>{left}</span>
+            <span style={{ fontSize: '15px', color: '#ff0044', fontWeight: '700' }}>{leftPct}%</span>
+          </div>
+          <div style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '8px 12px',
+            background: 'rgba(0,170,255,0.1)',
+            borderRadius: '6px',
+            border: '1px solid rgba(0,170,255,0.2)',
+          }}>
+            <span style={{ fontSize: '12px', color: '#fff', fontWeight: '500' }}>{right}</span>
+            <span style={{ fontSize: '15px', color: '#00aaff', fontWeight: '700' }}>{rightPct}%</span>
+          </div>
+        </div>
+        
+        {/* Pool Amount */}
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '11px', color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Pool</span>
+          <span style={{ fontSize: '16px', fontWeight: '700', color: '#00ff88' }}>
+            ${formatCurrency(pot, 2)}
+          </span>
+        </div>
       </div>
 
       {/* Warning Banner - Ominous */}

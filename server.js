@@ -431,7 +431,18 @@ app.get('/Divides', async (req, res) => {
   }
   
   try {
-    const list = await Divide.aggregate([
+    // Support category filtering via query parameter
+    const { category } = req.query;
+    const matchStage = {};
+    if (category && category !== 'All') {
+      matchStage.category = category;
+    }
+    
+    const pipeline = [];
+    if (Object.keys(matchStage).length > 0) {
+      pipeline.push({ $match: matchStage });
+    }
+    pipeline.push(
       { $sort: { endTime: 1 } },
       {
         $lookup: {
@@ -446,12 +457,19 @@ app.get('/Divides', async (req, res) => {
       },
       { $addFields: { creatorUsername: { $ifNull: [{ $arrayElemAt: ['$creator.username', 0] }, null] } } },
       { $project: { creator: 0 } }
-    ]).allowDiskUse(true);
+    );
+    
+    const list = await Divide.aggregate(pipeline).allowDiskUse(true);
     res.json(list || []);
   } catch (e) {
     console.error('GET /Divides error', e);
     try {
-      const fallback = await Divide.find({}).sort({ endTime: 1 }).lean();
+      const { category } = req.query;
+      const query = {};
+      if (category && category !== 'All') {
+        query.category = category;
+      }
+      const fallback = await Divide.find(query).sort({ endTime: 1 }).lean();
       return res.json(fallback || []);
     } catch (err) {
       console.error('GET /Divides fallback error', err);
@@ -475,6 +493,7 @@ app.post('/Divides', auth, adminOnly, async (req, res) => {
       imageB,
       soundA,
       soundB,
+      category = 'Other',
       durationValue = 10,
       durationUnit = 'minutes'
     } = req.body || {};
@@ -503,6 +522,7 @@ app.post('/Divides', auth, adminOnly, async (req, res) => {
       imageB: imageB || '',
       soundA: soundA || '',
       soundB: soundB || '',
+      category,
       endTime,
       votesA: 0,
       votesB: 0,
@@ -537,6 +557,7 @@ app.post('/Divides/create-user', auth, async (req, res) => {
       optionB,
       bet = 1,
       side,
+      category = 'Other',
       durationValue = 10,
       durationUnit = 'minutes'
     } = req.body || {};
@@ -579,6 +600,7 @@ app.post('/Divides/create-user', auth, async (req, res) => {
       imageB: '',
       soundA: '',
       soundB: '',
+      category,
       endTime,
       votesA: side === 'A' ? bet : 0,
       votesB: side === 'B' ? bet : 0,
@@ -936,6 +958,56 @@ app.post('/divides/:id/dislike', auth, async (req, res) => {
     res.json({ success: true, dislikes: divide.dislikes });
   } catch (err) {
     console.error('POST /divides/:id/dislike', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ==========================================
+// JACKPOT & NOTIFICATIONS
+// ==========================================
+
+app.get('/jackpot', async (req, res) => {
+  try {
+    const jackpot = await Jackpot.findOne({ id: 'global' }).lean();
+    const house = await House.findOne({ id: 'global' }).lean();
+    res.json({ amount: jackpot?.amount || 0, houseTotal: house?.houseTotal || 0 });
+  } catch (err) {
+    console.error('Error fetching jackpot:', err);
+    res.status(500).json({ error: 'Failed to fetch jackpot' });
+  }
+});
+
+app.get('/api/notifications', auth, async (req, res) => {
+  try {
+    const notifications = await Notification.find({ userId: req.userId })
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .lean();
+    res.json(notifications || []);
+  } catch (err) {
+    console.error('GET /api/notifications', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.get('/api/recent-games', async (req, res) => {
+  try {
+    // Only show recent divides for "recent games" feed
+    const recentDivides = await Divide.find({ status: 'ended' })
+      .sort({ endTime: -1 })
+      .limit(20)
+      .lean();
+    
+    res.json({ games: recentDivides.map(d => ({
+      type: 'divide',
+      id: d._id || d.id,
+      title: d.title,
+      pot: d.pot,
+      winner: d.loserSide,
+      endTime: d.endTime
+    })) });
+  } catch (err) {
+    console.error('GET /api/recent-games', err);
     res.status(500).json({ error: 'Server error' });
   }
 });

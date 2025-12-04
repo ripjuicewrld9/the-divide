@@ -29,6 +29,12 @@ const divideSchema = new mongoose.Schema({
   soundA: { type: String },
   soundB: { type: String },
   endTime: { type: Date },
+  category: {
+    type: String,
+    enum: ['Politics', 'Sports', 'Crypto', 'Entertainment', 'Science', 'Business', 'Other'],
+    default: 'Other',
+    index: true
+  },
   shortsA: { type: Number, default: 0 }, // total $ shorting side A (betting A will lose)
   shortsB: { type: Number, default: 0 }, // total $ shorting side B (betting B will lose)
   totalShorts: { type: Number, default: 0 },
