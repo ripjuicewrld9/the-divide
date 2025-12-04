@@ -1,7 +1,7 @@
-/* src/styles/Divides.css – Deep Red/Black Minimalist Theme */
+/* src/styles/Divides.css – Charcoal Red/Blue Theme */
 .divides-container {
   padding: 24px;
-  background: #0a0a0a;
+  background: linear-gradient(180deg, #0d0d0f 0%, #121216 100%);
   color: #e5e5e5;
   font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
   min-height: 100vh;
@@ -450,19 +450,22 @@
 }
 
 .btn-create-divide {
-  padding: 0.5rem 1.25rem;
-  background: #6b1c1c;
+  padding: 0.6rem 1.5rem;
+  background: linear-gradient(135deg, #e53935 0%, #c62828 100%);
   color: #fff;
   border: none;
   border-radius: 6px;
-  font-size: 0.8rem;
-  font-weight: 500;
+  font-size: 0.85rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.12s ease;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 8px rgba(229, 57, 53, 0.25);
 }
 
 .btn-create-divide:hover {
-  background: #7d2121;
+  background: linear-gradient(135deg, #ef5350 0%, #d32f2f 100%);
+  box-shadow: 0 4px 12px rgba(229, 57, 53, 0.35);
+  transform: translateY(-1px);
 }
 
 .btn-create-divide:active {

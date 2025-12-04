@@ -9,9 +9,9 @@
   flex-direction: column;
   gap: 1.25rem;
   padding: 1.25rem;
-  background: #111;
-  border: 1px solid #1a1a1a;
-  border-radius: 8px;
+  background: #16161a;
+  border: none;
+  border-radius: 0 0 12px 12px;
 }
 
 .form-group {
@@ -31,10 +31,10 @@
 .form-group input,
 .form-group select {
   padding: 0.625rem 0.75rem;
-  border: 1px solid #1a1a1a;
+  border: 1px solid #2a2a30;
   border-radius: 6px;
-  background: #0a0a0a;
-  color: #d4d4d4;
+  background: #0d0d0f;
+  color: #e0e0e0;
   font-size: 0.9rem;
   transition: all 0.15s ease;
 }
@@ -42,12 +42,13 @@
 .form-group input:focus,
 .form-group select:focus {
   outline: none;
-  border-color: #6b1c1c;
+  border-color: #e53935;
+  box-shadow: 0 0 0 2px rgba(229, 57, 53, 0.15);
 }
 
 .form-group small {
   font-size: 0.75rem;
-  color: #444;
+  color: #666;
 }
 
 .form-row {
@@ -64,10 +65,10 @@
 
 .side-btn {
   padding: 0.625rem 0.75rem;
-  border: 1px solid #1a1a1a;
+  border: 1px solid #2a2a30;
   border-radius: 6px;
-  background: #0a0a0a;
-  color: #666;
+  background: #0d0d0f;
+  color: #888;
   font-weight: 500;
   font-size: 0.85rem;
   cursor: pointer;
@@ -75,22 +76,22 @@
 }
 
 .side-btn:hover {
-  border-color: #2a2a2a;
-  color: #888;
+  border-color: #3a3a40;
+  color: #aaa;
 }
 
 .side-btn.active {
-  border-color: #6b1c1c;
-  background: rgba(107, 28, 28, 0.1);
-  color: #a33;
+  border-color: #e53935;
+  background: rgba(229, 57, 53, 0.12);
+  color: #ff5252;
 }
 
 .error-message {
   padding: 0.625rem 0.75rem;
-  background: rgba(107, 28, 28, 0.1);
-  border: 1px solid #6b1c1c;
+  background: rgba(229, 57, 53, 0.12);
+  border: 1px solid #e53935;
   border-radius: 6px;
-  color: #a33;
+  color: #ff5252;
   font-size: 0.8rem;
 }
 
@@ -106,30 +107,32 @@
   padding: 0.625rem 1rem;
   border: none;
   border-radius: 6px;
-  font-weight: 500;
+  font-weight: 600;
   font-size: 0.85rem;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .btn-cancel {
-  background: #161616;
-  color: #666;
-  border: 1px solid #1a1a1a;
+  background: #1e1e24;
+  color: #888;
+  border: 1px solid #2a2a30;
 }
 
 .btn-cancel:hover {
-  background: #1a1a1a;
-  color: #888;
+  background: #26262c;
+  color: #aaa;
 }
 
 .btn-create {
-  background: #6b1c1c;
+  background: linear-gradient(135deg, #e53935 0%, #c62828 100%);
   color: #fff;
+  box-shadow: 0 2px 8px rgba(229, 57, 53, 0.25);
 }
 
 .btn-create:hover:not(:disabled) {
-  background: #7d2121;
+  background: linear-gradient(135deg, #ef5350 0%, #d32f2f 100%);
+  box-shadow: 0 4px 12px rgba(229, 57, 53, 0.35);
 }
 
 .btn-create:disabled {

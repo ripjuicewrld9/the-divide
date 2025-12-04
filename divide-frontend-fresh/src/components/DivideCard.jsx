@@ -1,5 +1,5 @@
 // src/components/DivideCard.jsx
-// Polymarket-exact minimalist design with deep red/black theme
+// Polymarket-style design with bright Red vs Blue sides
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { formatCurrency } from '../utils/format';
@@ -146,63 +146,64 @@ export default function DivideCard({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       style={{
-        background: isHovered ? '#161616' : '#111111',
-        borderRadius: '6px',
-        padding: '12px',
+        background: isHovered ? '#1e1e24' : '#16161a',
+        borderRadius: '8px',
+        padding: '14px',
         cursor: 'pointer',
-        transition: 'background 0.15s ease',
-        border: '1px solid #1a1a1a',
+        transition: 'all 0.15s ease',
+        border: '1px solid #2a2a30',
         position: 'relative',
         fontSize: '12px',
+        boxShadow: isHovered ? '0 4px 20px rgba(0,0,0,0.3)' : 'none',
       }}
     >
       {/* Header: Category + Timer */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
-        <span style={{ fontSize: '9px', fontWeight: '600', color: '#444', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+        <span style={{ fontSize: '9px', fontWeight: '600', color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
           {category}
         </span>
-        <span style={{ fontSize: '9px', fontWeight: '500', color: status === 'ended' ? '#6b1c1c' : '#444' }}>
+        <span style={{ fontSize: '9px', fontWeight: '500', color: status === 'ended' ? '#e53935' : '#888' }}>
           {status === 'active' ? formatTime(seconds) : 'Ended'}
         </span>
       </div>
 
       {/* Title */}
       <div style={{
-        fontSize: '12px',
+        fontSize: '13px',
         fontWeight: '600',
-        color: '#d4d4d4',
-        lineHeight: '1.3',
-        marginBottom: '10px',
+        color: '#e8e8e8',
+        lineHeight: '1.35',
+        marginBottom: '12px',
         display: '-webkit-box',
         WebkitLineClamp: 2,
         WebkitBoxOrient: 'vertical',
         overflow: 'hidden',
-        minHeight: '32px',
+        minHeight: '36px',
       }}>
         {title}
       </div>
 
-      {/* Options - Polymarket style rows */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '10px' }}>
-        {/* Option A */}
+      {/* Options - Red vs Blue style rows */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px' }}>
+        {/* Option A - RED */}
         <div
           onClick={(e) => handleStartEdit('left', e)}
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: editingSide === 'left' ? '6px 8px' : '8px 10px',
-            borderRadius: '4px',
+            padding: editingSide === 'left' ? '6px 10px' : '10px 12px',
+            borderRadius: '6px',
             cursor: status === 'active' ? 'pointer' : 'default',
             transition: 'all 0.12s ease',
             background: editingSide === 'left' 
-              ? 'linear-gradient(90deg, #6b1c1c 0%, #4a1212 100%)' 
-              : 'linear-gradient(90deg, rgba(107, 28, 28, 0.12) 0%, rgba(74, 18, 18, 0.06) 100%)',
-            border: `1px solid ${editingSide === 'left' ? '#6b1c1c' : 'rgba(107, 28, 28, 0.2)'}`,
+              ? 'linear-gradient(90deg, #e53935 0%, #c62828 100%)' 
+              : 'linear-gradient(90deg, rgba(229, 57, 53, 0.15) 0%, rgba(198, 40, 40, 0.08) 100%)',
+            border: `1px solid ${editingSide === 'left' ? '#e53935' : 'rgba(229, 57, 53, 0.25)'}`,
           }}
         >
           {editingSide === 'left' ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', width: '100%' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', width: '100%' }} onClick={(e) => e.stopPropagation()}>
               <input
                 type="number"
                 min="0.01"
@@ -213,46 +214,46 @@ export default function DivideCard({
                 autoFocus
                 style={{
                   flex: 1,
-                  background: 'rgba(0,0,0,0.4)',
+                  background: 'rgba(0,0,0,0.5)',
                   border: 'none',
-                  borderRadius: '3px',
-                  padding: '4px 6px',
+                  borderRadius: '4px',
+                  padding: '6px 8px',
                   color: '#fff',
-                  fontSize: '11px',
+                  fontSize: '12px',
                   outline: 'none',
                   width: '100%',
                 }}
               />
-              <button onClick={(e) => { e.stopPropagation(); setEditingSide(null); }} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '3px', padding: '4px 6px', color: '#666', fontSize: '10px', cursor: 'pointer' }}>✕</button>
-              <button onClick={(e) => handleSubmitBet('left', e)} style={{ background: '#6b1c1c', border: 'none', borderRadius: '3px', padding: '4px 8px', color: '#fff', fontSize: '10px', fontWeight: '600', cursor: 'pointer' }}>Buy</button>
+              <button onClick={(e) => { e.stopPropagation(); setEditingSide(null); }} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '4px', padding: '6px 8px', color: '#888', fontSize: '11px', cursor: 'pointer' }}>✕</button>
+              <button onClick={(e) => handleSubmitBet('left', e)} style={{ background: '#e53935', border: 'none', borderRadius: '4px', padding: '6px 12px', color: '#fff', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>Buy</button>
             </div>
           ) : (
             <>
-              <span style={{ fontSize: '11px', fontWeight: '500', color: '#c4c4c4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '70%' }}>{left}</span>
-              <span style={{ fontSize: '12px', fontWeight: '700', color: '#a33' }}>{leftPct}%</span>
+              <span style={{ fontSize: '12px', fontWeight: '500', color: '#e0e0e0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '70%' }}>{left}</span>
+              <span style={{ fontSize: '13px', fontWeight: '700', color: '#ff5252' }}>{leftPct}%</span>
             </>
           )}
         </div>
 
-        {/* Option B */}
+        {/* Option B - BLUE */}
         <div
           onClick={(e) => handleStartEdit('right', e)}
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: editingSide === 'right' ? '6px 8px' : '8px 10px',
-            borderRadius: '4px',
+            padding: editingSide === 'right' ? '6px 10px' : '10px 12px',
+            borderRadius: '6px',
             cursor: status === 'active' ? 'pointer' : 'default',
             transition: 'all 0.12s ease',
             background: editingSide === 'right'
-              ? 'linear-gradient(90deg, #4a1212 0%, #2d0a0a 100%)'
-              : 'linear-gradient(90deg, rgba(74, 18, 18, 0.12) 0%, rgba(45, 10, 10, 0.06) 100%)',
-            border: `1px solid ${editingSide === 'right' ? '#4a1212' : 'rgba(74, 18, 18, 0.2)'}`,
+              ? 'linear-gradient(90deg, #1e88e5 0%, #1565c0 100%)'
+              : 'linear-gradient(90deg, rgba(30, 136, 229, 0.15) 0%, rgba(21, 101, 192, 0.08) 100%)',
+            border: `1px solid ${editingSide === 'right' ? '#1e88e5' : 'rgba(30, 136, 229, 0.25)'}`,
           }}
         >
           {editingSide === 'right' ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', width: '100%' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', width: '100%' }} onClick={(e) => e.stopPropagation()}>
               <input
                 type="number"
                 min="0.01"
@@ -263,49 +264,50 @@ export default function DivideCard({
                 autoFocus
                 style={{
                   flex: 1,
-                  background: 'rgba(0,0,0,0.4)',
+                  background: 'rgba(0,0,0,0.5)',
                   border: 'none',
-                  borderRadius: '3px',
-                  padding: '4px 6px',
+                  borderRadius: '4px',
+                  padding: '6px 8px',
                   color: '#fff',
-                  fontSize: '11px',
+                  fontSize: '12px',
                   outline: 'none',
                   width: '100%',
                 }}
               />
-              <button onClick={(e) => { e.stopPropagation(); setEditingSide(null); }} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '3px', padding: '4px 6px', color: '#666', fontSize: '10px', cursor: 'pointer' }}>✕</button>
-              <button onClick={(e) => handleSubmitBet('right', e)} style={{ background: '#4a1212', border: 'none', borderRadius: '3px', padding: '4px 8px', color: '#fff', fontSize: '10px', fontWeight: '600', cursor: 'pointer' }}>Buy</button>
+              <button onClick={(e) => { e.stopPropagation(); setEditingSide(null); }} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '4px', padding: '6px 8px', color: '#888', fontSize: '11px', cursor: 'pointer' }}>✕</button>
+              <button onClick={(e) => handleSubmitBet('right', e)} style={{ background: '#1e88e5', border: 'none', borderRadius: '4px', padding: '6px 12px', color: '#fff', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>Buy</button>
             </div>
           ) : (
             <>
-              <span style={{ fontSize: '11px', fontWeight: '500', color: '#c4c4c4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '70%' }}>{right}</span>
-              <span style={{ fontSize: '12px', fontWeight: '700', color: '#733' }}>{rightPct}%</span>
+              <span style={{ fontSize: '12px', fontWeight: '500', color: '#e0e0e0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '70%' }}>{right}</span>
+              <span style={{ fontSize: '13px', fontWeight: '700', color: '#42a5f5' }}>{rightPct}%</span>
             </>
           )}
         </div>
       </div>
 
       {/* Footer: Volume + Reactions */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px', borderTop: '1px solid #1a1a1a' }}>
-        <span style={{ fontSize: '10px', color: '#444' }}>
-          <span style={{ color: '#6b1c1c', fontWeight: '600' }}>${formatCurrency(pot, 0)}</span>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '1px solid #2a2a30' }}>
+        <span style={{ fontSize: '11px', color: '#666' }}>
+          <span style={{ color: '#e53935', fontWeight: '600' }}>${formatCurrency(pot, 0)}</span> Vol
         </span>
-        <div style={{ display: 'flex', gap: '6px' }}>
+        <div style={{ display: 'flex', gap: '8px' }}>
           <button 
             onClick={handleLike}
             disabled={userLiked || userDisliked}
             style={{ 
-              background: userLiked ? 'rgba(74, 222, 128, 0.15)' : 'none',
+              background: userLiked ? 'rgba(74, 222, 128, 0.2)' : 'rgba(255,255,255,0.05)',
               border: 'none',
-              padding: '2px 4px',
+              padding: '4px 8px',
               cursor: (userLiked || userDisliked) ? 'default' : 'pointer',
-              fontSize: '10px',
-              color: userLiked ? '#4ade80' : (userDisliked ? '#333' : '#444'),
-              borderRadius: '3px',
+              fontSize: '11px',
+              color: userLiked ? '#4ade80' : (userDisliked ? '#444' : '#888'),
+              borderRadius: '4px',
               display: 'flex',
               alignItems: 'center',
-              gap: '2px',
+              gap: '4px',
               opacity: userDisliked ? 0.4 : 1,
+              transition: 'all 0.12s ease',
             }}
           >
             👍 {localLikes}
@@ -314,17 +316,18 @@ export default function DivideCard({
             onClick={handleDislike}
             disabled={userLiked || userDisliked}
             style={{ 
-              background: userDisliked ? 'rgba(248, 113, 113, 0.15)' : 'none',
+              background: userDisliked ? 'rgba(248, 113, 113, 0.2)' : 'rgba(255,255,255,0.05)',
               border: 'none',
-              padding: '2px 4px',
+              padding: '4px 8px',
               cursor: (userLiked || userDisliked) ? 'default' : 'pointer',
-              fontSize: '10px',
-              color: userDisliked ? '#f87171' : (userLiked ? '#333' : '#444'),
-              borderRadius: '3px',
+              fontSize: '11px',
+              color: userDisliked ? '#f87171' : (userLiked ? '#444' : '#888'),
+              borderRadius: '4px',
               display: 'flex',
               alignItems: 'center',
-              gap: '2px',
+              gap: '4px',
               opacity: userLiked ? 0.4 : 1,
+              transition: 'all 0.12s ease',
             }}
           >
             👎 {localDislikes}

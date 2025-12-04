@@ -102,7 +102,7 @@ export default function CreateDivideModal({ isOpen, onClose, onDivideCreated }) 
       left: 0,
       right: 0,
       bottom: 0,
-      background: 'rgba(0, 0, 0, 0.9)',
+      background: 'rgba(0, 0, 0, 0.85)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -110,8 +110,8 @@ export default function CreateDivideModal({ isOpen, onClose, onDivideCreated }) 
       padding: '20px',
     }} onClick={onClose}>
       <div style={{
-        background: '#111',
-        border: '1px solid #1a1a1a',
+        background: '#16161a',
+        border: '1px solid #2a2a30',
         borderRadius: '12px',
         width: '100%',
         maxWidth: '520px',
@@ -124,13 +124,13 @@ export default function CreateDivideModal({ isOpen, onClose, onDivideCreated }) 
           justifyContent: 'space-between',
           alignItems: 'center',
           padding: '16px 20px',
-          borderBottom: '1px solid #1a1a1a',
+          borderBottom: '1px solid #2a2a30',
         }}>
-          <h2 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: '#d4d4d4' }}>Create a Divide</h2>
+          <h2 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: '#e8e8e8' }}>Create a Divide</h2>
           <button onClick={onClose} style={{
             background: 'none',
             border: 'none',
-            color: '#666',
+            color: '#888',
             fontSize: '18px',
             cursor: 'pointer',
             padding: '4px 8px',
@@ -139,12 +139,12 @@ export default function CreateDivideModal({ isOpen, onClose, onDivideCreated }) 
 
         {/* Explanation Banner */}
         <div style={{
-          background: 'rgba(107, 28, 28, 0.15)',
-          color: '#a33',
+          background: 'rgba(229, 57, 53, 0.12)',
+          color: '#ff5252',
           padding: '12px 14px',
           borderRadius: '8px',
           margin: '16px 20px',
-          border: '1px solid rgba(107, 28, 28, 0.3)',
+          border: '1px solid rgba(229, 57, 53, 0.25)',
           fontSize: '12px',
           lineHeight: '1.5'
         }}>
@@ -201,15 +201,15 @@ export default function CreateDivideModal({ isOpen, onClose, onDivideCreated }) 
                 padding: '10px 12px',
                 fontSize: '13px',
                 borderRadius: '6px',
-                border: '1px solid #1a1a1a',
-                background: '#0a0a0a',
-                color: '#d4d4d4',
+                border: '1px solid #2a2a30',
+                background: '#0d0d0f',
+                color: '#e0e0e0',
                 width: '100%',
                 cursor: 'pointer'
               }}
             >
               {CATEGORIES.map(cat => (
-                <option key={cat} value={cat} style={{ background: '#111', color: '#d4d4d4' }}>
+                <option key={cat} value={cat} style={{ background: '#16161a', color: '#e0e0e0' }}>
                   {cat}
                 </option>
               ))}
@@ -238,9 +238,9 @@ export default function CreateDivideModal({ isOpen, onClose, onDivideCreated }) 
                 className={`side-btn ${side === 'A' ? 'active' : ''}`}
                 onClick={() => setSide('A')}
                 style={{
-                  border: side === 'A' ? '1px solid #6b1c1c' : '1px solid #1a1a1a',
-                  background: side === 'A' ? 'rgba(107, 28, 28, 0.2)' : '#0a0a0a',
-                  color: side === 'A' ? '#a33' : '#666'
+                  border: side === 'A' ? '1px solid #e53935' : '1px solid #2a2a30',
+                  background: side === 'A' ? 'rgba(229, 57, 53, 0.2)' : '#0d0d0f',
+                  color: side === 'A' ? '#ff5252' : '#888'
                 }}
               >
                 {optionA || 'Option A'}
@@ -250,15 +250,15 @@ export default function CreateDivideModal({ isOpen, onClose, onDivideCreated }) 
                 className={`side-btn ${side === 'B' ? 'active' : ''}`}
                 onClick={() => setSide('B')}
                 style={{
-                  border: side === 'B' ? '1px solid #6b1c1c' : '1px solid #1a1a1a',
-                  background: side === 'B' ? 'rgba(107, 28, 28, 0.2)' : '#0a0a0a',
-                  color: side === 'B' ? '#a33' : '#666'
+                  border: side === 'B' ? '1px solid #1e88e5' : '1px solid #2a2a30',
+                  background: side === 'B' ? 'rgba(30, 136, 229, 0.2)' : '#0d0d0f',
+                  color: side === 'B' ? '#42a5f5' : '#888'
                 }}
               >
                 {optionB || 'Option B'}
               </button>
             </div>
-            <small style={{ color: '#666' }}>
+            <small style={{ color: '#888' }}>
               Pick the side you think will lose
             </small>
           </div>
