@@ -1309,9 +1309,9 @@ async function endDivideById(divideId, userId) {
     const totalWinnerVotes = winners.reduce((sum, w) => sum + w.voteCount, 0);
 
     const pot = Number(divide.pot);
-    const houseCut = pot * 0.05;
-    const jackpotAmount = pot * 0.01;
-    const distributed = pot - houseCut - jackpotAmount;
+    const houseCut = pot * 0.02; // 2% house rake
+    const creatorCut = pot * 0.01; // 1% creator rake
+    const distributed = pot - houseCut - creatorCut;
 
     await House.findOneAndUpdate(
       { id: 'global' },
@@ -1319,11 +1319,21 @@ async function endDivideById(divideId, userId) {
       { upsert: true }
     );
 
-    await Jackpot.findOneAndUpdate(
-      { id: 'global' },
-      { $inc: { amount: toCents(jackpotAmount) } },
-      { upsert: true }
-    );
+    // Pay creator their 1% rake
+    if (divide.creatorId) {
+      await User.findByIdAndUpdate(
+        divide.creatorId,
+        { $inc: { balance: toCents(creatorCut) } }
+      );
+      
+      await Ledger.create({
+        type: 'creator_rake',
+        amount: Number(creatorCut),
+        userId: divide.creatorId,
+        divideId: divide.id || divide._id,
+        meta: { pot, creatorCut }
+      });
+    }
 
     if (totalWinnerVotes > 0) {
       for (const w of winners) {
@@ -1337,7 +1347,7 @@ async function endDivideById(divideId, userId) {
           amount: Number(share),
           userId: w.userId,
           divideId: divide.id || divide._id,
-          meta: { side: winnerSide, pot, houseCut, jackpotAmount }
+          meta: { side: winnerSide, pot, houseCut, creatorCut }
         });
       }
     }
@@ -1350,7 +1360,7 @@ async function endDivideById(divideId, userId) {
       winner: winnerSide, 
       pot: divide.pot, 
       houseCut, 
-      jackpotAmount, 
+      creatorCut, 
       distributed 
     });
 
@@ -1535,17 +1545,6 @@ app.post('/divides/:id/dislike', auth, async (req, res) => {
 // JACKPOT & NOTIFICATIONS
 // ==========================================
 
-app.get('/jackpot', async (req, res) => {
-  try {
-    const jackpot = await Jackpot.findOne({ id: 'global' }).lean();
-    const house = await House.findOne({ id: 'global' }).lean();
-    res.json({ amount: jackpot?.amount || 0, houseTotal: house?.houseTotal || 0 });
-  } catch (err) {
-    console.error('Error fetching jackpot:', err);
-    res.status(500).json({ error: 'Failed to fetch jackpot' });
-  }
-});
-
 app.get('/api/notifications', auth, async (req, res) => {
   try {
     const notifications = await Notification.find({ userId: req.userId })
@@ -1593,15 +1592,13 @@ app.get('/admin/stats', auth, adminOnly, async (req, res) => {
     const activeDivides = await Divide.countDocuments({ status: 'active' });
 
     const house = await House.findOne({ id: 'global' });
-    const jackpot = await Jackpot.findOne({ id: 'global' });
 
     res.json({
       userCount,
       activeUsers,
       totalWagered: totalWagered[0]?.total || 0,
       activeDivides,
-      houseTotal: house?.houseTotal || 0,
-      jackpotAmount: jackpot?.amount || 0
+      houseTotal: house?.houseTotal || 0
     });
   } catch (err) {
     console.error('GET /admin/stats', err);
@@ -1668,7 +1665,6 @@ app.get('/admin/ledger', auth, adminOnly, async (req, res) => {
 app.get('/admin/finance', auth, adminOnly, async (req, res) => {
   try {
     const house = await House.findOne({ id: 'global' }).lean();
-    const jackpot = await Jackpot.findOne({ id: 'global' }).lean();
 
     if (!house) {
       return res.status(500).json({ error: 'House document not found' });
@@ -1693,7 +1689,6 @@ app.get('/admin/finance', auth, adminOnly, async (req, res) => {
 
     res.json({
       global: {
-        jackpotAmount: toDollars(jackpot?.amount || 0),
         houseTotal: toDollars(house?.houseTotal || 0),
         totalDeposited: toDollars(totalDeposited),
         totalWithdrawn: toDollars(totalWithdrawn),
