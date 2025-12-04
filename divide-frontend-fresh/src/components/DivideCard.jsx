@@ -234,13 +234,13 @@ export default function DivideCard({
             alignItems: 'center',
             gap: '6px',
             padding: '4px 10px',
-            background: isUrgent ? 'rgba(255,68,68,0.12)' : 'rgba(255,50,50,0.08)',
+            background: isUrgent ? 'rgba(255,68,68,0.12)' : 'rgba(139,69,88,0.08)',
             borderRadius: '16px',
             fontSize: '11px',
             fontWeight: '600',
             fontFamily: 'monospace',
-            color: isUrgent ? '#ff6b6b' : '#ff3232',
-            border: `1px solid ${isUrgent ? 'rgba(255,68,68,0.25)' : 'rgba(255,50,50,0.2)'}`,
+            color: isUrgent ? '#ff6b6b' : '#c97586',
+            border: `1px solid ${isUrgent ? 'rgba(255,68,68,0.25)' : 'rgba(139,69,88,0.2)'}`,
           }}>
             {isUrgent && '⚡'} {formatTime(seconds)}
           </div>
@@ -563,12 +563,12 @@ export default function DivideCard({
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: '8px 12px',
-            background: 'rgba(255,50,50,0.1)',
+            background: 'rgba(139,69,88,0.1)',
             borderRadius: '6px',
-            border: '1px solid rgba(255,50,50,0.2)',
+            border: '1px solid rgba(139,69,88,0.2)',
           }}>
             <span style={{ fontSize: '12px', color: '#fff', fontWeight: '500' }}>{right}</span>
-            <span style={{ fontSize: '15px', color: '#ff3232', fontWeight: '700' }}>{rightPct}%</span>
+            <span style={{ fontSize: '15px', color: '#c97586', fontWeight: '700' }}>{rightPct}%</span>
           </div>
         </div>
         
