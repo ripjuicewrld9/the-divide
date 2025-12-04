@@ -6,15 +6,15 @@ import api from '../services/api';
 
 const getCategoryColor = (category) => {
   const colors = {
-    'Politics': '#ff0044',
-    'Sports': '#00ff88',
-    'Crypto': '#f7931a',
-    'Entertainment': '#ff44aa',
-    'Science': '#44aaff',
-    'Business': '#ffaa00',
-    'Other': '#888888'
+    'Politics': '#c97586',
+    'Sports': '#b86576',
+    'Crypto': '#a85c6f',
+    'Entertainment': '#c97586',
+    'Science': '#b86576',
+    'Business': '#a85c6f',
+    'Other': '#8b4558'
   };
-  return colors[category] || '#888888';
+  return colors[category] || '#8b4558';
 };
 
 export default function DivideCard({

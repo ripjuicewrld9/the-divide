@@ -3,13 +3,13 @@ import '../styles/CategoryNav.css';
 
 const categories = [
   { name: 'All', icon: '🌐', color: '#c97586' },
-  { name: 'Politics', icon: '🏛️', color: '#ff0044' },
-  { name: 'Sports', icon: '⚽', color: '#00ff88' },
-  { name: 'Crypto', icon: '₿', color: '#f7931a' },
-  { name: 'Entertainment', icon: '🎬', color: '#ff44aa' },
-  { name: 'Science', icon: '🔬', color: '#ff5050' },
-  { name: 'Business', icon: '💼', color: '#ffaa00' },
-  { name: 'Other', icon: '❓', color: '#888888' }
+  { name: 'Politics', icon: '🏛️', color: '#c97586' },
+  { name: 'Sports', icon: '⚽', color: '#b86576' },
+  { name: 'Crypto', icon: '₿', color: '#a85c6f' },
+  { name: 'Entertainment', icon: '🎬', color: '#c97586' },
+  { name: 'Science', icon: '🔬', color: '#b86576' },
+  { name: 'Business', icon: '💼', color: '#a85c6f' },
+  { name: 'Other', icon: '❓', color: '#8b4558' }
 ];
 
 export default function CategoryNav({ activeCategory, onCategoryChange }) {

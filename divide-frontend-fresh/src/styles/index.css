@@ -1,56 +1,65 @@
 @import "tailwindcss";
 
-/* src/index.css */
+/* src/index.css - Minimalist Premium Polymarket Style */
 body {
-  background: linear-gradient(135deg, #0f0a0e 0%, #1a0f14 50%, #120a0f 100%);
-  color: #fff;
+  background: linear-gradient(180deg, #0a0609 0%, #0f0a0e 50%, #0a0609 100%);
+  color: #e8e8e8;
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   margin: 0;
   padding: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
 }
 
 /* Global dark scrollbar styling */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #3d1f2a #0f0a0e;
+  scrollbar-color: rgba(139, 69, 88, 0.3) rgba(10, 6, 9, 0.8);
 }
 
 *::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 *::-webkit-scrollbar-track {
-  background: #0f0a0e;
+  background: rgba(10, 6, 9, 0.8);
 }
 
 *::-webkit-scrollbar-thumb {
-  background: #3d1f2a;
-  border-radius: 4px;
+  background: rgba(139, 69, 88, 0.3);
+  border-radius: 3px;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: #4d2f3a;
+  background: rgba(139, 69, 88, 0.5);
 }
 
 .divides-container {
-  padding: 20px;
+  padding: 1rem 1.5rem;
 }
 
 .divides-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 20px;
+  gap: 1rem;
 }
 
 .divide-card {
-  background: linear-gradient(135deg, rgba(31, 20, 26, 0.8) 0%, rgba(20, 15, 18, 0.8) 100%);
-  border-radius: 12px;
-  padding: 20px;
+  background: linear-gradient(135deg, rgba(20, 10, 14, 0.95) 0%, rgba(15, 8, 12, 0.98) 100%);
+  border-radius: 0.75rem;
+  padding: 1rem;
   flex: 1 1 300px;
-  box-shadow: 0 0 10px rgba(139, 69, 88, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(139, 69, 88, 0.1) inset;
   border: 1px solid rgba(139, 69, 88, 0.2);
   text-align: center;
+  transition: all 0.2s ease;
+}
+
+.divide-card:hover {
+  border-color: rgba(201, 117, 134, 0.4);
+  box-shadow: 0 4px 12px rgba(139, 69, 88, 0.3), 0 0 0 1px rgba(201, 117, 134, 0.2) inset;
 }
 
 .options {

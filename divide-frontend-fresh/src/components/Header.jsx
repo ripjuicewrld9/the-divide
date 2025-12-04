@@ -78,7 +78,7 @@ export default function Header() {
         {/* Logo & Nav */}
         <nav className="flex items-center gap-6">
           <Link to="/" className="flex items-center gap-2 font-display text-2xl font-bold tracking-tight transition-transform hover:scale-105">
-            <span className="bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-[#c97586] to-[#a85c6f] bg-clip-text text-transparent">
               The Divide
             </span>
           </Link>
@@ -107,15 +107,15 @@ export default function Header() {
               <div className="flex items-center gap-2 rounded-full border border-white/10 bg-black/40 px-1 py-1 pr-4">
                 <div className="flex flex-col items-end leading-none mr-2">
                   <span className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Balance</span>
-                  <span className="bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-sm font-bold text-transparent">
+                  <span className="bg-gradient-to-r from-[#c97586] to-[#a85c6f] bg-clip-text text-sm font-bold text-transparent">
                     ${formatCurrency(Number(user.balance || 0), 2)}
                   </span>
                 </div>
                 <button
                   onClick={() => setShowDepositModal(true)}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-r from-cyan-400 to-emerald-400 text-black shadow-lg transition-transform hover:scale-105 active:scale-95"
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-r from-[#c97586] to-[#a85c6f] text-white shadow-lg transition-transform hover:scale-105 active:scale-95"
                   title="Add funds"
-                  style={{ boxShadow: '0 2px 8px rgba(6, 182, 212, 0.3)' }}
+                  style={{ boxShadow: '0 2px 8px rgba(139, 69, 88, 0.4)' }}
                 >
                   <span className="font-bold text-lg leading-none">+</span>
                 </button>
@@ -126,7 +126,7 @@ export default function Header() {
               <div className="relative">
                 <button
                   onClick={handleUserButton}
-                  className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-white/10 hover:border-cyan-500/30"
+                  className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-white/10 hover:border-[#c97586]/30"
                 >
                   <UserAvatar user={user} size={24} />
                   {user.username}
@@ -152,7 +152,7 @@ export default function Header() {
                           <Link
                             to="/admin"
                             onClick={() => setMenuOpen(false)}
-                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-cyan-400 transition-colors hover:bg-white/5 hover:text-cyan-300"
+                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-[#c97586] transition-colors hover:bg-white/5 hover:text-[#d98597]"
                           >
                             🛠️ Admin Panel
                           </Link>
