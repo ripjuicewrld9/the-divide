@@ -408,7 +408,14 @@ app.get('/api/me', auth, async (req, res) => {
 
     res.json({
       ...user.toObject(),
-      balance: toDollars(user.balance)
+      balance: toDollars(user.balance),
+      wagered: toDollars(user.wagered || 0),
+      totalWinnings: toDollars(user.totalWinnings || 0),
+      totalWon: toDollars(user.totalWon || 0),
+      totalDeposited: toDollars(user.totalDeposited || 0),
+      totalWithdrawn: toDollars(user.totalWithdrawn || 0),
+      wagerRequirement: toDollars(user.wagerRequirement || 0),
+      totalWageredUsd: toDollars(user.totalWageredUsd || 0)
     });
   } catch (err) {
     console.error('GET /api/me', err);
