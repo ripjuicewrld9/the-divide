@@ -1,42 +1,54 @@
 import React from 'react';
-import '../styles/CategoryNav.css';
 
 const categories = [
-  { name: 'All', icon: '🌐', color: '#c97586' },
-  { name: 'Politics', icon: '🏛️', color: '#c97586' },
-  { name: 'Sports', icon: '⚽', color: '#b86576' },
-  { name: 'Crypto', icon: '₿', color: '#a85c6f' },
-  { name: 'Entertainment', icon: '🎬', color: '#c97586' },
-  { name: 'Science', icon: '🔬', color: '#b86576' },
-  { name: 'Business', icon: '💼', color: '#a85c6f' },
-  { name: 'Other', icon: '❓', color: '#8b4558' }
+  { name: 'All', icon: '🌐' },
+  { name: 'Politics', icon: '🏛️' },
+  { name: 'Sports', icon: '⚽' },
+  { name: 'Crypto', icon: '₿' },
+  { name: 'Entertainment', icon: '🎬' },
+  { name: 'Science', icon: '🔬' },
+  { name: 'Business', icon: '💼' },
+  { name: 'Other', icon: '❓' }
 ];
 
 export default function CategoryNav({ activeCategory, onCategoryChange }) {
   return (
-    <div className="category-nav">
-      <div className="category-nav-scroll">
+    <div style={{
+      display: 'flex',
+      justifyContent: 'center',
+      padding: '12px 16px',
+      marginBottom: '16px',
+      borderBottom: '1px solid #1a1a1a',
+    }}>
+      <div style={{
+        display: 'flex',
+        gap: '6px',
+        overflowX: 'auto',
+        maxWidth: '100%',
+        paddingBottom: '4px',
+      }}>
         {categories.map((cat) => (
           <button
             key={cat.name}
-            className={`category-pill ${activeCategory === cat.name ? 'active' : ''}`}
             onClick={() => onCategoryChange(cat.name)}
             style={{
-              '--category-color': cat.color,
-              borderColor: activeCategory === cat.name ? cat.color : 'rgba(255, 255, 255, 0.1)',
-              boxShadow: activeCategory === cat.name 
-                ? `0 0 20px ${cat.color}40, inset 0 0 20px ${cat.color}20` 
-                : 'none'
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 12px',
+              borderRadius: '6px',
+              border: `1px solid ${activeCategory === cat.name ? '#6b1c1c' : '#1a1a1a'}`,
+              background: activeCategory === cat.name ? 'rgba(107, 28, 28, 0.15)' : '#111',
+              color: activeCategory === cat.name ? '#a33' : '#666',
+              fontSize: '12px',
+              fontWeight: '500',
+              cursor: 'pointer',
+              transition: 'all 0.12s ease',
+              whiteSpace: 'nowrap',
             }}
           >
-            <span className="category-icon">{cat.icon}</span>
-            <span className="category-name">{cat.name}</span>
-            {activeCategory === cat.name && (
-              <div 
-                className="category-active-indicator"
-                style={{ backgroundColor: cat.color }}
-              />
-            )}
+            <span style={{ fontSize: '13px' }}>{cat.icon}</span>
+            <span>{cat.name}</span>
           </button>
         ))}
       </div>

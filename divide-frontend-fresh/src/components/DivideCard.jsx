@@ -1,21 +1,9 @@
 // src/components/DivideCard.jsx
+// Polymarket-exact minimalist design with deep red/black theme
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { formatCurrency } from '../utils/format';
 import api from '../services/api';
-
-const getCategoryColor = (category) => {
-  const colors = {
-    'Politics': '#c97586',
-    'Sports': '#b86576',
-    'Crypto': '#a85c6f',
-    'Entertainment': '#c97586',
-    'Science': '#b86576',
-    'Business': '#a85c6f',
-    'Other': '#8b4558'
-  };
-  return colors[category] || '#8b4558';
-};
 
 export default function DivideCard({
   divideId,
@@ -36,8 +24,6 @@ export default function DivideCard({
   dislikedBy = [],
   onVote,
   onRequestExpand,
-  colorA = "#ff0044",
-  colorB = "#0ff",
   active = true,
 }) {
   const [l, setL] = useState(Number(leftVotes) || 0);
@@ -48,6 +34,7 @@ export default function DivideCard({
   const [localDislikes, setLocalDislikes] = useState(Number(dislikes) || 0);
   const [userLiked, setUserLiked] = useState(false);
   const [userDisliked, setUserDisliked] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const [seconds, setSeconds] = useState(() => {
     if (!endTime) return 0;
     const delta = Math.floor((new Date(endTime) - Date.now()) / 1000);
@@ -62,7 +49,6 @@ export default function DivideCard({
   useEffect(() => { setLocalLikes(Number(likes) || 0); }, [likes]);
   useEffect(() => { setLocalDislikes(Number(dislikes) || 0); }, [dislikes]);
   
-  // Check if current user has already liked/disliked
   useEffect(() => {
     if (user && user.id) {
       setUserLiked((likedBy || []).includes(user.id));
@@ -83,70 +69,38 @@ export default function DivideCard({
 
   const total = l + r || 1;
   const leftPct = Math.round((l / total) * 100);
-  const rightPct = Math.round((r / total) * 100);
+  const rightPct = 100 - leftPct;
 
-  const winnerLabel = (() => {
-    if (!winner) return null;
-    const w = String(winner).toUpperCase();
-    if (w === 'A' || w === 'LEFT') return left;
-    if (w === 'B' || w === 'RIGHT') return right;
-    return winner;
-  })();
+  const formatTime = (s) => {
+    if (s <= 0) return "Ended";
+    const days = Math.floor(s / 86400);
+    const hours = Math.floor((s % 86400) / 3600);
+    const minutes = Math.floor((s % 3600) / 60);
+    if (days > 0) return `${days}d ${hours}h`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
+  };
 
   const handleVote = async (side, boostAmount) => {
     if (!active) return alert('This market is no longer active');
     if (!user) return alert("Please log in to place a position");
     try {
-      if (onVote) {
-        await onVote(side === "left" ? "A" : "B", boostAmount);
-        return;
-      }
+      if (onVote) await onVote(side === "left" ? "A" : "B", boostAmount);
     } catch (err) {
       console.error("Position error:", err);
       alert(err.message || "Failed to place position");
     }
   };
 
-  const handleStartEdit = (side) => {
-    // Server handles all validation (creator lock, duplicate votes, etc.)
-    // Frontend just opens the input - server will reject invalid attempts
+  const handleStartEdit = (side, e) => {
+    e.stopPropagation();
+    if (status !== 'active') return;
     setEditingSide(side);
     setBetAmount('');
   };
 
-  const handleLike = async (e) => {
+  const handleSubmitBet = async (side, e) => {
     e.stopPropagation();
-    if (!user) return alert('Please log in to react');
-    if (userLiked) return; // Already liked
-    try {
-      const res = await api.post(`/api/divides/${divideId}/like`);
-      setLocalLikes(res.likes || localLikes + 1);
-      if (userDisliked) setLocalDislikes(prev => Math.max(0, prev - 1));
-      setUserLiked(true);
-      setUserDisliked(false);
-    } catch (err) {
-      console.error('Like failed:', err);
-      // Don't show alert for common cases like "already liked"
-    }
-  };
-
-  const handleDislike = async (e) => {
-    e.stopPropagation();
-    if (!user) return alert('Please log in to react');
-    if (userDisliked) return; // Already disliked
-    try {
-      const res = await api.post(`/api/divides/${divideId}/dislike`);
-      setLocalDislikes(res.dislikes || localDislikes + 1);
-      if (userLiked) setLocalLikes(prev => Math.max(0, prev - 1));
-      setUserDisliked(true);
-      setUserLiked(false);
-    } catch (err) {
-      console.error('Dislike failed:', err);
-      // Don't show alert for common cases like "already disliked"
-    }
-  };
-
-  const handleSubmitBet = async (side) => {
     const amount = Number(betAmount) || 0;
     if (amount <= 0) return alert('Enter a valid amount');
     try {
@@ -160,106 +114,221 @@ export default function DivideCard({
     }
   };
 
-  const formatTime = (s) => {
-    if (s <= 0) return "0:00";
-    const days = Math.floor(s / 86400);
-    const hours = Math.floor((s % 86400) / 3600);
-    const minutes = Math.floor((s % 3600) / 60);
-    if (days > 0) return `${days}d ${hours}h`;
-    if (hours > 0) return `${hours}h ${minutes}m`;
-    const sec = (s % 60).toString().padStart(2, "0");
-    const min = minutes.toString().padStart(2, "0");
-    return `${min}:${sec}`;
+  const handleLike = async (e) => {
+    e.stopPropagation();
+    if (!user) return alert('Please log in');
+    if (userLiked) return;
+    try {
+      const res = await api.post(`/api/divides/${divideId}/like`);
+      setLocalLikes(res.likes || localLikes + 1);
+      if (userDisliked) setLocalDislikes(prev => Math.max(0, prev - 1));
+      setUserLiked(true);
+      setUserDisliked(false);
+    } catch (err) { console.error('Like failed:', err); }
+  };
+
+  const handleDislike = async (e) => {
+    e.stopPropagation();
+    if (!user) return alert('Please log in');
+    if (userDisliked) return;
+    try {
+      const res = await api.post(`/api/divides/${divideId}/dislike`);
+      setLocalDislikes(res.dislikes || localDislikes + 1);
+      if (userLiked) setLocalLikes(prev => Math.max(0, prev - 1));
+      setUserDisliked(true);
+      setUserLiked(false);
+    } catch (err) { console.error('Dislike failed:', err); }
   };
 
   const toggleExpand = () => {
     if (typeof onRequestExpand === 'function') onRequestExpand();
   };
 
-  // Determine urgency based on time
-  const isUrgent = seconds > 0 && seconds <= 60;
-  const isEnding = seconds > 0 && seconds <= 300;
-  const categoryColor = getCategoryColor(category);
-      
   return (
     <div
-      className="divide-market-card"
-      style={{
-        background: 'linear-gradient(135deg, rgba(17, 17, 17, 0.98) 0%, rgba(25, 25, 25, 0.95) 100%)',
-        border: status === 'ended' && winner 
-          ? `2px solid ${String(winner).toUpperCase() === 'A' ? colorA : colorB}`
-          : '1px solid rgba(255,255,255,0.08)',
-        borderRadius: '12px',
-        padding: '20px',
-        color: '#fff',
-        position: 'relative',
-        cursor: 'pointer',
-        transition: 'all 0.3s ease',
-        boxShadow: status === 'ended' && winner 
-          ? `0 0 24px ${String(winner).toUpperCase() === 'A' ? colorA : colorB}30`
-          : '0 2px 12px rgba(0,0,0,0.5)',
-      }}
       onClick={toggleExpand}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = 'translateY(-2px)';
-        e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.6)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.5)';
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      style={{
+        background: isHovered ? '#161616' : '#111111',
+        borderRadius: '8px',
+        padding: '16px',
+        cursor: 'pointer',
+        transition: 'background 0.15s ease',
+        border: '1px solid #1a1a1a',
+        position: 'relative',
       }}
     >
-      {/* Category Badge + Status */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-        <div style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '6px',
-          padding: '4px 12px',
-          background: `${categoryColor}18`,
-          border: `1px solid ${categoryColor}40`,
-          borderRadius: '16px',
-          fontSize: '11px',
-          fontWeight: '600',
-          color: categoryColor,
-          textTransform: 'uppercase',
-          letterSpacing: '0.5px',
-        }}>
+      {/* Header: Category + Timer */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+        <span style={{ fontSize: '10px', fontWeight: '600', color: '#444', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
           {category}
-        </div>
-        
-        {status === 'active' && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '4px 10px',
-            background: isUrgent ? 'rgba(255,68,68,0.12)' : 'rgba(139,69,88,0.08)',
-            borderRadius: '16px',
-            fontSize: '11px',
-            fontWeight: '600',
-            fontFamily: 'monospace',
-            color: isUrgent ? '#ff6b6b' : '#c97586',
-            border: `1px solid ${isUrgent ? 'rgba(255,68,68,0.25)' : 'rgba(139,69,88,0.2)'}`,
-          }}>
-            {isUrgent && '⚡'} {formatTime(seconds)}
-          </div>
-        )}
+        </span>
+        <span style={{ fontSize: '10px', fontWeight: '500', color: status === 'ended' ? '#6b1c1c' : '#444' }}>
+          {status === 'active' ? formatTime(seconds) : 'Ended'}
+        </span>
       </div>
 
       {/* Title */}
-      <h3 style={{
-        margin: '0 0 16px 0',
-        fontSize: '15px',
+      <div style={{
+        fontSize: '14px',
         fontWeight: '600',
-        lineHeight: '1.5',
-        color: '#fff',
-        letterSpacing: '0.2px',
+        color: '#d4d4d4',
+        lineHeight: '1.4',
+        marginBottom: '14px',
+        display: '-webkit-box',
+        WebkitLineClamp: 2,
+        WebkitBoxOrient: 'vertical',
+        overflow: 'hidden',
       }}>
         {title}
-      </h3>
+      </div>
 
-      {/* Admin controls */}
+      {/* Options - Polymarket style rows */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px' }}>
+        {/* Option A */}
+        <div
+          onClick={(e) => handleStartEdit('left', e)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: editingSide === 'left' ? '8px 10px' : '10px 12px',
+            borderRadius: '6px',
+            cursor: status === 'active' ? 'pointer' : 'default',
+            transition: 'all 0.12s ease',
+            background: editingSide === 'left' 
+              ? 'linear-gradient(90deg, #6b1c1c 0%, #4a1212 100%)' 
+              : 'linear-gradient(90deg, rgba(107, 28, 28, 0.12) 0%, rgba(74, 18, 18, 0.06) 100%)',
+            border: `1px solid ${editingSide === 'left' ? '#6b1c1c' : 'rgba(107, 28, 28, 0.2)'}`,
+          }}
+        >
+          {editingSide === 'left' ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', width: '100%' }} onClick={(e) => e.stopPropagation()}>
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                placeholder="$0.00"
+                value={betAmount}
+                onChange={(e) => setBetAmount(e.target.value)}
+                autoFocus
+                style={{
+                  flex: 1,
+                  background: 'rgba(0,0,0,0.4)',
+                  border: 'none',
+                  borderRadius: '4px',
+                  padding: '6px 8px',
+                  color: '#fff',
+                  fontSize: '12px',
+                  outline: 'none',
+                }}
+              />
+              <button onClick={(e) => { e.stopPropagation(); setEditingSide(null); }} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '4px', padding: '6px 8px', color: '#666', fontSize: '11px', cursor: 'pointer' }}>✕</button>
+              <button onClick={(e) => handleSubmitBet('left', e)} style={{ background: '#6b1c1c', border: 'none', borderRadius: '4px', padding: '6px 12px', color: '#fff', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>Buy</button>
+            </div>
+          ) : (
+            <>
+              <span style={{ fontSize: '13px', fontWeight: '500', color: '#c4c4c4' }}>{left}</span>
+              <span style={{ fontSize: '14px', fontWeight: '700', color: '#a33' }}>{leftPct}%</span>
+            </>
+          )}
+        </div>
+
+        {/* Option B */}
+        <div
+          onClick={(e) => handleStartEdit('right', e)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: editingSide === 'right' ? '8px 10px' : '10px 12px',
+            borderRadius: '6px',
+            cursor: status === 'active' ? 'pointer' : 'default',
+            transition: 'all 0.12s ease',
+            background: editingSide === 'right'
+              ? 'linear-gradient(90deg, #4a1212 0%, #2d0a0a 100%)'
+              : 'linear-gradient(90deg, rgba(74, 18, 18, 0.12) 0%, rgba(45, 10, 10, 0.06) 100%)',
+            border: `1px solid ${editingSide === 'right' ? '#4a1212' : 'rgba(74, 18, 18, 0.2)'}`,
+          }}
+        >
+          {editingSide === 'right' ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', width: '100%' }} onClick={(e) => e.stopPropagation()}>
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                placeholder="$0.00"
+                value={betAmount}
+                onChange={(e) => setBetAmount(e.target.value)}
+                autoFocus
+                style={{
+                  flex: 1,
+                  background: 'rgba(0,0,0,0.4)',
+                  border: 'none',
+                  borderRadius: '4px',
+                  padding: '6px 8px',
+                  color: '#fff',
+                  fontSize: '12px',
+                  outline: 'none',
+                }}
+              />
+              <button onClick={(e) => { e.stopPropagation(); setEditingSide(null); }} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '4px', padding: '6px 8px', color: '#666', fontSize: '11px', cursor: 'pointer' }}>✕</button>
+              <button onClick={(e) => handleSubmitBet('right', e)} style={{ background: '#4a1212', border: 'none', borderRadius: '4px', padding: '6px 12px', color: '#fff', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>Buy</button>
+            </div>
+          ) : (
+            <>
+              <span style={{ fontSize: '13px', fontWeight: '500', color: '#c4c4c4' }}>{right}</span>
+              <span style={{ fontSize: '14px', fontWeight: '700', color: '#733' }}>{rightPct}%</span>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Footer: Volume + Reactions */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '1px solid #1a1a1a' }}>
+        <span style={{ fontSize: '11px', color: '#444' }}>
+          <span style={{ color: '#6b1c1c', fontWeight: '600' }}>${formatCurrency(pot, 0)}</span> Vol.
+        </span>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button 
+            onClick={handleLike}
+            style={{ 
+              background: userLiked ? 'rgba(74, 222, 128, 0.1)' : 'none',
+              border: 'none',
+              padding: '4px 6px',
+              cursor: userLiked ? 'default' : 'pointer',
+              fontSize: '11px',
+              color: userLiked ? '#4ade80' : '#444',
+              borderRadius: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '3px',
+            }}
+          >
+            👍 {localLikes}
+          </button>
+          <button 
+            onClick={handleDislike}
+            style={{ 
+              background: userDisliked ? 'rgba(248, 113, 113, 0.1)' : 'none',
+              border: 'none',
+              padding: '4px 6px',
+              cursor: userDisliked ? 'default' : 'pointer',
+              fontSize: '11px',
+              color: userDisliked ? '#f87171' : '#444',
+              borderRadius: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '3px',
+            }}
+          >
+            👎 {localDislikes}
+          </button>
+        </div>
+      </div>
+
+      {/* Admin Cancel */}
       {isAdmin && status === 'active' && (
         <button
           onClick={async (e) => {
@@ -268,344 +337,13 @@ export default function DivideCard({
             try {
               await api.patch(`/divides/${encodeURIComponent(divideId)}`, { status: 'ended' });
               alert('Market cancelled');
-            } catch (err) {
-              alert(err.message || 'Failed to cancel');
-            }
+            } catch (err) { alert(err.message || 'Failed'); }
           }}
-          style={{
-            position: 'absolute',
-            top: '12px',
-            right: '12px',
-            background: 'rgba(255,255,255,0.1)',
-            border: 'none',
-            color: '#888',
-            padding: '4px 8px',
-            borderRadius: '4px',
-            fontSize: '11px',
-            cursor: 'pointer',
-          }}
+          style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(255,255,255,0.04)', border: 'none', color: '#444', padding: '3px 6px', borderRadius: '4px', fontSize: '9px', cursor: 'pointer' }}
         >
-          Cancel
+          ✕
         </button>
       )}
-
-      {/* Position Buttons */}
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
-        {/* Left/A Position */}
-        <button
-          onClick={(e) => { e.stopPropagation(); if (editingSide !== 'left') handleStartEdit('left'); }}
-          disabled={status !== 'active'}
-          style={{
-            flex: 1,
-            background: editingSide === 'left' 
-              ? 'linear-gradient(135deg, #ff0044 0%, #cc0033 100%)'
-              : 'linear-gradient(135deg, rgba(255,0,68,0.15) 0%, rgba(255,0,68,0.05) 100%)',
-            border: `1px solid ${editingSide === 'left' ? '#ff0044' : 'rgba(255,0,68,0.3)'}`,
-            borderRadius: '12px',
-            padding: editingSide === 'left' ? '12px' : '16px',
-            cursor: status === 'active' ? 'pointer' : 'default',
-            opacity: status === 'active' ? 1 : 0.5,
-            transition: 'all 0.2s ease',
-          }}
-        >
-          {editingSide === 'left' ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }} onClick={(e) => e.stopPropagation()}>
-              <input
-                type="number"
-                min="0.01"
-                step="0.01"
-                placeholder="$ Amount"
-                value={betAmount}
-                onChange={(e) => setBetAmount(e.target.value)}
-                onClick={(e) => e.stopPropagation()}
-                autoFocus
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  border: 'none',
-                  borderRadius: '8px',
-                  background: 'rgba(0,0,0,0.3)',
-                  color: '#fff',
-                  fontSize: '14px',
-                  textAlign: 'center',
-                  outline: 'none',
-                }}
-              />
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setEditingSide(null); }}
-                  style={{
-                    flex: 1,
-                    padding: '8px',
-                    background: 'rgba(255,255,255,0.1)',
-                    border: 'none',
-                    borderRadius: '6px',
-                    color: '#fff',
-                    fontSize: '12px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleSubmitBet('left'); }}
-                  style={{
-                    flex: 1,
-                    padding: '8px',
-                    background: '#ff0044',
-                    border: 'none',
-                    borderRadius: '6px',
-                    color: '#fff',
-                    fontSize: '12px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                  }}
-                >
-                  Confirm
-                </button>
-              </div>
-            </div>
-          ) : (
-            <>
-              <div style={{ fontSize: '14px', fontWeight: '600', color: '#fff', lineHeight: '1.3' }}>
-                {left}
-              </div>
-              {status !== 'active' && (
-                <div style={{ fontSize: '11px', color: '#888', marginTop: '4px' }}>{leftPct}%</div>
-              )}
-            </>
-          )}
-        </button>
-
-        {/* VS Divider */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '10px',
-          fontWeight: '700',
-          color: '#444',
-          letterSpacing: '1px',
-        }}>
-          VS
-        </div>
-
-        {/* Right/B Position */}
-        <button
-          onClick={(e) => { e.stopPropagation(); if (editingSide !== 'right') handleStartEdit('right'); }}
-          disabled={status !== 'active'}
-          style={{
-            flex: 1,
-            background: editingSide === 'right'
-              ? 'linear-gradient(135deg, #0088ff 0%, #0066cc 100%)'
-              : 'linear-gradient(135deg, rgba(0,136,255,0.15) 0%, rgba(0,136,255,0.05) 100%)',
-            border: `1px solid ${editingSide === 'right' ? '#0088ff' : 'rgba(0,136,255,0.3)'}`,
-            borderRadius: '12px',
-            padding: editingSide === 'right' ? '12px' : '16px',
-            cursor: status === 'active' ? 'pointer' : 'default',
-            opacity: status === 'active' ? 1 : 0.5,
-            transition: 'all 0.2s ease',
-          }}
-        >
-          {editingSide === 'right' ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }} onClick={(e) => e.stopPropagation()}>
-              <input
-                type="number"
-                min="0.01"
-                step="0.01"
-                placeholder="$ Amount"
-                value={betAmount}
-                onChange={(e) => setBetAmount(e.target.value)}
-                onClick={(e) => e.stopPropagation()}
-                autoFocus
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  border: 'none',
-                  borderRadius: '8px',
-                  background: 'rgba(0,0,0,0.3)',
-                  color: '#fff',
-                  fontSize: '14px',
-                  textAlign: 'center',
-                  outline: 'none',
-                }}
-              />
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setEditingSide(null); }}
-                  style={{
-                    flex: 1,
-                    padding: '8px',
-                    background: 'rgba(255,255,255,0.1)',
-                    border: 'none',
-                    borderRadius: '6px',
-                    color: '#fff',
-                    fontSize: '12px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleSubmitBet('right'); }}
-                  style={{
-                    flex: 1,
-                    padding: '8px',
-                    background: '#0088ff',
-                    border: 'none',
-                    borderRadius: '6px',
-                    color: '#fff',
-                    fontSize: '12px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                  }}
-                >
-                  Confirm
-                </button>
-              </div>
-            </div>
-          ) : (
-            <>
-              <div style={{ fontSize: '14px', fontWeight: '600', color: '#fff', lineHeight: '1.3' }}>
-                {right}
-              </div>
-              {status !== 'active' && (
-                <div style={{ fontSize: '11px', color: '#888', marginTop: '4px' }}>{rightPct}%</div>
-              )}
-            </>
-          )}
-        </button>
-      </div>
-
-      {/* Social Engagement Row */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: '16px',
-        marginBottom: '12px',
-        padding: '8px 0',
-      }}>
-        <button
-          onClick={handleLike}
-          disabled={userLiked}
-          style={{
-            background: userLiked ? 'rgba(0,255,136,0.15)' : 'none',
-            border: userLiked ? '1px solid rgba(0,255,136,0.3)' : 'none',
-            cursor: userLiked ? 'default' : 'pointer',
-            padding: '6px 12px',
-            borderRadius: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            color: userLiked ? '#00ff88' : '#888',
-            fontSize: '13px',
-            transition: 'all 0.2s ease',
-            opacity: userLiked ? 0.8 : 1,
-          }}
-          onMouseEnter={(e) => { if (!userLiked) { e.currentTarget.style.background = 'rgba(0,255,136,0.1)'; e.currentTarget.style.color = '#00ff88'; }}}
-          onMouseLeave={(e) => { if (!userLiked) { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#888'; }}}
-        >
-          👍 <span>{localLikes}</span>
-        </button>
-        <button
-          onClick={handleDislike}
-          disabled={userDisliked}
-          style={{
-            background: userDisliked ? 'rgba(255,68,68,0.15)' : 'none',
-            border: userDisliked ? '1px solid rgba(255,68,68,0.3)' : 'none',
-            cursor: userDisliked ? 'default' : 'pointer',
-            padding: '6px 12px',
-            borderRadius: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            color: userDisliked ? '#ff6b6b' : '#888',
-            fontSize: '13px',
-            transition: 'all 0.2s ease',
-            opacity: userDisliked ? 0.8 : 1,
-          }}
-          onMouseEnter={(e) => { if (!userDisliked) { e.currentTarget.style.background = 'rgba(255,68,68,0.1)'; e.currentTarget.style.color = '#ff6b6b'; }}}
-          onMouseLeave={(e) => { if (!userDisliked) { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#888'; }}}
-        >
-          👎 <span>{localDislikes}</span>
-        </button>
-      </div>
-
-      {/* Footer: Probabilities + Pot */}
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '12px',
-        padding: '12px',
-        background: 'rgba(255,255,255,0.02)',
-        borderRadius: '8px',
-        border: '1px solid rgba(255,255,255,0.05)',
-      }}>
-        {/* Probability Bar */}
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <div style={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '8px 12px',
-            background: 'rgba(255,0,68,0.1)',
-            borderRadius: '6px',
-            border: '1px solid rgba(255,0,68,0.2)',
-          }}>
-            <span style={{ fontSize: '12px', color: '#fff', fontWeight: '500' }}>{left}</span>
-            <span style={{ fontSize: '15px', color: '#ff0044', fontWeight: '700' }}>{leftPct}%</span>
-          </div>
-          <div style={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '8px 12px',
-            background: 'rgba(139,69,88,0.1)',
-            borderRadius: '6px',
-            border: '1px solid rgba(139,69,88,0.2)',
-          }}>
-            <span style={{ fontSize: '12px', color: '#fff', fontWeight: '500' }}>{right}</span>
-            <span style={{ fontSize: '15px', color: '#c97586', fontWeight: '700' }}>{rightPct}%</span>
-          </div>
-        </div>
-        
-        {/* Pool Amount */}
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '11px', color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Pool</span>
-          <span style={{ fontSize: '16px', fontWeight: '700', color: '#00ff88' }}>
-            ${formatCurrency(pot, 2)}
-          </span>
-        </div>
-      </div>
-
-      {/* Warning Banner - Ominous */}
-      {status === 'active' && (
-        <div style={{
-          marginTop: '12px',
-          padding: '10px 12px',
-          background: 'linear-gradient(90deg, rgba(255,68,68,0.08) 0%, rgba(255,136,0,0.08) 100%)',
-          borderRadius: '8px',
-          border: '1px solid rgba(255,68,68,0.2)',
-          fontSize: '12px',
-          color: '#ff9966',
-          textAlign: 'center',
-          lineHeight: '1.5',
-          fontWeight: '500',
-        }}>
-          ⚠️ <strong>Pick. But know this:</strong><br/>
-          <span style={{ color: '#cc6644' }}>If everyone agrees with you, you all lose.</span>
-        </div>
-      )}
-
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
-        }
-      `}</style>
     </div>
   );
 }

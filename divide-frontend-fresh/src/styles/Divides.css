@@ -1,60 +1,48 @@
-/* src/styles/Divides.css – Polymarket Exact Style with Burgundy */
+/* src/styles/Divides.css – Deep Red/Black Minimalist Theme */
 .divides-container {
-  padding: 1rem;
-  background: linear-gradient(180deg, #0a0609 0%, #0f0a0e 50%, #0a0609 100%);
-  color: #fff;
+  padding: 24px;
+  background: #0a0a0a;
+  color: #e5e5e5;
   font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
   min-height: 100vh;
 }
 
 .page-title {
   text-align: center;
-  margin-bottom: 1.25rem;
-  font-size: 1.5rem;
+  margin-bottom: 20px;
+  font-size: 1.25rem;
   font-weight: 600;
   letter-spacing: -0.02em;
-  background: linear-gradient(135deg, #c97586 0%, #8b4558 100%);
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #d4d4d4;
 }
 
-/* GRID – Polymarket exact style: 4 columns, tight spacing */
+/* GRID – Polymarket exact: tight grid, compact cards */
 .divides-grid {
   display: grid;
-  gap: 0.75rem;
+  gap: 12px;
   padding: 0;
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
 }
 @media (min-width: 640px) { .divides-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (min-width: 1024px) { .divides-grid { grid-template-columns: repeat(3, 1fr); } }
-@media (min-width: 1280px) { .divides-grid { grid-template-columns: repeat(4, 1fr); } }
+@media (min-width: 1400px) { .divides-grid { grid-template-columns: repeat(4, 1fr); } }
 
-/* CARD – Polymarket exact style: compact, clean, minimal */
+/* CARD – Handled by inline styles in DivideCard.jsx */
 .divide-card {
-  background: rgba(18, 18, 22, 0.95);
-  border: 1px solid rgba(139, 69, 88, 0.15);
-  border-radius: 12px;
-  padding: 0.875rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-  color: #fff;
+  background: #111111;
+  border: 1px solid #1a1a1a;
+  border-radius: 8px;
+  padding: 16px;
+  color: #e5e5e5;
   text-align: left;
-  transition: all .15s ease;
-  position: relative;
-  width: 100%;
-  max-width: 100%;
-  margin: 0;
-  box-sizing: border-box;
-  overflow: hidden;
+  transition: background .12s ease;
   cursor: pointer;
 }
 
 .divide-card:hover {
-  transform: translateY(-1px);
-  border-color: rgba(201, 117, 134, 0.3);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  background: #161616;
 }
 
 /* Title – Polymarket style: left aligned, compact */
@@ -457,27 +445,23 @@
 .create-divide-section {
   display: flex;
   justify-content: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 .btn-create-divide {
-  padding: 0.65rem 1.75rem;
-  background: linear-gradient(135deg, #c97586 0%, #a85c6f 100%);
+  padding: 0.5rem 1.25rem;
+  background: #6b1c1c;
   color: #fff;
   border: none;
-  border-radius: 0.5rem;
-  font-size: 0.9rem;
-  font-weight: 600;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(139, 69, 88, 0.3);
-  letter-spacing: -0.01em;
+  transition: all 0.12s ease;
 }
 
 .btn-create-divide:hover {
-  background: linear-gradient(135deg, #d98597 0%, #c97586 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(139, 69, 88, 0.4);
+  background: #7d2121;
 }
 
 .btn-create-divide:active {
