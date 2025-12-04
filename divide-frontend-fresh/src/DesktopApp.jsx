@@ -2,11 +2,8 @@ import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthContext } from "./context/AuthContext.jsx";
 import Divides from "./components/Divides.jsx";
-import Admin from "./components/Admin.jsx";
 import AdminFinance from "./pages/AdminFinance.jsx";
 import AdminLedger from "./pages/AdminLedger.jsx";
-import AdminItems from "./components/AdminItems.jsx";
-import AdminCases from "./components/AdminCases.jsx";
 import AuthModal from "./components/AuthModal.jsx";
 import Header from "./components/Header.jsx";
 import ChatSidebar from "./components/ChatSidebar.jsx";
@@ -78,7 +75,7 @@ export default function DesktopApp() {
               path="/admin"
               element={
                 <ProtectedRoute requiredRole="admin">
-                  <Admin />
+                  <Navigate to="/admin/finance" replace />
                 </ProtectedRoute>
               }
             />
@@ -98,22 +95,6 @@ export default function DesktopApp() {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/admin/items"
-              element={
-                <ProtectedRoute requiredRole="admin">
-                  <AdminItems />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/cases"
-              element={
-                <ProtectedRoute requiredRole="admin">
-                  <AdminCases />
-                </ProtectedRoute>
-              }
-            />
           </Routes>
         </main>
 
@@ -128,11 +109,6 @@ export default function DesktopApp() {
           onClose={() => setShowAuthModal(false)}
           onToggleMode={() => setIsRegister(!isRegister)}
         />
-      )}
-
-      {/* Admin Modal */}
-      {showAdminModal && user?.role === 'admin' && (
-        <Admin onClose={() => setShowAdminModal(false)} />
       )}
     </div>
   );

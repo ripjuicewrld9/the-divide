@@ -39,9 +39,7 @@ export default function MobileApp() {
                 {/* Admin Routes */}
                 <Route path="/admin" element={
                     <ProtectedRoute requiredRole="admin">
-                        <React.Suspense fallback={<div>Loading...</div>}>
-                            {React.createElement(React.lazy(() => import("./components/Admin")))}
-                        </React.Suspense>
+                        <Navigate to="/admin/finance" replace />
                     </ProtectedRoute>
                 } />
                 <Route path="/admin/finance" element={
