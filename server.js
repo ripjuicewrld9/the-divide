@@ -417,6 +417,86 @@ app.get('/api/me', auth, async (req, res) => {
 });
 
 // ==========================================
+// DEPOSIT/WITHDRAW & BALANCE
+// ==========================================
+
+app.post("/add-funds", auth, async (req, res) => {
+  try {
+    const { amount } = req.body;
+
+    if (typeof amount !== 'number' || isNaN(amount)) {
+      return res.status(400).json({ error: "Invalid amount" });
+    }
+
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    // Add funds (convert dollars to cents)
+    const amountCents = Math.round(amount * 100);
+    user.balance += amountCents;
+    user.totalDeposited = (user.totalDeposited || 0) + amountCents;
+    // Add to wager requirement: user must wager this amount 1x before withdrawal
+    user.wagerRequirement = (user.wagerRequirement || 0) + amountCents;
+    await user.save();
+
+    console.log(`[ADD FUNDS] User ${user.username} added $${amount}, new balance: $${toDollars(user.balance)}, wagerReq: $${toDollars(user.wagerRequirement)}`);
+
+    res.json({ balance: toDollars(user.balance) });
+  } catch (err) {
+    console.error('[POST /add-funds] error:', err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.post("/api/withdraw", auth, async (req, res) => {
+  try {
+    if (!req.userId) return res.status(401).json({ error: "Not authenticated" });
+
+    const { amount } = req.body;
+    if (typeof amount !== 'number' || amount <= 0) {
+      return res.status(400).json({ error: "Invalid amount" });
+    }
+
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const amountCents = Math.round(amount * 100);
+    
+    // Check balance
+    if (user.balance < amountCents) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Insufficient balance" 
+      });
+    }
+
+    // Check wager requirement
+    if ((user.wagerRequirement || 0) > 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: `You must wager $${toDollars(user.wagerRequirement)} before withdrawing (1x playthrough requirement)` 
+      });
+    }
+
+    // Process withdrawal
+    user.balance -= amountCents;
+    user.totalWithdrawn = (user.totalWithdrawn || 0) + amountCents;
+    await user.save();
+
+    console.log(`[WITHDRAW] User ${user.username} withdrew $${amount}, new balance: $${toDollars(user.balance)}`);
+
+    res.json({ 
+      success: true, 
+      balance: toDollars(user.balance),
+      message: `Successfully withdrew $${amount}` 
+    });
+  } catch (err) {
+    console.error('[POST /api/withdraw] error:', err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+// ==========================================
 // DIVIDES ROUTES
 // ==========================================
 
@@ -1067,15 +1147,74 @@ app.patch('/admin/users/:id', auth, adminOnly, async (req, res) => {
 
 app.get('/admin/ledger', auth, adminOnly, async (req, res) => {
   try {
-    const { limit = 100, type, userId } = req.query;
+    const { limit = 100, page = 1, type, userId } = req.query;
     const filter = {};
     if (type) filter.type = type;
     if (userId) filter.userId = userId;
 
-    const entries = await Ledger.find(filter).sort({ createdAt: -1 }).limit(parseInt(limit));
-    res.json(entries);
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 100;
+    const skip = (pageNum - 1) * limitNum;
+
+    const total = await Ledger.countDocuments(filter);
+    const items = await Ledger.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum)
+      .lean();
+
+    res.json({ 
+      items, 
+      total, 
+      page: pageNum, 
+      limit: limitNum,
+      pages: Math.ceil(total / limitNum)
+    });
   } catch (err) {
     console.error('GET /admin/ledger', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.get('/admin/finance', auth, adminOnly, async (req, res) => {
+  try {
+    const house = await House.findOne({ id: 'global' }).lean();
+    const jackpot = await Jackpot.findOne({ id: 'global' }).lean();
+
+    if (!house) {
+      return res.status(500).json({ error: 'House document not found' });
+    }
+
+    // Calculate total deposits/withdrawals across all users
+    const userStats = await User.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalDeposited: { $sum: '$totalDeposited' },
+          totalWithdrawn: { $sum: '$totalWithdrawn' }
+        }
+      }
+    ]);
+
+    const totalDeposited = userStats.length > 0 ? (userStats[0].totalDeposited || 0) : 0;
+    const totalWithdrawn = userStats.length > 0 ? (userStats[0].totalWithdrawn || 0) : 0;
+
+    // Count total redemptions
+    const redemptionCount = await Ledger.countDocuments({ type: 'withdrawal' });
+
+    res.json({
+      global: {
+        jackpotAmount: toDollars(jackpot?.amount || 0),
+        houseTotal: toDollars(house?.houseTotal || 0),
+        totalDeposited: toDollars(totalDeposited),
+        totalWithdrawn: toDollars(totalWithdrawn),
+        totalRedemptions: redemptionCount,
+        totalRedemptionAmount: toDollars(totalWithdrawn)
+      },
+      games: {}
+    });
+  } catch (err) {
+    console.error('/admin/finance error', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -1147,8 +1286,49 @@ app.patch('/api/support/tickets/:id', auth, moderatorOnly, async (req, res) => {
 });
 
 // ==========================================
-// CHAT ROUTES
+// CHAT ROUTES & MODERATOR PANEL
 // ==========================================
+
+app.get('/api/team', auth, moderatorOnly, async (req, res) => {
+  try {
+    const team = await User.find({ role: { $in: ['moderator', 'admin'] } })
+      .select('username role profileImage')
+      .sort({ role: 1, username: 1 })
+      .lean();
+    res.json({ team });
+  } catch (err) {
+    console.error('GET /api/team', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.get('/api/chat/muted', auth, moderatorOnly, async (req, res) => {
+  try {
+    const muted = await ChatMute.find({ 
+      $or: [
+        { expiresAt: { $gt: new Date() } },
+        { expiresAt: null }
+      ]
+    }).sort({ createdAt: -1 }).lean();
+    res.json({ muted });
+  } catch (err) {
+    console.error('GET /api/chat/muted', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.get('/api/divides/active', auth, moderatorOnly, async (req, res) => {
+  try {
+    const activeDivides = await Divide.find({ status: 'active' })
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .lean();
+    res.json({ divides: activeDivides });
+  } catch (err) {
+    console.error('GET /api/divides/active', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 
 app.get('/api/chat/messages', auth, async (req, res) => {
   try {
