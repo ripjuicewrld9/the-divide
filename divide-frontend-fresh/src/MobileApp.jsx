@@ -2,14 +2,6 @@ import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthContext } from "./context/AuthContext.jsx";
 import Divides from "./components/Divides.jsx";
-import Home from "./pages/Home.jsx";
-import AuthModal from "./components/AuthModal.jsx";
-import KenoPage from "./pages/Keno.jsx";
-import RuggedPage from "./pages/Rugged.jsx";
-import BlackjackPage from "./games/blackjack/index.tsx";
-import PlinkoPage from "./games/plinko/index.tsx";
-import WheelPage from "./games/wheel/index.tsx";
-import WheelLobby from "./games/wheel/WheelLobby.tsx";
 import MobileMainLayout from "./components/MobileMainLayout.jsx";
 import MobileChatOverlay from "./components/MobileChatOverlay.jsx";
 import MobileBottomNav from "./components/MobileBottomNav.jsx";
@@ -18,22 +10,12 @@ import ForgotPassword from "./pages/ForgotPassword.jsx";
 import ResetPassword from "./pages/ResetPassword.jsx";
 import DiscordLinkHandler from "./components/DiscordLinkHandler.jsx";
 import OAuthLoginHandler from "./components/OAuthLoginHandler.jsx";
-import ComingSoon from "./components/ComingSoon.jsx";
 
 function ProtectedRoute({ children, requiredRole = null }) {
     const { user } = React.useContext(AuthContext);
     if (!user) return <Navigate to="/" />;
     if (requiredRole && user.role !== requiredRole) return <Navigate to="/" />;
     return children;
-}
-
-// Mobile Rugged route - Coming Soon for non-admins, accessible for admins
-function MobileRuggedRoute() {
-    const { user } = React.useContext(AuthContext);
-    if (user && user.role === 'admin') {
-        return <RuggedPage />;
-    }
-    return <ComingSoon gameName="Rugged" />;
 }
 
 export default function MobileApp() {
@@ -48,13 +30,7 @@ export default function MobileApp() {
                 {/* Home */}
                 <Route path="/" element={<MobileMainLayout onOpenChat={() => setIsChatOpen(true)} />} />
 
-                {/* Games */}
-                <Route path="/keno" element={<KenoPage onOpenChat={() => setIsChatOpen(true)} />} />
-                <Route path="/rugged" element={<MobileRuggedRoute />} />
-                <Route path="/blackjack" element={<BlackjackPage onOpenChat={() => setIsChatOpen(true)} />} />
-                <Route path="/plinko" element={<PlinkoPage onOpenChat={() => setIsChatOpen(true)} />} />
-                <Route path="/wheel" element={<ComingSoon gameName="Wheel" />} />
-                <Route path="/wheel/:gameId" element={<ComingSoon gameName="Wheel" />} />
+                {/* Divides - The only game */}
                 <Route path="/divides" element={<Divides onOpenChat={() => setIsChatOpen(true)} />} />
 
                 {/* Profile */}

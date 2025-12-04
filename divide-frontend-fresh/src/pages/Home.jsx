@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import RuggedCard from '../components/RuggedCard';
 import UserAvatar from '../components/UserAvatar';
 import ProvenFairModal from '../components/ProvenFairModal';
 import UserProfileModal from '../components/UserProfileModal';
@@ -18,12 +17,9 @@ export default function Home() {
   // Map game names to SVG icons
   const getGameIcon = (gameName) => {
     const iconMap = {
-      'Keno': '/tiles-svgrepo-com.svg',
-      'Plinko': '/ball-pyramid-svgrepo-com.svg',
-      'Blackjack': '/cards-game-solitaire-poker-blackjack-casino-svgrepo-com.svg',
-      'Wheel': '/helm-wheel-svgrepo-com.svg'
+      'Divides': '/elections-poll-svgrepo-com.svg'
     };
-    return iconMap[gameName] || '/tiles-svgrepo-com.svg';
+    return iconMap[gameName] || '/elections-poll-svgrepo-com.svg';
   };
 
   const fetchRecentGames = useCallback(async () => {
@@ -60,68 +56,13 @@ export default function Home() {
     {
       id: 'divides',
       title: 'Divides',
-      description: 'OPINION MARKETS: Players decide outcomes with blind short bets!',
+      description: 'The Psychology Game. Blind betting where the minority wins. Trust no one.',
       icon: '/blind-short-divide.svg',
       color: '#ff6b6b',
       gradient: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)',
       path: '/divides',
-      label: 'Opinion Markets',
-      tagline: '🎭 Opinion Markets'
-    },
-    {
-      id: 'keno',
-      title: 'Keno',
-      description: 'Traditional keno-style quick-bet lottery with provably fair seeds',
-      icon: '/tiles-svgrepo-com.svg',
-      color: '#ffd700',
-      gradient: 'linear-gradient(135deg, #ffd700 0%, #ff8800 100%)',
-      path: '/keno',
-      label: 'Play Keno',
-      tagline: 'Pick & Match'
-    },
-    {
-      id: 'blackjack',
-      title: 'Blackjack',
-      description: 'Classic 21 with smooth animations and fair deck shuffling',
-      icon: '/cards-game-solitaire-poker-blackjack-casino-svgrepo-com.svg',
-      color: '#ff6b6b',
-      gradient: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)',
-      path: '/blackjack',
-      label: 'Play Blackjack',
-      tagline: 'Beat the Dealer'
-    },
-    {
-      id: 'plinko',
-      title: 'Plinko',
-      description: 'Drop balls and watch them bounce to massive multipliers',
-      icon: '/ball-pyramid-svgrepo-com.svg',
-      color: '#a78bfa',
-      gradient: 'linear-gradient(135deg, #a78bfa 0%, #ec4899 100%)',
-      path: '/plinko',
-      label: 'Play Plinko',
-      tagline: 'Drop & Win'
-    },
-    {
-      id: 'wheel',
-      title: 'Lucky Wheel',
-      description: 'Reserve your seat and spin the wheel for massive prizes',
-      icon: '/helm-wheel-svgrepo-com.svg',
-      color: '#3b82f6',
-      gradient: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-      path: '/wheel',
-      label: 'Coming Soon',
-      tagline: 'Spin & Win'
-    },
-    {
-      id: 'pump',
-      title: 'Rugged — DC',
-      description: 'Live meme coin market with dynamic pricing and rugpull mechanics',
-      icon: '/trend-down-svgrepo-com.svg',
-      color: '#10b981',
-      gradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-      path: '/rugged',
-      label: 'Coming Soon',
-      tagline: 'Pump or Dump'
+      label: 'Play Now',
+      tagline: '🎭 The Psychology Game'
     }
   ];
 
@@ -170,7 +111,7 @@ export default function Home() {
           margin: '0 auto',
           lineHeight: '1.6'
         }}>
-          Premium crypto gaming experience. Choose your game, place your bets, and win big.
+          The Psychology Game. Where the minority wins and trust is optional.
         </p>
       </div>
 

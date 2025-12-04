@@ -9,15 +9,9 @@ import AdminLedger from "./pages/AdminLedger.jsx";
 import AdminItems from "./components/AdminItems.jsx";
 import AdminCases from "./components/AdminCases.jsx";
 import AuthModal from "./components/AuthModal.jsx";
-import KenoPage from "./pages/Keno.jsx";
-import RuggedPage from "./pages/Rugged.jsx";
 import Header from "./components/Header.jsx";
 import Sidebar from "./components/Sidebar.jsx";
 import ChatSidebar from "./components/ChatSidebar.jsx";
-import BlackjackPage from "./games/blackjack/index.tsx";
-import PlinkoPage from "./games/plinko/index.tsx";
-import WheelPage from "./games/wheel/index.tsx";
-import WheelLobby from "./games/wheel/WheelLobby.tsx";
 import ProfilePage from "./pages/ProfileNew.jsx";
 import Support from "./pages/Support.jsx";
 import SupportDashboard from "./pages/SupportDashboard.jsx";
@@ -68,20 +62,6 @@ export default function DesktopApp() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/divides" element={<Divides />} />
-            <Route path="/keno" element={<KenoPage />} />
-            <Route path="/rugged" element={<RuggedPage />} />
-            <Route path="/blackjack" element={<BlackjackPage />} />
-            <Route path="/plinko" element={<PlinkoPage />} />
-            <Route path="/wheel" element={
-              <ProtectedRoute requiredRole="admin">
-                <WheelLobby />
-              </ProtectedRoute>
-            } />
-            <Route path="/wheel/:gameId" element={
-              <ProtectedRoute requiredRole="admin">
-                <WheelPage />
-              </ProtectedRoute>
-            } />
             <Route path="/profile" element={<ProfilePage />} />
             
             {/* Support Routes - Moderators get full dashboard, users get simple view */}

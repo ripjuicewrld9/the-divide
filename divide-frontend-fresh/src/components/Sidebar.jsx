@@ -62,12 +62,7 @@ export default function Sidebar() {
 
     const links = [
         { name: 'Home', path: '/', icon: '/home-alt-svgrepo-com.svg' },
-        { name: 'Keno', path: '/keno', icon: '/tiles-svgrepo-com.svg' },
-        { name: 'Blackjack', path: '/blackjack', icon: '/cards-game-solitaire-poker-blackjack-casino-svgrepo-com.svg' },
-        { name: 'Plinko', path: '/plinko', icon: '/ball-pyramid-svgrepo-com.svg' },
-        { name: 'Wheel (Coming Soon)', path: '/wheel', icon: '/helm-wheel-svgrepo-com.svg' },
         { name: 'Divides', path: '/divides', icon: '/elections-poll-svgrepo-com.svg' },
-        { name: 'Pump (Coming Soon)', path: '/rugged', icon: '/trend-down-svgrepo-com.svg' },
         { name: 'Support', path: '/support', icon: '/home-alt-svgrepo-com.svg' },
     ];
 

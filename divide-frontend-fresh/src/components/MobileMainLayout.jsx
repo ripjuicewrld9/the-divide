@@ -19,64 +19,23 @@ export default function MobileMainLayout({ onOpenChat }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showDepositModal, setShowDepositModal] = useState(false);
 
-  // Game data - using exact same data as desktop Home.jsx
+  // Game data - Divides only
   const games = [
     {
       id: 'divides',
       title: 'Divides',
-      description: 'OPINION MARKETS: Players decide with blind fades!',
+      description: 'The Psychology Game. Blind betting where the minority wins. Trust no one.',
       icon: '/elections-poll-svgrepo-com.svg',
       color: '#ff6b6b',
       gradient: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)',
       path: '/divides',
-      tagline: '🎭 Opinion Markets'
-    },
-    {
-      id: 'keno',
-      title: 'Keno',
-      description: 'Traditional keno-style quick-bet lottery',
-      icon: '/tiles-svgrepo-com.svg',
-      color: '#ffd700',
-      gradient: 'linear-gradient(135deg, #ffd700 0%, #ff8800 100%)',
-      path: '/keno',
-      tagline: 'Pick & Match'
-    },
-    {
-      id: 'blackjack',
-      title: 'Blackjack',
-      description: 'Classic 21 with smooth animations',
-      icon: '/cards-game-solitaire-poker-blackjack-casino-svgrepo-com.svg',
-      color: '#ff6b6b',
-      gradient: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)',
-      path: '/blackjack',
-      tagline: 'Beat the Dealer'
-    },
-    {
-      id: 'plinko',
-      title: 'Plinko',
-      description: 'Drop balls and watch them bounce to multipliers',
-      icon: '/ball-pyramid-svgrepo-com.svg',
-      color: '#a78bfa',
-      gradient: 'linear-gradient(135deg, #a78bfa 0%, #ec4899 100%)',
-      path: '/plinko',
-      tagline: 'Drop & Win'
-    },
-    {
-      id: 'pump',
-      title: 'Rugged — DC',
-      description: 'Live meme coin market with dynamic pricing',
-      icon: '/trend-down-svgrepo-com.svg',
-      color: '#10b981',
-      gradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-      path: '/rugged',
-      tagline: 'Pump or Dump',
-      isActive: true
+      tagline: '🎭 The Psychology Game'
     }
   ];
 
   const navItems = [
     { id: 'home', label: 'Browse', icon: '/home-alt-svgrepo-com.svg', path: '/' },
-    { id: 'games', label: 'Games', icon: '/tiles-svgrepo-com.svg', path: '/keno' },
+    { id: 'divides', label: 'Divides', icon: '/elections-poll-svgrepo-com.svg', path: '/divides' },
     { id: 'chat', label: 'Chat', icon: '💬', path: '/chat' },
     { id: 'profile', label: 'Profile', icon: '👤', path: '/profile' },
   ];
@@ -174,7 +133,7 @@ export default function MobileMainLayout({ onOpenChat }) {
             The Divide
           </h1>
           <p className="text-sm text-gray-400 mb-6">
-            Premium crypto gaming experience
+            The Psychology Game. Where the minority wins and trust is optional.
           </p>
 
           {/* Search Bar - Like Stake.us */}
@@ -196,10 +155,10 @@ export default function MobileMainLayout({ onOpenChat }) {
           </div>
         </div>
 
-        {/* Game Cards Grid - LARGER with MORE SPACING */}
+        {/* Game Cards Grid - Single Divides Card */}
         <div className="px-4 pb-8">
           <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">
-            Popular Games
+            Featured Game
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {games.map((game) => (
