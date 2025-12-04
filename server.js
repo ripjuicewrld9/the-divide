@@ -1436,26 +1436,33 @@ app.post('/divides/:id/like', auth, async (req, res) => {
     if (!divide) divide = await Divide.findById(divideId);
     if (!divide) return res.status(404).json({ error: 'Divide not found' });
 
-    const existing = await UserEngagement.findOne({
-      userId: req.userId,
-      type: 'likeGiven',
-      'metadata.divideId': divide.id || divide._id
-    });
-
-    if (existing) {
+    const userId = req.userId;
+    
+    // Check if user already liked OR disliked (once you react, you're locked)
+    const alreadyLiked = (divide.likedBy || []).includes(userId);
+    const alreadyDisliked = (divide.dislikedBy || []).includes(userId);
+    
+    if (alreadyLiked) {
       return res.status(400).json({ error: 'Already liked this divide' });
     }
+    if (alreadyDisliked) {
+      return res.status(400).json({ error: 'You already disliked this divide - reactions are locked' });
+    }
 
+    // Add to likedBy array and increment count
+    divide.likedBy = divide.likedBy || [];
+    divide.likedBy.push(userId);
     divide.likes = (divide.likes || 0) + 1;
     await divide.save();
 
+    // Award XP
     await awardXp(req.userId, 'likeGiven', 0, { divideId: divide.id || divide._id });
 
     if (divide.creatorId) {
       await awardXp(divide.creatorId, 'likeReceived', 0, { divideId: divide.id || divide._id });
     }
 
-    res.json({ success: true, likes: divide.likes });
+    res.json({ success: true, likes: divide.likes, likedBy: divide.likedBy, dislikedBy: divide.dislikedBy });
   } catch (err) {
     console.error('POST /divides/:id/like', err);
     res.status(500).json({ error: 'Server error' });
@@ -1469,19 +1476,26 @@ app.post('/divides/:id/dislike', auth, async (req, res) => {
     if (!divide) divide = await Divide.findById(divideId);
     if (!divide) return res.status(404).json({ error: 'Divide not found' });
 
-    const existing = await UserEngagement.findOne({
-      userId: req.userId,
-      type: 'dislikeGiven',
-      'metadata.divideId': divide.id || divide._id
-    });
-
-    if (existing) {
+    const userId = req.userId;
+    
+    // Check if user already liked OR disliked (once you react, you're locked)
+    const alreadyLiked = (divide.likedBy || []).includes(userId);
+    const alreadyDisliked = (divide.dislikedBy || []).includes(userId);
+    
+    if (alreadyDisliked) {
       return res.status(400).json({ error: 'Already disliked this divide' });
     }
+    if (alreadyLiked) {
+      return res.status(400).json({ error: 'You already liked this divide - reactions are locked' });
+    }
 
+    // Add to dislikedBy array and increment count
+    divide.dislikedBy = divide.dislikedBy || [];
+    divide.dislikedBy.push(userId);
     divide.dislikes = (divide.dislikes || 0) + 1;
     await divide.save();
 
+    // Track engagement
     await UserEngagement.create({
       userId: req.userId,
       type: 'dislikeGiven',
@@ -1494,7 +1508,7 @@ app.post('/divides/:id/dislike', auth, async (req, res) => {
       await awardXp(divide.creatorId, 'dislikeReceived', 0, { divideId: divide.id || divide._id });
     }
 
-    res.json({ success: true, dislikes: divide.dislikes });
+    res.json({ success: true, dislikes: divide.dislikes, likedBy: divide.likedBy, dislikedBy: divide.dislikedBy });
   } catch (err) {
     console.error('POST /divides/:id/dislike', err);
     res.status(500).json({ error: 'Server error' });

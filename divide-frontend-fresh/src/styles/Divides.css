@@ -16,19 +16,19 @@
   color: #d4d4d4;
 }
 
-/* GRID – 5 columns, compact cards */
+/* GRID – Fixed 5 columns, small cards */
 .divides-grid {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   padding: 0;
   max-width: 1600px;
   margin: 0 auto;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(5, 1fr);
 }
-@media (min-width: 640px) { .divides-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (min-width: 900px) { .divides-grid { grid-template-columns: repeat(3, 1fr); } }
-@media (min-width: 1100px) { .divides-grid { grid-template-columns: repeat(4, 1fr); } }
-@media (min-width: 1400px) { .divides-grid { grid-template-columns: repeat(5, 1fr); } }
+@media (max-width: 1200px) { .divides-grid { grid-template-columns: repeat(4, 1fr); } }
+@media (max-width: 900px) { .divides-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 640px) { .divides-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 400px) { .divides-grid { grid-template-columns: 1fr; } }
 
 /* CARD – Handled by inline styles in DivideCard.jsx */
 .divide-card {
