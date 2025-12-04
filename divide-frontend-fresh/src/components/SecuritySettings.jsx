@@ -391,7 +391,7 @@ export default function SecuritySettings({ isOpen, onClose }) {
                   style={{
                     width: '100%',
                     padding: '12px',
-                    background: changingPassword ? 'rgba(100, 100, 100, 0.3)' : 'linear-gradient(135deg, #00ffff, #00ccff)',
+                    background: changingPassword ? 'rgba(100, 100, 100, 0.3)' : 'linear-gradient(135deg, #ff3232, #cc2828)',
                     border: 'none',
                     borderRadius: '8px',
                     color: changingPassword ? '#666' : '#000',
@@ -420,7 +420,7 @@ export default function SecuritySettings({ isOpen, onClose }) {
                     style={{
                       width: '100%',
                       padding: '12px',
-                      background: settingUp2FA ? 'rgba(100, 100, 100, 0.3)' : 'linear-gradient(135deg, #00ffff, #00ccff)',
+                      background: settingUp2FA ? 'rgba(100, 100, 100, 0.3)' : 'linear-gradient(135deg, #ff3232, #cc2828)',
                       border: 'none',
                       borderRadius: '8px',
                       color: settingUp2FA ? '#666' : '#000',
@@ -497,7 +497,7 @@ export default function SecuritySettings({ isOpen, onClose }) {
                       style={{
                         width: '100%',
                         padding: '12px',
-                        background: 'linear-gradient(135deg, #00ffff, #00ccff)',
+                        background: 'linear-gradient(135deg, #ff3232, #cc2828)',
                         border: 'none',
                         borderRadius: '8px',
                         color: '#000',

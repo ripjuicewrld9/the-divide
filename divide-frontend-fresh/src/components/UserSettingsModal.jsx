@@ -149,7 +149,7 @@ export default function UserSettingsModal({ isOpen, onClose }) {
               margin: 0,
               fontSize: '24px',
               fontWeight: 700,
-              background: 'linear-gradient(135deg, #00ffff, #00ccff)',
+              background: 'linear-gradient(135deg, #ff3232, #cc2828)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent'
             }}>
@@ -405,7 +405,7 @@ export default function UserSettingsModal({ isOpen, onClose }) {
                     disabled={uploading || !selectedFile}
                     style={{
                       padding: '12px 24px',
-                      background: uploading || !selectedFile ? 'rgba(100, 100, 100, 0.3)' : 'linear-gradient(135deg, #00ffff, #00ccff)',
+                      background: uploading || !selectedFile ? 'rgba(100, 100, 100, 0.3)' : 'linear-gradient(135deg, #ff3232, #cc2828)',
                       border: 'none',
                       borderRadius: '8px',
                       color: uploading || !selectedFile ? '#666' : '#000',

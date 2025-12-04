@@ -73,12 +73,12 @@ export default function ChatSidebar({ isOpen, setIsOpen }) {
             width: '56px',
             height: '56px',
             borderRadius: '50%',
-            background: 'linear-gradient(135deg, #00ffff, #00ccff)',
+            background: 'linear-gradient(135deg, #ff3232, #cc2828)',
             border: 'none',
-            color: '#000',
+            color: '#fff',
             fontSize: '24px',
             cursor: 'pointer',
-            boxShadow: '0 4px 12px rgba(0, 255, 255, 0.4)',
+            boxShadow: '0 4px 12px rgba(255, 50, 50, 0.4)',
             transition: 'all 0.3s ease',
             zIndex: 999,
             display: 'flex',
@@ -88,11 +88,11 @@ export default function ChatSidebar({ isOpen, setIsOpen }) {
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.transform = 'scale(1.1)';
-            e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 255, 255, 0.6)';
+            e.currentTarget.style.boxShadow = '0 6px 20px rgba(255, 50, 50, 0.6)';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.transform = 'scale(1)';
-            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 255, 255, 0.4)';
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(255, 50, 50, 0.4)';
           }}
         >
           💬
@@ -105,7 +105,7 @@ export default function ChatSidebar({ isOpen, setIsOpen }) {
           width: isOpen ? '320px' : '0',
           height: '100%',
           background: '#0b0b0b',
-          borderLeft: isOpen ? '2px solid rgba(0, 255, 255, 0.2)' : 'none',
+          borderLeft: isOpen ? '2px solid rgba(255, 50, 50, 0.2)' : 'none',
           transition: 'width 0.3s ease',
           display: 'flex',
           flexDirection: 'column',
@@ -117,8 +117,8 @@ export default function ChatSidebar({ isOpen, setIsOpen }) {
         <div
           style={{
             padding: '16px',
-            borderBottom: '2px solid rgba(0, 255, 255, 0.2)',
-            background: 'linear-gradient(135deg, rgba(0, 255, 255, 0.1), rgba(0, 204, 255, 0.1))',
+            borderBottom: '2px solid rgba(255, 50, 50, 0.2)',
+            background: 'linear-gradient(135deg, rgba(255, 50, 50, 0.1), rgba(204, 40, 40, 0.1))',
             minHeight: '64px',
             display: isOpen ? 'block' : 'none',
           }}
@@ -129,7 +129,7 @@ export default function ChatSidebar({ isOpen, setIsOpen }) {
                 margin: 0,
                 fontSize: '16px',
                 fontWeight: 700,
-                background: 'linear-gradient(135deg, #00ffff, #00ccff)',
+                background: 'linear-gradient(135deg, #ff3232, #cc2828)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 textTransform: 'uppercase',
@@ -154,7 +154,7 @@ export default function ChatSidebar({ isOpen, setIsOpen }) {
                 justifyContent: 'center',
                 transition: 'color 0.2s ease',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = '#00ffff')}
+              onMouseEnter={(e) => (e.currentTarget.style.color = '#ff3232')}
               onMouseLeave={(e) => (e.currentTarget.style.color = '#666')}
             >
               ×
@@ -196,8 +196,8 @@ export default function ChatSidebar({ isOpen, setIsOpen }) {
                   transition: 'all 0.2s ease',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(0, 255, 255, 0.05)';
-                  e.currentTarget.style.borderColor = 'rgba(0, 255, 255, 0.2)';
+                  e.currentTarget.style.background = 'rgba(255, 50, 50, 0.05)';
+                  e.currentTarget.style.borderColor = 'rgba(255, 50, 50, 0.2)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
@@ -208,7 +208,7 @@ export default function ChatSidebar({ isOpen, setIsOpen }) {
                   style={{
                     fontSize: '12px',
                     fontWeight: 700,
-                    color: '#00ffff',
+                    color: '#ff3232',
                     marginBottom: '4px',
                   }}
                 >
@@ -245,7 +245,7 @@ export default function ChatSidebar({ isOpen, setIsOpen }) {
         <div
           style={{
             padding: '16px',
-            borderTop: '2px solid rgba(0, 255, 255, 0.2)',
+            borderTop: '2px solid rgba(255, 50, 50, 0.2)',
             background: 'rgba(0, 0, 0, 0.3)',
             display: isOpen ? 'block' : 'none',
           }}
@@ -269,8 +269,8 @@ export default function ChatSidebar({ isOpen, setIsOpen }) {
                   transition: 'all 0.2s ease',
                 }}
                 onFocus={(e) => {
-                  e.target.style.borderColor = '#00ffff';
-                  e.target.style.background = 'rgba(0, 255, 255, 0.05)';
+                  e.target.style.borderColor = '#ff3232';
+                  e.target.style.background = 'rgba(255, 50, 50, 0.05)';
                 }}
                 onBlur={(e) => {
                   e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
@@ -283,11 +283,11 @@ export default function ChatSidebar({ isOpen, setIsOpen }) {
                 style={{
                   padding: '10px 16px',
                   background: inputMessage.trim()
-                    ? 'linear-gradient(135deg, #00ffff, #00ccff)'
+                    ? 'linear-gradient(135deg, #ff3232, #cc2828)'
                     : 'rgba(255, 255, 255, 0.1)',
                   border: 'none',
                   borderRadius: '6px',
-                  color: inputMessage.trim() ? '#000' : '#666',
+                  color: inputMessage.trim() ? '#fff' : '#666',
                   fontSize: '13px',
                   fontWeight: 700,
                   cursor: inputMessage.trim() ? 'pointer' : 'not-allowed',

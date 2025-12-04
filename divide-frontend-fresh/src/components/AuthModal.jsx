@@ -75,7 +75,7 @@ export default function AuthModal({ onClose, isRegister, setIsRegister }) {
                 boxShadow: '0 8px 32px rgba(0, 255, 255, 0.2)'
             }} onClick={e => e.stopPropagation()}>
                 <h2 style={{
-                    background: 'linear-gradient(135deg, #00ffff, #00ccff)',
+                    background: 'linear-gradient(135deg, #ff3232, #cc2828)',
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
                     marginBottom: '1.5rem',

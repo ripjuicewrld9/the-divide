@@ -9,8 +9,8 @@
   flex-direction: column;
   gap: 1.5rem;
   padding: 1.5rem;
-  background: linear-gradient(135deg, rgba(26, 26, 46, 0.8) 0%, rgba(15, 15, 30, 0.8) 100%);
-  border: 1px solid rgba(0, 255, 255, 0.15);
+  background: linear-gradient(135deg, rgba(26, 10, 10, 0.8) 0%, rgba(15, 5, 5, 0.8) 100%);
+  border: 1px solid rgba(255, 50, 50, 0.15);
 }
 
 .form-group {
@@ -28,7 +28,7 @@
 .form-group input,
 .form-group select {
   padding: 0.75rem;
-  border: 1px solid rgba(0, 255, 255, 0.2);
+  border: 1px solid rgba(255, 50, 50, 0.2);
   border-radius: 0.5rem;
   background: rgba(10, 10, 20, 0.8);
   color: #fff;
@@ -39,8 +39,8 @@
 .form-group input:focus,
 .form-group select:focus {
   outline: none;
-  border-color: #00ffff;
-  box-shadow: 0 0 0 3px rgba(0, 255, 255, 0.1);
+  border-color: #ff3232;
+  box-shadow: 0 0 0 3px rgba(255, 50, 50, 0.1);
 }
 
 .form-group small {
@@ -62,7 +62,7 @@
 
 .side-btn {
   padding: 0.75rem 1rem;
-  border: 2px solid rgba(0, 255, 255, 0.2);
+  border: 2px solid rgba(255, 50, 50, 0.2);
   border-radius: 0.5rem;
   background: rgba(10, 10, 20, 0.8);
   color: #b0b0b0;
@@ -72,14 +72,14 @@
 }
 
 .side-btn:hover {
-  border-color: rgba(0, 255, 255, 0.4);
+  border-color: rgba(255, 50, 50, 0.4);
   color: #e0e0e0;
 }
 
 .side-btn.active {
-  border-color: #00ffff;
-  background: rgba(0, 255, 255, 0.15);
-  color: #00ffff;
+  border-color: #ff3232;
+  background: rgba(255, 50, 50, 0.15);
+  color: #ff3232;
 }
 
 .error-message {
@@ -120,14 +120,14 @@
 }
 
 .btn-create {
-  background: linear-gradient(135deg, #00aaff, #0088cc);
+  background: linear-gradient(135deg, #ff3232, #cc2828);
   color: #fff;
 }
 
 .btn-create:hover:not(:disabled) {
-  background: linear-gradient(135deg, #00ccff, #00aaff);
+  background: linear-gradient(135deg, #ff5050, #ff3232);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 170, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(255, 50, 50, 0.3);
 }
 
 .btn-create:disabled {

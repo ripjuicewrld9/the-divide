@@ -18,9 +18,9 @@ import { useAuth } from '../context/AuthContext';
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
 // 🎨 Randomize 2 colors for each Divide
-// Fixed red/blue neon color scheme: A = red, B = blue
+// Fixed red color scheme: A = red, B = red (both red variants for Polymarket style)
 const randomColors = () => {
-  return ['#ff0044', '#00aaff'];
+  return ['#ff0044', '#ff3232'];
 };
 
 // small client-side short id generator for temporary keys

@@ -2,12 +2,12 @@ import React from 'react';
 import '../styles/CategoryNav.css';
 
 const categories = [
-  { name: 'All', icon: '🌐', color: '#00aaff' },
+  { name: 'All', icon: '🌐', color: '#ff3232' },
   { name: 'Politics', icon: '🏛️', color: '#ff0044' },
   { name: 'Sports', icon: '⚽', color: '#00ff88' },
   { name: 'Crypto', icon: '₿', color: '#f7931a' },
   { name: 'Entertainment', icon: '🎬', color: '#ff44aa' },
-  { name: 'Science', icon: '🔬', color: '#44aaff' },
+  { name: 'Science', icon: '🔬', color: '#ff5050' },
   { name: 'Business', icon: '💼', color: '#ffaa00' },
   { name: 'Other', icon: '❓', color: '#888888' }
 ];

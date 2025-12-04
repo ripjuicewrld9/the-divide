@@ -54,8 +54,8 @@ export default function ForgotPassword() {
         padding: '40px',
         width: '100%',
         maxWidth: '450px',
-        border: '1px solid rgba(0, 255, 255, 0.2)',
-        boxShadow: '0 8px 32px rgba(0, 255, 255, 0.15)'
+        border: '1px solid rgba(255, 50, 50, 0.2)',
+        boxShadow: '0 8px 32px rgba(255, 50, 50, 0.15)'
       }}>
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <h1 style={{ 
@@ -101,7 +101,7 @@ export default function ForgotPassword() {
                   transition: 'all 0.2s ease'
                 }}
                 onFocus={(e) => {
-                  e.target.style.borderColor = 'rgba(0, 255, 255, 0.5)';
+                  e.target.style.borderColor = 'rgba(255, 50, 50, 0.5)';
                   e.target.style.background = 'rgba(255, 255, 255, 0.08)';
                 }}
                 onBlur={(e) => {
@@ -131,7 +131,7 @@ export default function ForgotPassword() {
               style={{
                 width: '100%',
                 padding: '14px',
-                background: loading ? 'rgba(100, 100, 100, 0.3)' : 'linear-gradient(135deg, #00ffff, #00ccff)',
+                background: loading ? 'rgba(100, 100, 100, 0.3)' : 'linear-gradient(135deg, #ff3232, #cc2828)',
                 border: 'none',
                 borderRadius: '8px',
                 color: loading ? '#666' : '#000',
@@ -179,7 +179,7 @@ export default function ForgotPassword() {
               textDecoration: 'none',
               transition: 'all 0.2s ease'
             }}
-            onMouseEnter={(e) => e.target.style.color = '#00ccff'}
+            onMouseEnter={(e) => e.target.style.color = '#ff3232'}
             onMouseLeave={(e) => e.target.style.color = '#00ffff'}
           >
             ← Back to Login
