@@ -1214,9 +1214,83 @@ app.post('/divides/vote', auth, async (req, res) => {
   }
 });
 
+// Alias for capital D route
 app.post('/Divides/vote', auth, async (req, res) => {
-  req.url = '/divides/vote';
-  return app._router.handle(req, res);
+  try {
+    const { divideId: rawDivideId, side, boostAmount = 0, id: altId, _id: alt_id } = req.body;
+    const divideId = rawDivideId || altId || alt_id;
+    if (!['A', 'B'].includes(side)) return res.status(400).json({ error: 'Invalid side' });
+
+    let divide = await Divide.findOne({ id: divideId });
+    if (!divide) divide = await Divide.findById(divideId);
+    if (!divide) {
+      return res.status(400).json({ error: 'Divide not found' });
+    }
+    if (divide.status !== 'active') {
+      return res.status(400).json({ error: 'Divide not active' });
+    }
+
+    if (divide.isUserCreated && divide.creatorId === req.userId && divide.creatorSide && side !== divide.creatorSide) {
+      return res.status(400).json({ error: 'Creator is locked to their chosen side' });
+    }
+
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    if (!boostAmount || boostAmount <= 0) {
+      return res.status(400).json({ error: 'Bet amount required (minimum $0.01)' });
+    }
+
+    let shortAmount = boostAmount;
+    let boostCents = toCents(boostAmount);
+    
+    if (user.balance < boostCents) return res.status(400).json({ error: 'Insufficient balance' });
+    user.balance = Math.max(0, user.balance - boostCents);
+    
+    if (user.wagerRequirement > 0) {
+      user.wagerRequirement = Math.max(0, user.wagerRequirement - boostCents);
+    }
+
+    const existing = divide.votes.find(v => v.userId === req.userId);
+    if (existing) {
+      if (divide.isUserCreated && divide.creatorId === req.userId && divide.creatorSide && side !== divide.creatorSide) {
+        return res.status(400).json({ error: 'Creator is locked to their chosen side' });
+      } else {
+        existing.voteCount += shortAmount;
+        existing.side = side;
+      }
+    } else {
+      divide.votes.push({ userId: req.userId, side, voteCount: shortAmount });
+    }
+
+    divide.totalVotes += shortAmount;
+    if (side === 'A') divide.votesA += shortAmount;
+    else divide.votesB += shortAmount;
+    divide.pot = Number((divide.pot + boostAmount).toFixed(2));
+
+    user.totalBets = (user.totalBets || 0) + 1;
+    user.wagered = (user.wagered || 0) + boostCents;
+    
+    await awardXp(req.userId, 'usdWager', boostCents, { divideId: divide.id || divide._id, side, amount: boostAmount });
+
+    await divide.save();
+    await user.save();
+
+    await Ledger.create({
+      type: 'divides_bet',
+      amount: Number(boostAmount),
+      userId: req.userId,
+      divideId: divide.id || divide._id,
+      meta: { side }
+    });
+
+    io.emit('voteUpdate', divide);
+    res.json({ balance: toDollars(user.balance), votesA: divide.votesA, votesB: divide.votesB, pot: divide.pot });
+  } catch (err) {
+    console.error('POST /Divides/vote ERROR:', err);
+    console.error('Error stack:', err.stack);
+    res.status(500).json({ error: 'Server error', details: err.message });
+  }
 });
 
 // END divide helper function
