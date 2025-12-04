@@ -4,20 +4,21 @@ import { io } from "socket.io-client";
 
 // Use VITE_API_URL if set, otherwise use same domain (production)
 const SOCKET_URL = import.meta.env.VITE_API_URL || '';
-const socket = io(SOCKET_URL);
-const chatSocket = io(SOCKET_URL + '/chat');
-const moderatorChatSocket = io(SOCKET_URL + '/moderator-chat');
+const socket = io(SOCKET_URL, {
+  transports: ['websocket', 'polling'],
+  reconnection: true,
+  reconnectionDelay: 1000,
+  reconnectionAttempts: 5
+});
 
 export default function useSocket(roomId) {
-  const socketRef = useRef(
-    roomId === 'chat' ? chatSocket : 
-    roomId === 'moderator-chat' ? moderatorChatSocket : 
-    socket
-  );
+  const socketRef = useRef(socket);
 
   useEffect(() => {
-    // Skip room join/leave for chat and moderator-chat namespaces
+    // Skip room join/leave for special room types
     if (roomId === 'chat' || roomId === 'moderator-chat') return;
+    
+    if (!roomId) return;
     
     try {
       socketRef.current.emit("joinDivide", roomId);
