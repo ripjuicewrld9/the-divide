@@ -36,45 +36,6 @@ body {
   background: rgba(139, 69, 88, 0.5);
 }
 
-.divides-container {
-  padding: 1rem 1.5rem;
-}
-
-.divides-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.divide-card {
-  background: linear-gradient(135deg, rgba(20, 10, 14, 0.95) 0%, rgba(15, 8, 12, 0.98) 100%);
-  border-radius: 0.75rem;
-  padding: 1rem;
-  flex: 1 1 300px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(139, 69, 88, 0.1) inset;
-  border: 1px solid rgba(139, 69, 88, 0.2);
-  text-align: center;
-  transition: all 0.2s ease;
-}
-
-.divide-card:hover {
-  border-color: rgba(201, 117, 134, 0.4);
-  box-shadow: 0 4px 12px rgba(139, 69, 88, 0.3), 0 0 0 1px rgba(201, 117, 134, 0.2) inset;
-}
-
-.options {
-  display: flex;
-  justify-content: space-around;
-  margin: 10px 0;
-}
-
-.options img {
-  width: 100px;
-  height: 100px;
-  border-radius: 10px;
-  object-fit: cover;
-}
-
 /* Hide scrollbar for Chrome, Safari and Opera */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
