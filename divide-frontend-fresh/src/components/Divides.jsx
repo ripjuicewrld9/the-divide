@@ -10,7 +10,6 @@ import CreateDivideModal from './CreateDivideModal';
 import VoteWithBetModal from './VoteWithBetModal';
 import { AuthContext } from "../context/AuthContext";
 import AuthModal from "./AuthModal.jsx";
-import LiveGamesFeed from "./LiveGamesFeed";
 import MobileGameHeader from "./MobileGameHeader";
 import "../styles/Divides.css";
 import { useAuth } from '../context/AuthContext';
@@ -450,11 +449,6 @@ export default function Divides({ onOpenChat }) {
             setSelectedDivideForVote(null);
           }}
         />
-        <div className="live-games-feed-mobile mt-6">
-          <div className="bg-gray-900 rounded-xl p-4">
-            <LiveGamesFeed />
-          </div>
-        </div>
       </div>
     ) : (
       // Desktop layout (adapted from mobile)
@@ -586,11 +580,6 @@ export default function Divides({ onOpenChat }) {
             setSelectedDivideForVote(null);
           }}
         />
-        <div className="live-games-feed-desktop mt-10">
-          <div className="bg-gray-900 rounded-xl p-6">
-            <LiveGamesFeed />
-          </div>
-        </div>
       </div>
     )
   );
