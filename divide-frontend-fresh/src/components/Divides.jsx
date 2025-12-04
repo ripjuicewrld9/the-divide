@@ -34,7 +34,6 @@ export default function Divides({ onOpenChat }) {
   const [activeCategory, setActiveCategory] = useState('All');
   const [allExpanded, setAllExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [jackpot, setJackpot] = useState({ amount: 0, houseTotal: 0, kenoReserve: 0 });
   const [showCreateDivideModal, setShowCreateDivideModal] = useState(false);
   const [showVoteBetModal, setShowVoteBetModal] = useState(false);
   const [selectedDivideForVote, setSelectedDivideForVote] = useState(null);
@@ -143,22 +142,8 @@ export default function Divides({ onOpenChat }) {
 
   useEffect(() => {
     fetchDivides();
-    fetchJackpot();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const fetchJackpot = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/jackpot`);
-      const data = await res.json();
-      // Normalize server response: prefer kenoReserve when present, otherwise fall back to houseTotal
-      const amount = (typeof data.amount !== 'undefined') ? data.amount : 0;
-      const kenoReserve = (typeof data.kenoReserve !== 'undefined') ? data.kenoReserve : (data.houseTotal || 0);
-      setJackpot({ amount: amount, houseTotal: data.houseTotal || 0, kenoReserve });
-    } catch (err) {
-      console.error('Failed to load jackpot', err);
-    }
-  };
 
   // ⚡ Connect live updates via Socket.IO
   useEffect(() => {
@@ -330,12 +315,6 @@ export default function Divides({ onOpenChat }) {
         {/* Category Navigation */}
         <CategoryNav activeCategory={activeCategory} onCategoryChange={handleCategoryChange} />
         
-        <div className="top-stats flex justify-center mb-2">
-          <div className="stat-wrapper bg-gray-900 rounded-lg px-4 py-2">
-            <div className="stat-title text-sm text-gray-300">Jackpot</div>
-            <div className="stat-value text-lg font-bold text-yellow-400">${formatCurrency(jackpot.amount / 100, 2)}</div>
-          </div>
-        </div>
         <div className="create-divide-section flex justify-center mb-4">
           <button
             className="btn-create-divide text-white font-bold px-4 py-2 rounded-lg shadow-lg text-lg"
@@ -461,12 +440,6 @@ export default function Divides({ onOpenChat }) {
         {/* Category Navigation */}
         <CategoryNav activeCategory={activeCategory} onCategoryChange={handleCategoryChange} />
         
-        <div className="top-stats flex justify-center mb-6">
-          <div className="stat-wrapper bg-gray-900 rounded-lg px-6 py-4">
-            <div className="stat-title text-base text-gray-300">Jackpot</div>
-            <div className="stat-value text-2xl font-bold text-yellow-400">${formatCurrency(jackpot.amount / 100, 2)}</div>
-          </div>
-        </div>
         <div className="create-divide-section flex justify-center mb-8">
           <button
             className="btn-create-divide text-white font-bold px-6 py-3 rounded-lg shadow-lg text-xl"
