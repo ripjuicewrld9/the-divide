@@ -18,6 +18,9 @@ import SocialPost from './models/SocialPost.js';
 import DivideSentiment from './models/DivideSentiment.js';
 import { analyzeDivideSentiment } from './utils/geminiSentiment.js';
 
+// Routes
+import paymentRoutes from './routes/payments.js';
+
 // Core dependencies
 import express from 'express';
 import fs from 'fs';
@@ -538,7 +541,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     await user.save();
 
     // Send email
-    const resetUrl = `${process.env.FRONTEND_URL || 'https://the-divide.onrender.com'}/reset-password?token=${resetToken}`;
+    const resetUrl = `${process.env.FRONTEND_URL || 'https://thedivide.us'}/reset-password?token=${resetToken}`;
     
     try {
       await emailTransporter.sendMail({
@@ -620,7 +623,7 @@ app.post('/api/auth/reset-password', async (req, res) => {
 // Step 1: Redirect to Discord OAuth (Account Linking)
 app.get('/auth/discord', (req, res) => {
   const clientId = process.env.DISCORD_CLIENT_ID;
-  const redirectUri = encodeURIComponent(process.env.DISCORD_REDIRECT_URI || 'https://the-divide.onrender.com/auth/discord/callback');
+  const redirectUri = encodeURIComponent(process.env.DISCORD_REDIRECT_URI || 'https://thedivide.us/auth/discord/callback');
   const scope = encodeURIComponent('identify');
   
   const discordAuthUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
@@ -632,7 +635,7 @@ app.get('/auth/discord/callback', async (req, res) => {
   const { code } = req.query;
   
   if (!code) {
-    return res.redirect(`${process.env.FRONTEND_URL || 'https://the-divide.onrender.com'}?error=discord_auth_failed`);
+    return res.redirect(`${process.env.FRONTEND_URL || 'https://thedivide.us'}?error=discord_auth_failed`);
   }
 
   try {
@@ -647,7 +650,7 @@ app.get('/auth/discord/callback', async (req, res) => {
         client_secret: process.env.DISCORD_CLIENT_SECRET,
         grant_type: 'authorization_code',
         code: code,
-        redirect_uri: process.env.DISCORD_REDIRECT_URI || 'https://the-divide.onrender.com/auth/discord/callback',
+        redirect_uri: process.env.DISCORD_REDIRECT_URI || 'https://thedivide.us/auth/discord/callback',
       }),
     });
 
@@ -655,7 +658,7 @@ app.get('/auth/discord/callback', async (req, res) => {
 
     if (!tokenData.access_token) {
       console.error('Discord OAuth error:', tokenData);
-      return res.redirect(`${process.env.FRONTEND_URL || 'https://the-divide.onrender.com'}?error=discord_token_failed`);
+      return res.redirect(`${process.env.FRONTEND_URL || 'https://thedivide.us'}?error=discord_token_failed`);
     }
 
     // Get user info from Discord
@@ -669,7 +672,7 @@ app.get('/auth/discord/callback', async (req, res) => {
 
     if (!discordUser.id) {
       console.error('Failed to get Discord user:', discordUser);
-      return res.redirect(`${process.env.FRONTEND_URL || 'https://the-divide.onrender.com'}?error=discord_user_failed`);
+      return res.redirect(`${process.env.FRONTEND_URL || 'https://thedivide.us'}?error=discord_user_failed`);
     }
 
     // Create a temporary token to link this Discord account to website account
@@ -684,10 +687,10 @@ app.get('/auth/discord/callback', async (req, res) => {
     );
 
     // Redirect back to frontend with the link token
-    res.redirect(`${process.env.FRONTEND_URL || 'https://the-divide.onrender.com'}/profile?discord_link=${linkToken}`);
+    res.redirect(`${process.env.FRONTEND_URL || 'https://thedivide.us'}/profile?discord_link=${linkToken}`);
   } catch (error) {
     console.error('Discord OAuth error:', error);
-    res.redirect(`${process.env.FRONTEND_URL || 'https://the-divide.onrender.com'}?error=discord_oauth_error`);
+    res.redirect(`${process.env.FRONTEND_URL || 'https://thedivide.us'}?error=discord_oauth_error`);
   }
 });
 
@@ -740,7 +743,7 @@ app.post('/api/link-discord', auth, async (req, res) => {
 // Step 1: Redirect to Discord OAuth for login
 app.get('/auth/discord/login', (req, res) => {
   const clientId = process.env.DISCORD_CLIENT_ID;
-  const redirectUri = encodeURIComponent(process.env.DISCORD_REDIRECT_URI_LOGIN || 'https://the-divide.onrender.com/auth/discord/login/callback');
+  const redirectUri = encodeURIComponent(process.env.DISCORD_REDIRECT_URI_LOGIN || 'https://thedivide.us/auth/discord/login/callback');
   const scope = encodeURIComponent('identify email');
   
   const discordAuthUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
@@ -752,7 +755,7 @@ app.get('/auth/discord/login/callback', async (req, res) => {
   const { code } = req.query;
   
   if (!code) {
-    return res.redirect(`${process.env.FRONTEND_URL || 'https://the-divide.onrender.com'}?error=discord_login_failed`);
+    return res.redirect(`${process.env.FRONTEND_URL || 'https://thedivide.us'}?error=discord_login_failed`);
   }
 
   try {
@@ -767,7 +770,7 @@ app.get('/auth/discord/login/callback', async (req, res) => {
         client_secret: process.env.DISCORD_CLIENT_SECRET,
         grant_type: 'authorization_code',
         code: code,
-        redirect_uri: process.env.DISCORD_REDIRECT_URI_LOGIN || 'https://the-divide.onrender.com/auth/discord/login/callback',
+        redirect_uri: process.env.DISCORD_REDIRECT_URI_LOGIN || 'https://thedivide.us/auth/discord/login/callback',
       }),
     });
 
@@ -775,7 +778,7 @@ app.get('/auth/discord/login/callback', async (req, res) => {
 
     if (!tokenData.access_token) {
       console.error('Discord login error:', tokenData);
-      return res.redirect(`${process.env.FRONTEND_URL || 'https://the-divide.onrender.com'}?error=discord_token_failed`);
+      return res.redirect(`${process.env.FRONTEND_URL || 'https://thedivide.us'}?error=discord_token_failed`);
     }
 
     // Get user info from Discord
@@ -789,7 +792,7 @@ app.get('/auth/discord/login/callback', async (req, res) => {
 
     if (!discordUser.id) {
       console.error('Failed to get Discord user:', discordUser);
-      return res.redirect(`${process.env.FRONTEND_URL || 'https://the-divide.onrender.com'}?error=discord_user_failed`);
+      return res.redirect(`${process.env.FRONTEND_URL || 'https://thedivide.us'}?error=discord_user_failed`);
     }
 
     // Check if user exists with this Discord ID
@@ -814,10 +817,10 @@ app.get('/auth/discord/login/callback', async (req, res) => {
     const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '30d' });
 
     // Redirect to frontend with token
-    res.redirect(`${process.env.FRONTEND_URL || 'https://the-divide.onrender.com'}?discord_login=${token}`);
+    res.redirect(`${process.env.FRONTEND_URL || 'https://thedivide.us'}?discord_login=${token}`);
   } catch (error) {
     console.error('Discord login error:', error);
-    res.redirect(`${process.env.FRONTEND_URL || 'https://the-divide.onrender.com'}?error=discord_login_error`);
+    res.redirect(`${process.env.FRONTEND_URL || 'https://thedivide.us'}?error=discord_login_error`);
   }
 });
 
@@ -828,7 +831,7 @@ app.get('/auth/discord/login/callback', async (req, res) => {
 // Step 1: Redirect to Google OAuth for login
 app.get('/auth/google/login', (req, res) => {
   const clientId = process.env.GOOGLE_CLIENT_ID;
-  const redirectUri = encodeURIComponent(process.env.GOOGLE_REDIRECT_URI || 'https://the-divide.onrender.com/auth/google/login/callback');
+  const redirectUri = encodeURIComponent(process.env.GOOGLE_REDIRECT_URI || 'https://thedivide.us/auth/google/login/callback');
   const scope = encodeURIComponent('openid email profile');
   
   const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
@@ -841,7 +844,7 @@ app.get('/auth/google/login/callback', async (req, res) => {
   
   if (!code) {
     console.error('❌ No authorization code received from Google');
-    return res.redirect(`${process.env.FRONTEND_URL || 'https://the-divide.onrender.com'}?error=google_login_failed`);
+    return res.redirect(`${process.env.FRONTEND_URL || 'https://thedivide.us'}?error=google_login_failed`);
   }
 
   try {
@@ -856,7 +859,7 @@ app.get('/auth/google/login/callback', async (req, res) => {
         client_secret: process.env.GOOGLE_CLIENT_SECRET,
         grant_type: 'authorization_code',
         code: code,
-        redirect_uri: process.env.GOOGLE_REDIRECT_URI || 'https://the-divide.onrender.com/auth/google/login/callback',
+        redirect_uri: process.env.GOOGLE_REDIRECT_URI || 'https://thedivide.us/auth/google/login/callback',
       }),
     });
 
@@ -864,7 +867,7 @@ app.get('/auth/google/login/callback', async (req, res) => {
 
     if (!tokenData.access_token) {
       console.error('❌ Google login error:', tokenData);
-      return res.redirect(`${process.env.FRONTEND_URL || 'https://the-divide.onrender.com'}?error=google_token_failed`);
+      return res.redirect(`${process.env.FRONTEND_URL || 'https://thedivide.us'}?error=google_token_failed`);
     }
 
     // Get user info from Google
@@ -878,7 +881,7 @@ app.get('/auth/google/login/callback', async (req, res) => {
 
     if (!googleUser.id) {
       console.error('❌ Failed to get Google user:', googleUser);
-      return res.redirect(`${process.env.FRONTEND_URL || 'https://the-divide.onrender.com'}?error=google_user_failed`);
+      return res.redirect(`${process.env.FRONTEND_URL || 'https://thedivide.us'}?error=google_user_failed`);
     }
 
     // Check if user exists with this Google ID
@@ -903,10 +906,10 @@ app.get('/auth/google/login/callback', async (req, res) => {
     const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '30d' });
 
     // Redirect to frontend with token
-    res.redirect(`${process.env.FRONTEND_URL || 'https://the-divide.onrender.com'}?google_login=${token}`);
+    res.redirect(`${process.env.FRONTEND_URL || 'https://thedivide.us'}?google_login=${token}`);
   } catch (error) {
     console.error('❌ Google login error:', error);
-    res.redirect(`${process.env.FRONTEND_URL || 'https://the-divide.onrender.com'}?error=google_login_error`);
+    res.redirect(`${process.env.FRONTEND_URL || 'https://thedivide.us'}?error=google_login_error`);
   }
 });
 
@@ -2989,6 +2992,15 @@ app.get('/api/sentiment/trending', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch trending' });
   }
 });
+
+// ==========================================
+// PAYMENT ROUTES (NOWPayments)
+// ==========================================
+// Mount payment routes with auth middleware
+app.use('/api/payments', auth, paymentRoutes);
+
+// Admin-only payment routes need additional protection
+app.use('/api/payments/admin', auth, adminOnly);
 
 // ==========================================
 // ==========================================

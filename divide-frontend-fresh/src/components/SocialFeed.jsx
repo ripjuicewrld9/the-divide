@@ -1,6 +1,7 @@
 // src/components/SocialFeed.jsx
 // Social feed - "custom X inside the site"
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import '../styles/premium.css';
@@ -113,6 +114,7 @@ function CreatePost({ onPostCreated }) {
 // Single Post Card Component
 function PostCard({ post, onUpdate }) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [localPost, setLocalPost] = useState(post);
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState('');
@@ -121,7 +123,16 @@ function PostCard({ post, onUpdate }) {
   const hasLiked = user && localPost.likedBy?.some(id => id === user.id || id._id === user.id);
   const hasDisliked = user && localPost.dislikedBy?.some(id => id === user.id || id._id === user.id);
 
-  const handleLike = async () => {
+  const handleCardClick = (e) => {
+    // Don't navigate if clicking on buttons or interactive elements
+    if (e.target.closest('button') || e.target.closest('input') || e.target.closest('textarea') || e.target.closest('form')) {
+      return;
+    }
+    navigate(`/post/${localPost._id}`);
+  };
+
+  const handleLike = async (e) => {
+    e.stopPropagation();
     if (!user) return alert('Please log in');
     if (hasLiked || hasDisliked) return;
 
@@ -139,7 +150,8 @@ function PostCard({ post, onUpdate }) {
     }
   };
 
-  const handleDislike = async () => {
+  const handleDislike = async (e) => {
+    e.stopPropagation();
     if (!user) return alert('Please log in');
     if (hasLiked || hasDisliked) return;
 
@@ -157,8 +169,9 @@ function PostCard({ post, onUpdate }) {
     }
   };
 
-  const handleShare = () => {
-    const url = `${window.location.origin}/social/${localPost._id}`;
+  const handleShare = (e) => {
+    e.stopPropagation();
+    const url = `${window.location.origin}/post/${localPost._id}`;
     navigator.clipboard.writeText(url).then(() => {
       // Could show a toast here
     });
@@ -183,7 +196,8 @@ function PostCard({ post, onUpdate }) {
     }
   };
 
-  const handleDeletePost = async () => {
+  const handleDeletePost = async (e) => {
+    e.stopPropagation();
     if (!confirm('Delete this post?')) return;
     try {
       await api.delete(`/api/social/posts/${localPost._id}`);
@@ -198,13 +212,16 @@ function PostCard({ post, onUpdate }) {
   const isAdmin = user && user.role === 'admin';
 
   return (
-    <div style={{
-      background: 'rgba(12, 12, 15, 1)',
-      borderRadius: '16px',
-      padding: '20px',
-      marginBottom: '16px',
-      border: '1px solid rgba(255, 255, 255, 0.06)',
-      transition: 'all 200ms ease',
+    <div 
+      onClick={handleCardClick}
+      style={{
+        background: 'rgba(12, 12, 15, 1)',
+        borderRadius: '16px',
+        padding: '20px',
+        marginBottom: '16px',
+        border: '1px solid rgba(255, 255, 255, 0.06)',
+        transition: 'all 200ms ease',
+        cursor: 'pointer',
     }}>
       {/* Header */}
       <div style={{

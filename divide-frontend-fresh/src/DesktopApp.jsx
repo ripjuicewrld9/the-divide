@@ -23,6 +23,8 @@ import ResetPassword from "./pages/ResetPassword.jsx";
 import DiscordLinkHandler from "./components/DiscordLinkHandler.jsx";
 import OAuthLoginHandler from "./components/OAuthLoginHandler.jsx";
 import SocialFeed from "./components/SocialFeed.jsx";
+import PostDetail from "./pages/PostDetail.jsx";
+import WalletPage from "./pages/WalletPage.jsx";
 
 function ProtectedRoute({ children, requiredRole = null }) {
   const { user } = React.useContext(AuthContext);
@@ -58,6 +60,8 @@ export default function DesktopApp() {
             <Route path="/divides" element={<Divides />} />
             <Route path="/divide/:id" element={<DivideDetailPage />} />
             <Route path="/feed" element={<SocialFeed />} />
+            <Route path="/post/:postId" element={<PostDetail />} />
+            <Route path="/wallet" element={<WalletPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             
             {/* Support Routes - Moderators get full dashboard, users get simple view */}

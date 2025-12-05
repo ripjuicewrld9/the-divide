@@ -16,20 +16,22 @@
   color: #d4d4d4;
 }
 
-/* GRID – Centered single/double column like Polymarket */
+/* GRID – 4 columns centered */
 .divides-grid {
   display: grid;
-  gap: 16px;
+  gap: 12px;
   padding: 0;
-  max-width: 800px;
+  max-width: 1200px;
   margin: 0 auto;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(4, 1fr);
 }
-@media (max-width: 768px) { .divides-grid { grid-template-columns: 1fr; max-width: 420px; } }
+@media (max-width: 1100px) { .divides-grid { grid-template-columns: repeat(3, 1fr); max-width: 900px; } }
+@media (max-width: 800px) { .divides-grid { grid-template-columns: repeat(2, 1fr); max-width: 600px; } }
+@media (max-width: 550px) { .divides-grid { grid-template-columns: 1fr; max-width: 380px; } }
 
 /* Desktop container - centered */
 .divides-desktop-container {
-  max-width: 900px;
+  max-width: 1280px;
   margin: 0 auto;
   padding: 24px 16px;
 }
