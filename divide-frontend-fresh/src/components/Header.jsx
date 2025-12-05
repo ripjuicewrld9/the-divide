@@ -18,6 +18,7 @@ import HowItWorksModal from './HowItWorksModal.jsx';
 export default function Header() {
   const { user, logout } = useAuth();
   const isAdmin = user?.role === 'admin';
+  const isModerator = user?.role === 'moderator' || isAdmin;
 
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -364,6 +365,33 @@ export default function Header() {
                               }}
                             >
                               Admin
+                            </Link>
+                          )}
+                          
+                          {isModerator && (
+                            <Link
+                              to="/support"
+                              onClick={() => setMenuOpen(false)}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                padding: '10px 12px',
+                                borderRadius: '8px',
+                                textDecoration: 'none',
+                                color: '#06b6d4',
+                                fontSize: '13px',
+                                fontWeight: '500',
+                                transition: 'all 0.15s ease',
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = 'rgba(6,182,212,0.1)';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'transparent';
+                              }}
+                            >
+                              Support Dashboard
                             </Link>
                           )}
                           
