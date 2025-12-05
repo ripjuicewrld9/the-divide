@@ -41,6 +41,19 @@ const userSchema = new mongoose.Schema({
   xpThisMonth: { type: Number, default: 0 }, // resets monthly for leaderboard
   totalWageredUsd: { type: Number, default: 0 }, // total USD wagered on Divides (cents)
   currentBadge: { type: String, default: 'newbie' }, // badge name from level thresholds
+  
+  // VIP System - based on 30-day rolling wager
+  vipTier: { type: String, enum: ['none', 'bronze', 'silver', 'gold', 'platinum', 'diamond'], default: 'none' },
+  wagerLast30Days: { type: Number, default: 0 }, // rolling 30-day wager in cents
+  wagerHistory: [{ // daily wager snapshots for rolling calculation
+    date: { type: Date },
+    amount: { type: Number, default: 0 } // cents wagered that day
+  }],
+  dividends: { type: Number, default: 0 }, // Dividends balance in cents (VIP rewards go here)
+  totalDividendsEarned: { type: Number, default: 0 }, // lifetime dividends earned in cents
+  vipSince: { type: Date }, // when user first reached VIP status
+  diamondApproved: { type: Boolean, default: false }, // manual approval for Diamond tier
+  
   role: { type: String, enum: ['user', 'moderator', 'admin'], default: 'user' },
   holdingsDC: { type: Number, default: 0 },
   holdingsInvested: { type: Number, default: 0 },

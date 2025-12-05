@@ -155,6 +155,47 @@ async function moderatorOnly(req, res, next) {
 // XP System
 import { XP_RATES, getLevelFromXP, getXPToNextLevel, getProgressPercent } from './utils/xpSystem.js';
 
+// VIP System
+import { VIP_TIERS, getVipTier, getVipTierInfo, calculateRakeback, applyVipWithdrawalDiscount, updateRollingWager, addDailyWager, getVipProgress } from './utils/vipSystem.js';
+
+// Award rakeback to Dividends balance based on VIP tier
+async function awardRakeback(userId, wagerCents) {
+  try {
+    const user = await User.findById(userId);
+    if (!user) return 0;
+    
+    // Update rolling wager and VIP tier
+    user.wagerHistory = addDailyWager(user.wagerHistory || [], wagerCents);
+    const { wagerLast30Days, cleanedHistory } = updateRollingWager(user.wagerHistory);
+    user.wagerHistory = cleanedHistory;
+    user.wagerLast30Days = wagerLast30Days;
+    
+    // Calculate new VIP tier
+    const newTier = getVipTier(wagerLast30Days, user.diamondApproved);
+    if (user.vipTier !== newTier) {
+      console.log(`[VIP] User ${user.username} tier changed: ${user.vipTier} -> ${newTier}`);
+      if (newTier !== 'none' && !user.vipSince) {
+        user.vipSince = new Date();
+      }
+    }
+    user.vipTier = newTier;
+    
+    // Calculate and award rakeback to Dividends
+    const rakeback = calculateRakeback(wagerCents, newTier);
+    if (rakeback > 0) {
+      user.dividends = (user.dividends || 0) + rakeback;
+      user.totalDividendsEarned = (user.totalDividendsEarned || 0) + rakeback;
+      console.log(`[VIP] User ${user.username} earned ${(rakeback/100).toFixed(2)} dividends (${newTier} tier)`);
+    }
+    
+    await user.save();
+    return rakeback;
+  } catch (err) {
+    console.error('[VIP] awardRakeback error:', err);
+    return 0;
+  }
+}
+
 async function awardXp(userId, type, amount = 0, extra = {}) {
   try {
     const user = await User.findById(userId);
@@ -396,16 +437,31 @@ app.get('/api/me', auth, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
+    // Update rolling wager and VIP tier on each request
+    const { wagerLast30Days } = updateRollingWager(user.wagerHistory || []);
+    const currentVipTier = getVipTier(wagerLast30Days, user.diamondApproved);
+    const vipTierInfo = getVipTierInfo(currentVipTier);
+    const vipProgress = getVipProgress(wagerLast30Days, currentVipTier);
+
     res.json({
       ...user.toObject(),
       balance: toDollars(user.balance),
+      dividends: toDollars(user.dividends || 0),
+      totalDividendsEarned: toDollars(user.totalDividendsEarned || 0),
       wagered: toDollars(user.wagered || 0),
       totalWinnings: toDollars(user.totalWinnings || 0),
       totalWon: toDollars(user.totalWon || 0),
       totalDeposited: toDollars(user.totalDeposited || 0),
       totalWithdrawn: toDollars(user.totalWithdrawn || 0),
       wagerRequirement: toDollars(user.wagerRequirement || 0),
-      totalWageredUsd: toDollars(user.totalWageredUsd || 0)
+      totalWageredUsd: toDollars(user.totalWageredUsd || 0),
+      wagerLast30Days: toDollars(wagerLast30Days),
+      vipTier: currentVipTier,
+      vipTierInfo,
+      vipProgress: {
+        ...vipProgress,
+        remaining: toDollars(vipProgress.remaining),
+      },
     });
   } catch (err) {
     console.error('GET /api/me', err);
@@ -888,18 +944,23 @@ app.post("/api/withdraw", auth, async (req, res) => {
     // - $10,000 – $49,999 → 1%
     // - $50,000 – $249,999 → 0.5%
     // - $250,000+ → FREE
-    let feePercent = 0;
+    let baseFeePercent = 0;
     if (amount < 1000) {
-      feePercent = 0.02;        // 2%
+      baseFeePercent = 0.02;        // 2%
     } else if (amount < 10000) {
-      feePercent = 0.015;       // 1.5%
+      baseFeePercent = 0.015;       // 1.5%
     } else if (amount < 50000) {
-      feePercent = 0.01;        // 1%
+      baseFeePercent = 0.01;        // 1%
     } else if (amount < 250000) {
-      feePercent = 0.005;       // 0.5%
+      baseFeePercent = 0.005;       // 0.5%
     } else {
-      feePercent = 0;           // FREE for $250k+
+      baseFeePercent = 0;           // FREE for $250k+
     }
+    
+    // Apply VIP discount to withdrawal fee
+    const vipTier = user.vipTier || 'none';
+    const feePercent = applyVipWithdrawalDiscount(baseFeePercent, vipTier);
+    const vipDiscount = baseFeePercent > 0 ? Math.round((1 - feePercent / baseFeePercent) * 100) : 0;
     
     const feeAmount = amount * feePercent;
     const feeCents = Math.round(feeAmount * 100);
@@ -977,6 +1038,82 @@ app.get("/api/withdrawal-fees", (req, res) => {
     description: 'Withdrawal fees cover network + processing costs. Higher withdrawals = lower fees.',
     vipNote: 'VIP members may qualify for reduced or zero fees.'
   });
+});
+
+// GET VIP tiers info
+app.get("/api/vip/tiers", (req, res) => {
+  res.json(VIP_TIERS);
+});
+
+// GET user's VIP status
+app.get("/api/vip/status", auth, async (req, res) => {
+  try {
+    if (!req.userId) return res.status(401).json({ error: 'Not authenticated' });
+    
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    
+    const { wagerLast30Days } = updateRollingWager(user.wagerHistory || []);
+    const currentTier = getVipTier(wagerLast30Days, user.diamondApproved);
+    const tierInfo = getVipTierInfo(currentTier);
+    const progress = getVipProgress(wagerLast30Days, currentTier);
+    
+    res.json({
+      tier: currentTier,
+      tierInfo,
+      wagerLast30Days: toDollars(wagerLast30Days),
+      dividends: toDollars(user.dividends || 0),
+      totalDividendsEarned: toDollars(user.totalDividendsEarned || 0),
+      progress: {
+        ...progress,
+        remaining: toDollars(progress.remaining),
+      },
+      diamondApproved: user.diamondApproved,
+      vipSince: user.vipSince,
+    });
+  } catch (err) {
+    console.error('[GET /api/vip/status]', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// POST claim dividends (transfer to main balance)
+app.post("/api/vip/claim-dividends", auth, async (req, res) => {
+  try {
+    if (!req.userId) return res.status(401).json({ error: 'Not authenticated' });
+    
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    
+    const dividendsCents = user.dividends || 0;
+    if (dividendsCents <= 0) {
+      return res.status(400).json({ error: 'No dividends to claim' });
+    }
+    
+    // Transfer dividends to main balance
+    user.balance += dividendsCents;
+    user.dividends = 0;
+    await user.save();
+    
+    await Ledger.create({
+      type: 'dividends_claimed',
+      amount: toDollars(dividendsCents),
+      userId: req.userId,
+      meta: { vipTier: user.vipTier }
+    });
+    
+    console.log(`[VIP] User ${user.username} claimed $${toDollars(dividendsCents)} dividends`);
+    
+    res.json({
+      success: true,
+      claimed: toDollars(dividendsCents),
+      newBalance: toDollars(user.balance),
+      message: `Claimed $${toDollars(dividendsCents)} from Dividends!`
+    });
+  } catch (err) {
+    console.error('[POST /api/vip/claim-dividends]', err);
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
 // ==========================================
@@ -1193,6 +1330,9 @@ app.post('/Divides/create-user', auth, async (req, res) => {
 
     await awardXp(req.userId, 'divideCreated', 0, { divideId: doc.id || doc._id, title, pot: bet });
     await awardXp(req.userId, 'usdWager', betCents, { divideId: doc.id || doc._id, side, amount: bet });
+    
+    // Award VIP rakeback for the initial bet
+    await awardRakeback(req.userId, betCents);
 
     // SECURITY: Sanitize new divide data before emitting
     io.emit('newDivide', sanitizeDivide(doc));
@@ -1275,6 +1415,9 @@ app.post('/divides/vote', auth, async (req, res) => {
     user.wagered = (user.wagered || 0) + boostCents;
     
     await awardXp(req.userId, 'usdWager', boostCents, { divideId: divide.id || divide._id, side, amount: boostAmount });
+    
+    // Award VIP rakeback to Dividends balance
+    await awardRakeback(req.userId, boostCents);
 
     await divide.save();
     await user.save();
@@ -1365,6 +1508,9 @@ app.post('/Divides/vote', auth, async (req, res) => {
     user.wagered = (user.wagered || 0) + boostCents;
     
     await awardXp(req.userId, 'usdWager', boostCents, { divideId: divide.id || divide._id, side, amount: boostAmount });
+    
+    // Award VIP rakeback to Dividends balance
+    await awardRakeback(req.userId, boostCents);
 
     await divide.save();
     await user.save();
