@@ -40,7 +40,7 @@ export const AuthProvider = ({ children }) => {
                     discordUsername: data.discordUsername || null,
                     xp: data.xp || 0,
                     level: data.level || 1,
-                    currentBadge: data.currentBadge || 'newbie',
+                    currentBadge: data.currentBadge || 'Sheep',
                     xpThisWeek: data.xpThisWeek || 0,
                     xpThisMonth: data.xpThisMonth || 0
                 });

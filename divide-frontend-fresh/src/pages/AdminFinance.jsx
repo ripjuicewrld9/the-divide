@@ -92,9 +92,17 @@ export default function AdminFinance() {
             ${formatCurrency(global.treasury || 0, 2)}
           </div>
           <p className="text-gray-500 text-sm">
-            Total money on platform (Deposits - Withdrawals)
+            Total money in play (User Balances + Active Pots)
           </p>
-          <div className="mt-4 flex gap-6 text-sm">
+          <div className="mt-4 flex flex-wrap gap-6 text-sm">
+            <div>
+              <span className="text-gray-500">User Balances:</span>
+              <span className="text-blue-400 font-bold ml-2">${formatCurrency(global.totalUserBalances || 0, 2)}</span>
+            </div>
+            <div>
+              <span className="text-gray-500">Active Pots:</span>
+              <span className="text-purple-400 font-bold ml-2">${formatCurrency(global.activePots || 0, 2)}</span>
+            </div>
             <div>
               <span className="text-gray-500">Total Deposited:</span>
               <span className="text-green-400 font-bold ml-2">${formatCurrency(global.totalDeposited || 0, 2)}</span>
@@ -102,10 +110,6 @@ export default function AdminFinance() {
             <div>
               <span className="text-gray-500">Total Withdrawn:</span>
               <span className="text-red-400 font-bold ml-2">${formatCurrency(global.totalWithdrawn || 0, 2)}</span>
-            </div>
-            <div>
-              <span className="text-gray-500">User Balances:</span>
-              <span className="text-blue-400 font-bold ml-2">${formatCurrency(global.totalUserBalances || 0, 2)}</span>
             </div>
           </div>
         </div>

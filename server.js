@@ -446,30 +446,41 @@ app.post('/verify-2fa', async (req, res) => {
   }
 });
 
-// Public treasury endpoint - shows site volume to all users
+// Public treasury endpoint - shows site money in play to all users
 app.get('/api/treasury', async (req, res) => {
   try {
-    // Calculate total deposits/withdrawals across all users
+    // Calculate total user balances
     const userStats = await User.aggregate([
       {
         $group: {
           _id: null,
           totalDeposited: { $sum: '$totalDeposited' },
-          totalWithdrawn: { $sum: '$totalWithdrawn' }
+          totalWithdrawn: { $sum: '$totalWithdrawn' },
+          totalBalance: { $sum: '$balance' }
         }
       }
     ]);
 
     const totalDeposited = userStats.length > 0 ? (userStats[0].totalDeposited || 0) : 0;
     const totalWithdrawn = userStats.length > 0 ? (userStats[0].totalWithdrawn || 0) : 0;
+    const totalUserBalances = userStats.length > 0 ? (userStats[0].totalBalance || 0) : 0;
 
-    // Treasury = Total Deposited - Total Withdrawn (money still on platform)
-    const treasury = totalDeposited - totalWithdrawn;
+    // Calculate money in active Divide pots
+    const activeDivides = await Divide.aggregate([
+      { $match: { status: 'active' } },
+      { $group: { _id: null, totalPot: { $sum: '$pot' } } }
+    ]);
+    const activePots = activeDivides.length > 0 ? (activeDivides[0].totalPot || 0) : 0;
+
+    // Treasury = User Balances + Money in Active Pots (excludes house revenue)
+    const treasury = totalUserBalances + activePots;
 
     res.json({
       treasury: toDollars(treasury),
       totalDeposited: toDollars(totalDeposited),
-      totalWithdrawn: toDollars(totalWithdrawn)
+      totalWithdrawn: toDollars(totalWithdrawn),
+      totalUserBalances: toDollars(totalUserBalances),
+      activePots: toDollars(activePots)
     });
   } catch (err) {
     console.error('/api/treasury error', err);
@@ -2144,34 +2155,39 @@ app.get('/api/divides/recent-eats', async (req, res) => {
       .limit(10)
       .lean();
 
-    // Calculate stats for each divide
+    // Calculate stats for each divide (with error handling for malformed data)
     const results = recentDivides.map(d => {
-      const totalA = d.totalA || 0;
-      const totalB = d.totalB || 0;
-      const pot = totalA + totalB;
-      const winnerSide = d.winnerSide;
-      const loserSide = d.loserSide || (winnerSide === 'A' ? 'B' : 'A');
-      
-      // Count unique winners
-      const winnerVotes = (d.voteHistory || []).filter(v => v.side === winnerSide);
-      const winnerCount = new Set(winnerVotes.map(v => v.oddsMultiplier ? v.oddsMultiplier.oddsAt : v.oddsAt)).size || winnerVotes.length;
-      
-      // Calculate minority percentage (what % of pot was on minority/winning side)
-      const minorityAmount = winnerSide === 'A' ? totalA : totalB;
-      const minorityPct = pot > 0 ? Math.round((minorityAmount / pot) * 100) : 0;
+      try {
+        const totalA = d.totalA || 0;
+        const totalB = d.totalB || 0;
+        const pot = totalA + totalB;
+        const winnerSide = d.winnerSide || 'A';
+        
+        // Count winners safely
+        const winnerVotes = Array.isArray(d.voteHistory) 
+          ? d.voteHistory.filter(v => v && v.side === winnerSide)
+          : [];
+        
+        // Calculate minority percentage (what % of pot was on minority/winning side)
+        const minorityAmount = winnerSide === 'A' ? totalA : totalB;
+        const minorityPct = pot > 0 ? Math.round((minorityAmount / pot) * 100) : 0;
 
-      return {
-        _id: d._id,
-        title: d.title,
-        optionA: d.optionA,
-        optionB: d.optionB,
-        pot: pot,
-        winnerSide: winnerSide,
-        winnerCount: winnerVotes.length,
-        minorityPct: minorityPct,
-        endTime: d.endTime,
-      };
-    });
+        return {
+          _id: d._id,
+          title: d.title || 'Untitled',
+          optionA: d.optionA || 'Option A',
+          optionB: d.optionB || 'Option B',
+          pot: pot,
+          winnerSide: winnerSide,
+          winnerCount: winnerVotes.length,
+          minorityPct: minorityPct,
+          endTime: d.endTime,
+        };
+      } catch (mapErr) {
+        console.error('Error processing divide:', d._id, mapErr);
+        return null;
+      }
+    }).filter(Boolean); // Remove any null results from errors
 
     res.json(results);
   } catch (err) {
@@ -2420,11 +2436,18 @@ app.get('/admin/finance', auth, adminOnly, async (req, res) => {
     const totalWithdrawn = userStats.length > 0 ? (userStats[0].totalWithdrawn || 0) : 0;
     const totalUserBalances = userStats.length > 0 ? (userStats[0].totalBalance || 0) : 0;
 
+    // Calculate money in active Divide pots
+    const activeDivides = await Divide.aggregate([
+      { $match: { status: 'active' } },
+      { $group: { _id: null, totalPot: { $sum: '$pot' } } }
+    ]);
+    const activePots = activeDivides.length > 0 ? (activeDivides[0].totalPot || 0) : 0;
+
     // Count total redemptions
     const redemptionCount = await Ledger.countDocuments({ type: 'withdrawal' });
 
-    // Treasury = Total Deposited - Total Withdrawn (money still on platform)
-    const treasury = totalDeposited - totalWithdrawn;
+    // Treasury = User Balances + Money in Active Pots (excludes house revenue)
+    const treasury = totalUserBalances + activePots;
 
     res.json({
       global: {
@@ -2436,6 +2459,7 @@ app.get('/admin/finance', auth, adminOnly, async (req, res) => {
         totalWithdrawn: toDollars(totalWithdrawn),
         treasury: toDollars(treasury),
         totalUserBalances: toDollars(totalUserBalances),
+        activePots: toDollars(activePots),
         totalRedemptions: redemptionCount,
         totalRedemptionAmount: toDollars(totalWithdrawn)
       },
@@ -2588,7 +2612,7 @@ app.post('/api/chat/messages', auth, async (req, res) => {
       username: user.username,
       message: message.trim().substring(0, 500),
       level: user.level || 1,
-      badge: user.currentBadge || 'Rookie',
+      badge: user.currentBadge || 'Sheep',
       createdAt: new Date()
     });
 
@@ -2615,7 +2639,7 @@ app.get('/api/users/:id', async (req, res) => {
       wagered: toDollars(user.wagered || 0),
       level: user.level || 1,
       xp: user.xp || 0,
-      currentBadge: user.currentBadge || 'Rookie'
+      currentBadge: user.currentBadge || 'Sheep'
     };
 
     res.json({ user, stats });

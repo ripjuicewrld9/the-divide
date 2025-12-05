@@ -40,7 +40,7 @@ const userSchema = new mongoose.Schema({
   xpThisWeek: { type: Number, default: 0 }, // resets weekly for leaderboard
   xpThisMonth: { type: Number, default: 0 }, // resets monthly for leaderboard
   totalWageredUsd: { type: Number, default: 0 }, // total USD wagered on Divides (cents)
-  currentBadge: { type: String, default: 'newbie' }, // badge name from level thresholds
+  currentBadge: { type: String, default: 'Sheep' }, // badge name from level thresholds
   
   // VIP System - based on 30-day rolling wager
   vipTier: { type: String, enum: ['none', 'bronze', 'silver', 'gold', 'platinum', 'diamond'], default: 'none' },

@@ -345,9 +345,10 @@ router.post('/deposit/direct', async (req, res) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const { amountUsd, currency } = req.body;
+    const { amountUsd, currency, payCurrency } = req.body;
+    const cryptoCurrency = currency || payCurrency; // Accept both field names
     
-    if (!amountUsd || !currency) {
+    if (!amountUsd || !cryptoCurrency) {
       return res.status(400).json({ error: 'Amount and currency required' });
     }
 
@@ -371,7 +372,7 @@ router.post('/deposit/direct', async (req, res) => {
     const payment = await nowPayments.createPayment({
       priceAmount: amountCents / 100,
       priceCurrency: 'usd',
-      payCurrency: currency.toLowerCase(),
+      payCurrency: cryptoCurrency.toLowerCase(),
       orderId,
       orderDescription: `Deposit to The Divide - ${user.username}`,
       successUrl: `${frontendUrl}/wallet?deposit=success`,
@@ -383,7 +384,7 @@ router.post('/deposit/direct', async (req, res) => {
       type: 'deposit',
       status: 'waiting',
       amountCents,
-      cryptoCurrency: currency.toLowerCase(),
+      cryptoCurrency: cryptoCurrency.toLowerCase(),
       cryptoAmount: payment.pay_amount,
       nowPaymentsId: payment.payment_id,
       nowPaymentsOrderId: orderId,
