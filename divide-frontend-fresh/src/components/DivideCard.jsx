@@ -202,9 +202,10 @@ export default function DivideCard({
             cursor: status === 'active' ? 'pointer' : 'default',
             transition: 'all 0.12s ease',
             background: editingSide === 'left' 
-              ? 'linear-gradient(90deg, #e53935 0%, #c62828 100%)' 
-              : 'linear-gradient(90deg, rgba(229, 57, 53, 0.15) 0%, rgba(198, 40, 40, 0.08) 100%)',
-            border: `1px solid ${editingSide === 'left' ? '#e53935' : 'rgba(229, 57, 53, 0.25)'}`,
+              ? 'linear-gradient(90deg, #ff1744 0%, #d50000 100%)' 
+              : 'linear-gradient(90deg, rgba(255, 23, 68, 0.25) 0%, rgba(213, 0, 0, 0.15) 100%)',
+            border: `1px solid ${editingSide === 'left' ? '#ff1744' : 'rgba(255, 23, 68, 0.4)'}`,
+            boxShadow: editingSide === 'left' ? '0 0 12px rgba(255, 23, 68, 0.4)' : 'none',
           }}
         >
           {editingSide === 'left' ? (
@@ -235,7 +236,7 @@ export default function DivideCard({
           ) : (
             <>
               <span style={{ fontSize: '12px', fontWeight: '500', color: '#e0e0e0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '70%' }}>{left}</span>
-              <span style={{ fontSize: '13px', fontWeight: '700', color: '#ff5252' }}>{leftPct}%</span>
+              <span style={{ fontSize: '14px', fontWeight: '800', color: '#ff1744', textShadow: '0 0 8px rgba(255, 23, 68, 0.5)' }}>{leftPct}%</span>
             </>
           )}
         </div>
@@ -252,9 +253,10 @@ export default function DivideCard({
             cursor: status === 'active' ? 'pointer' : 'default',
             transition: 'all 0.12s ease',
             background: editingSide === 'right'
-              ? 'linear-gradient(90deg, #1e88e5 0%, #1565c0 100%)'
-              : 'linear-gradient(90deg, rgba(30, 136, 229, 0.15) 0%, rgba(21, 101, 192, 0.08) 100%)',
-            border: `1px solid ${editingSide === 'right' ? '#1e88e5' : 'rgba(30, 136, 229, 0.25)'}`,
+              ? 'linear-gradient(90deg, #2979ff 0%, #0d47a1 100%)'
+              : 'linear-gradient(90deg, rgba(41, 121, 255, 0.25) 0%, rgba(13, 71, 161, 0.15) 100%)',
+            border: `1px solid ${editingSide === 'right' ? '#2979ff' : 'rgba(41, 121, 255, 0.4)'}`,
+            boxShadow: editingSide === 'right' ? '0 0 12px rgba(41, 121, 255, 0.4)' : 'none',
           }}
         >
           {editingSide === 'right' ? (
@@ -285,7 +287,7 @@ export default function DivideCard({
           ) : (
             <>
               <span style={{ fontSize: '12px', fontWeight: '500', color: '#e0e0e0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '70%' }}>{right}</span>
-              <span style={{ fontSize: '13px', fontWeight: '700', color: '#42a5f5' }}>{rightPct}%</span>
+              <span style={{ fontSize: '14px', fontWeight: '800', color: '#2979ff', textShadow: '0 0 8px rgba(41, 121, 255, 0.5)' }}>{rightPct}%</span>
             </>
           )}
         </div>

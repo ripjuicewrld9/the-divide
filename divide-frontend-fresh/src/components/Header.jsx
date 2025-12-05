@@ -78,7 +78,12 @@ export default function Header() {
         {/* Logo & Nav */}
         <nav className="flex items-center gap-6">
           <Link to="/" className="flex items-center gap-2 font-display text-xl font-bold tracking-tight transition-transform hover:scale-105">
-            <span className="text-[#d4d4d4]">
+            <span style={{ 
+              background: 'linear-gradient(90deg, #ff1744 0%, #2979ff 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}>
               The Divide
             </span>
           </Link>
