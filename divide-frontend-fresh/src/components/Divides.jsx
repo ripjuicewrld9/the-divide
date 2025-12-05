@@ -320,7 +320,46 @@ export default function Divides({ onOpenChat }) {
 
   return (
     isMobile() ? (
-      <div className=\"divides-mobile-container px-2 py-2\">\n        {/* Mobile Header - only shows on mobile */}\n        <MobileGameHeader title=\"Divides\" onOpenChat={onOpenChat} className=\"md:hidden mb-4\" />\n        \n        {/* Live Treasury Banner */}\n        {treasury && (\n          <div style={{\n            background: 'linear-gradient(135deg, rgba(30, 136, 229, 0.15) 0%, rgba(229, 57, 53, 0.15) 100%)',\n            border: '1px solid rgba(41, 121, 255, 0.3)',\n            borderRadius: '12px',\n            padding: '12px 16px',\n            marginBottom: '16px',\n            display: 'flex',\n            alignItems: 'center',\n            justifyContent: 'space-between',\n          }}>\n            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>\n              <span style={{ fontSize: '20px' }}>\ud83c\udfe6</span>\n              <div>\n                <div style={{ fontSize: '10px', color: '#888', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Live Treasury</div>\n                <div style={{\n                  fontSize: '20px',\n                  fontWeight: '900',\n                  background: 'linear-gradient(90deg, #4ade80 0%, #22d3ee 100%)',\n                  WebkitBackgroundClip: 'text',\n                  WebkitTextFillColor: 'transparent',\n                  backgroundClip: 'text',\n                }}>\n                  ${formatCurrency(treasury.treasury || 0, 0)}\n                </div>\n              </div>\n            </div>\n            <div style={{ fontSize: '9px', color: '#666', textAlign: 'right' }}>\n              <div>\u2191 ${formatCurrency(treasury.totalDeposited || 0, 0)} in</div>\n              <div>\u2193 ${formatCurrency(treasury.totalWithdrawn || 0, 0)} out</div>\n            </div>\n          </div>\n        )}\n        \n        {/* Category Navigation */}", "oldString": "    isMobile() ? (\n      <div className=\"divides-mobile-container px-2 py-2\">\n        {/* Mobile Header - only shows on mobile */}\n        <MobileGameHeader title=\"Divides\" onOpenChat={onOpenChat} className=\"md:hidden mb-4\" />\n        \n        {/* Category Navigation */}"}
+      <div className="divides-mobile-container px-2 py-2">
+        {/* Mobile Header - only shows on mobile */}
+        <MobileGameHeader title="Divides" onOpenChat={onOpenChat} className="md:hidden mb-4" />
+        
+        {/* Live Treasury Banner */}
+        {treasury && (
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(30, 136, 229, 0.15) 0%, rgba(229, 57, 53, 0.15) 100%)',
+            border: '1px solid rgba(41, 121, 255, 0.3)',
+            borderRadius: '12px',
+            padding: '12px 16px',
+            marginBottom: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '20px' }}>🏦</span>
+              <div>
+                <div style={{ fontSize: '10px', color: '#888', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Live Treasury</div>
+                <div style={{
+                  fontSize: '20px',
+                  fontWeight: '900',
+                  background: 'linear-gradient(90deg, #4ade80 0%, #22d3ee 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                }}>
+                  ${formatCurrency(treasury.treasury || 0, 0)}
+                </div>
+              </div>
+            </div>
+            <div style={{ fontSize: '9px', color: '#666', textAlign: 'right' }}>
+              <div>↑ ${formatCurrency(treasury.totalDeposited || 0, 0)} in</div>
+              <div>↓ ${formatCurrency(treasury.totalWithdrawn || 0, 0)} out</div>
+            </div>
+          </div>
+        )}
+        
+        {/* Category Navigation */}
         <CategoryNav activeCategory={activeCategory} onCategoryChange={handleCategoryChange} />
         
         <div className="create-divide-section flex justify-center mb-4">
@@ -487,7 +526,7 @@ export default function Divides({ onOpenChat }) {
             </div>
           </div>
         )}
-
+        
         {/* Category Navigation */}
         <CategoryNav activeCategory={activeCategory} onCategoryChange={handleCategoryChange} />
         
