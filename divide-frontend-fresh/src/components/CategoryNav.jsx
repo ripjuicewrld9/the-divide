@@ -1,57 +1,81 @@
+// src/components/CategoryNav.jsx
+// Premium minimalist category navigation
+
 import React from 'react';
 
 const categories = [
-  { name: 'All', icon: '🌐' },
-  { name: 'Politics', icon: '🏛️' },
-  { name: 'Sports', icon: '⚽' },
-  { name: 'Crypto', icon: '₿' },
-  { name: 'Entertainment', icon: '🎬' },
-  { name: 'Science', icon: '🔬' },
-  { name: 'Business', icon: '💼' },
-  { name: 'Other', icon: '❓' }
+  { name: 'All', label: 'All' },
+  { name: 'Politics', label: 'Politics' },
+  { name: 'Sports', label: 'Sports' },
+  { name: 'Crypto', label: 'Crypto' },
+  { name: 'Entertainment', label: 'Entertainment' },
+  { name: 'Science', label: 'Science' },
+  { name: 'Business', label: 'Business' },
+  { name: 'Other', label: 'Other' }
 ];
 
 export default function CategoryNav({ activeCategory, onCategoryChange }) {
   return (
     <div style={{
-      display: 'flex',
-      justifyContent: 'center',
-      padding: '12px 16px',
-      marginBottom: '16px',
-      borderBottom: '1px solid #1a1a1a',
+      marginBottom: '24px',
     }}>
+      {/* Horizontal scrolling pills */}
       <div style={{
         display: 'flex',
-        gap: '6px',
+        gap: '8px',
         overflowX: 'auto',
-        maxWidth: '100%',
-        paddingBottom: '4px',
+        paddingBottom: '8px',
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none',
       }}>
-        {categories.map((cat) => (
-          <button
-            key={cat.name}
-            onClick={() => onCategoryChange(cat.name)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 12px',
-              borderRadius: '6px',
-              border: `1px solid ${activeCategory === cat.name ? '#6b1c1c' : '#1a1a1a'}`,
-              background: activeCategory === cat.name ? 'rgba(107, 28, 28, 0.15)' : '#111',
-              color: activeCategory === cat.name ? '#a33' : '#666',
-              fontSize: '12px',
-              fontWeight: '500',
-              cursor: 'pointer',
-              transition: 'all 0.12s ease',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            <span style={{ fontSize: '13px' }}>{cat.icon}</span>
-            <span>{cat.name}</span>
-          </button>
-        ))}
+        {categories.map((cat) => {
+          const isActive = activeCategory === cat.name;
+          return (
+            <button
+              key={cat.name}
+              onClick={() => onCategoryChange(cat.name)}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '20px',
+                border: 'none',
+                background: isActive 
+                  ? 'rgba(255,255,255,0.1)' 
+                  : 'transparent',
+                color: isActive 
+                  ? 'rgba(255,255,255,0.9)' 
+                  : 'rgba(255,255,255,0.4)',
+                fontSize: '13px',
+                fontWeight: isActive ? '600' : '500',
+                letterSpacing: '-0.01em',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                whiteSpace: 'nowrap',
+              }}
+              onMouseEnter={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.color = 'rgba(255,255,255,0.6)';
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.color = 'rgba(255,255,255,0.4)';
+                  e.currentTarget.style.background = 'transparent';
+                }
+              }}
+            >
+              {cat.label}
+            </button>
+          );
+        })}
       </div>
+      
+      {/* Subtle divider */}
+      <div style={{
+        height: '1px',
+        background: 'rgba(255,255,255,0.06)',
+        marginTop: '8px',
+      }} />
     </div>
   );
 }

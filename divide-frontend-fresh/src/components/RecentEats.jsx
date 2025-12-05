@@ -1,23 +1,23 @@
-import React, { useState, useEffect } from 'react';
-import { formatCurrency } from '../utils/format';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 
-const API_BASE = import.meta.env.VITE_API_URL || '';
+const API = import.meta.env.VITE_API_URL || '';
 
 export default function RecentEats() {
-  const [recentDivides, setRecentDivides] = useState([]);
+  const [eats, setEats] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchRecentEats();
+    fetchEats();
   }, []);
 
-  const fetchRecentEats = async () => {
+  const fetchEats = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/divides/recent-eats`);
+      const res = await fetch(`${API}/api/divides/recent-eats`);
       if (res.ok) {
         const data = await res.json();
-        setRecentDivides(data);
+        setEats(data);
       }
     } catch (err) {
       console.error('Failed to fetch recent eats:', err);
@@ -26,152 +26,194 @@ export default function RecentEats() {
     }
   };
 
-  if (loading) return null;
-  if (recentDivides.length === 0) return null;
+  if (loading) {
+    return (
+      <div style={{
+        padding: '24px 0',
+        display: 'flex',
+        justifyContent: 'center'
+      }}>
+        <div style={{
+          width: '20px',
+          height: '20px',
+          border: '2px solid rgba(255,255,255,0.1)',
+          borderTopColor: 'rgba(255,255,255,0.4)',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite'
+        }} />
+      </div>
+    );
+  }
+
+  if (eats.length === 0) return null;
 
   return (
     <div style={{
-      marginBottom: '24px',
-      background: '#111',
-      borderRadius: '12px',
-      border: '1px solid #1a1a1a',
-      overflow: 'hidden',
+      marginBottom: '48px',
+      overflow: 'hidden'
     }}>
-      {/* Header */}
+      {/* Section header */}
       <div style={{
-        padding: '12px 16px',
-        borderBottom: '1px solid #1a1a1a',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        gap: '12px',
+        marginBottom: '20px',
+        paddingLeft: '4px'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '16px' }}>🔥</span>
-          <span style={{ fontSize: '13px', fontWeight: '700', color: '#fff' }}>Recent Eats</span>
-          <span style={{ 
-            fontSize: '9px', 
-            color: '#4ade80', 
-            background: 'rgba(74, 222, 128, 0.15)', 
-            padding: '2px 6px', 
-            borderRadius: '10px',
-            fontWeight: '600',
-          }}>
-            LIVE
-          </span>
-        </div>
-        <span style={{ fontSize: '10px', color: '#666' }}>Last {recentDivides.length} completed</span>
+        <span style={{
+          fontSize: '11px',
+          fontWeight: '600',
+          letterSpacing: '0.1em',
+          textTransform: 'uppercase',
+          color: 'rgba(255,255,255,0.4)'
+        }}>
+          Recent Outcomes
+        </span>
+        <div style={{
+          flex: 1,
+          height: '1px',
+          background: 'linear-gradient(90deg, rgba(255,255,255,0.1) 0%, transparent 100%)'
+        }} />
       </div>
 
-      {/* Horizontal Scroller */}
+      {/* Scrollable container */}
       <div style={{
         display: 'flex',
         gap: '12px',
-        padding: '16px',
         overflowX: 'auto',
-        scrollbarWidth: 'thin',
-        scrollbarColor: '#333 transparent',
+        paddingBottom: '8px',
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none'
       }}>
-        {recentDivides.map((d) => (
-          <Link
-            key={d._id || d.id}
-            to={`/divide/${d._id || d.id}`}
-            style={{
-              flexShrink: 0,
-              width: '220px',
-              background: '#16161a',
-              borderRadius: '10px',
-              border: '1px solid #2a2a30',
-              padding: '12px',
-              textDecoration: 'none',
-              transition: 'all 0.15s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.border = '1px solid #2979ff';
-              e.currentTarget.style.transform = 'translateY(-2px)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.border = '1px solid #2a2a30';
-              e.currentTarget.style.transform = 'translateY(0)';
-            }}
-          >
-            {/* Title */}
-            <div style={{
-              fontSize: '11px',
-              fontWeight: '600',
-              color: '#e0e0e0',
-              marginBottom: '8px',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}>
-              {d.title}
-            </div>
+        <AnimatePresence>
+          {eats.map((eat, index) => (
+            <motion.div
+              key={eat._id}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: index * 0.05 }}
+            >
+              <Link
+                to={`/divides/${eat._id}`}
+                style={{
+                  display: 'block',
+                  textDecoration: 'none',
+                  color: 'inherit'
+                }}
+              >
+                <div style={{
+                  minWidth: '240px',
+                  background: 'rgba(255,255,255,0.02)',
+                  backdropFilter: 'blur(20px)',
+                  WebkitBackdropFilter: 'blur(20px)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  borderRadius: '12px',
+                  padding: '16px',
+                  transition: 'all 0.2s ease',
+                  cursor: 'pointer'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
+                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+                >
+                  {/* Question - truncated */}
+                  <div style={{
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    color: 'rgba(255,255,255,0.9)',
+                    letterSpacing: '-0.01em',
+                    lineHeight: '1.4',
+                    marginBottom: '12px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {eat.question}
+                  </div>
 
-            {/* Winner Side */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              marginBottom: '8px',
-            }}>
-              <span style={{
-                fontSize: '9px',
-                fontWeight: '700',
-                color: d.winnerSide === 'A' ? '#ff1744' : '#2979ff',
-                background: d.winnerSide === 'A' ? 'rgba(255, 23, 68, 0.15)' : 'rgba(41, 121, 255, 0.15)',
-                padding: '3px 8px',
-                borderRadius: '6px',
-                textTransform: 'uppercase',
-              }}>
-                {d.winnerSide === 'A' ? d.optionA : d.optionB} WON
-              </span>
-            </div>
+                  {/* Outcome */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '12px'
+                  }}>
+                    {/* Winner side */}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}>
+                      <div style={{
+                        width: '6px',
+                        height: '6px',
+                        borderRadius: '50%',
+                        background: eat.winner === 'sideA' ? '#dc2626' : '#2563eb',
+                        boxShadow: eat.winner === 'sideA' 
+                          ? '0 0 8px rgba(220,38,38,0.5)' 
+                          : '0 0 8px rgba(37,99,235,0.5)'
+                      }} />
+                      <span style={{
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        color: eat.winner === 'sideA' ? '#f87171' : '#60a5fa',
+                        letterSpacing: '-0.01em'
+                      }}>
+                        {eat.winner === 'sideA' ? eat.sideALabel : eat.sideBLabel}
+                      </span>
+                    </div>
 
-            {/* Stats */}
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}>
-              <div>
-                <div style={{ fontSize: '8px', color: '#666', textTransform: 'uppercase' }}>Pot</div>
-                <div style={{ 
-                  fontSize: '14px', 
-                  fontWeight: '800',
-                  background: 'linear-gradient(90deg, #e53935 0%, #2979ff 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                }}>
-                  ${formatCurrency(d.pot || 0, 0)}
+                    {/* Pot amount */}
+                    <div style={{
+                      fontSize: '11px',
+                      fontWeight: '500',
+                      color: 'rgba(255,255,255,0.4)',
+                      fontFamily: 'SF Mono, Monaco, monospace'
+                    }}>
+                      ${eat.pot?.toLocaleString() || 0}
+                    </div>
+                  </div>
+
+                  {/* Time ago */}
+                  <div style={{
+                    marginTop: '10px',
+                    paddingTop: '10px',
+                    borderTop: '1px solid rgba(255,255,255,0.04)'
+                  }}>
+                    <span style={{
+                      fontSize: '10px',
+                      fontWeight: '500',
+                      color: 'rgba(255,255,255,0.25)',
+                      letterSpacing: '0.02em'
+                    }}>
+                      {formatTimeAgo(eat.endedAt)}
+                    </span>
+                  </div>
                 </div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '8px', color: '#666', textTransform: 'uppercase' }}>Winners</div>
-                <div style={{ fontSize: '12px', fontWeight: '700', color: '#4ade80' }}>
-                  {d.winnerCount || 0}
-                </div>
-              </div>
-            </div>
-
-            {/* Minority % */}
-            <div style={{
-              marginTop: '8px',
-              padding: '6px 8px',
-              background: 'rgba(74, 222, 128, 0.1)',
-              borderRadius: '6px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}>
-              <span style={{ fontSize: '9px', color: '#888' }}>Minority Split</span>
-              <span style={{ fontSize: '11px', fontWeight: '700', color: '#4ade80' }}>
-                {d.minorityPct || 0}%
-              </span>
-            </div>
-          </Link>
-        ))}
+              </Link>
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </div>
     </div>
   );
+}
+
+function formatTimeAgo(dateStr) {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  const now = new Date();
+  const seconds = Math.floor((now - date) / 1000);
+  
+  if (seconds < 60) return 'Just now';
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+  return `${Math.floor(seconds / 86400)}d ago`;
 }

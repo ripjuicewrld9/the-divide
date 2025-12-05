@@ -1,5 +1,5 @@
 // src/components/DivideCard.jsx
-// Polymarket-style design with bright Red vs Blue sides
+// Premium minimalist prediction market card - Billion dollar aesthetic
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -10,6 +10,7 @@ export default function DivideCard({
   divideId,
   title,
   category = 'Other',
+  // eslint-disable-next-line no-unused-vars
   creatorUsername = null,
   left,
   right,
@@ -18,12 +19,14 @@ export default function DivideCard({
   pot = 0,
   endTime = null,
   status = 'active',
+  // eslint-disable-next-line no-unused-vars
   winner = null,
   likes = 0,
   dislikes = 0,
   likedBy = [],
   dislikedBy = [],
   onVote,
+  // eslint-disable-next-line no-unused-vars
   onRequestExpand,
   active = true,
 }) {
@@ -42,14 +45,10 @@ export default function DivideCard({
     return Math.max(0, delta);
   });
   
-  // Lock betting in last 5 seconds
   const isLocked = status === 'active' && seconds > 0 && seconds <= 5;
-
   const { user } = useAuth();
   const navigate = useNavigate();
   const isAdmin = user && user.role === 'admin';
-
-  // Check if votes are hidden (null = server is hiding them for active divides)
   const votesHidden = leftVotes === null || leftVotes === undefined;
   
   useEffect(() => { setL(Number(leftVotes) || 0); }, [leftVotes]);
@@ -84,9 +83,11 @@ export default function DivideCard({
     const days = Math.floor(s / 86400);
     const hours = Math.floor((s % 86400) / 3600);
     const minutes = Math.floor((s % 3600) / 60);
+    const secs = s % 60;
     if (days > 0) return `${days}d ${hours}h`;
     if (hours > 0) return `${hours}h ${minutes}m`;
-    return `${minutes}m`;
+    if (minutes > 0) return `${minutes}m`;
+    return `${secs}s`;
   };
 
   const handleVote = async (side, boostAmount) => {
@@ -103,7 +104,7 @@ export default function DivideCard({
   const handleStartEdit = (side, e) => {
     e.stopPropagation();
     if (status !== 'active') return;
-    if (isLocked) return; // Betting locked in final 5 seconds
+    if (isLocked) return;
     setEditingSide(side);
     setBetAmount('');
   };
@@ -126,8 +127,8 @@ export default function DivideCard({
   const handleLike = async (e) => {
     e.stopPropagation();
     if (!user) return alert('Please log in');
-    if (status !== 'active') return; // Can't like ended divides
-    if (userLiked || userDisliked) return; // Locked once you've reacted
+    if (status !== 'active') return;
+    if (userLiked || userDisliked) return;
     try {
       const res = await api.post(`/api/divides/${divideId}/like`);
       setLocalLikes(res.likes || localLikes + 1);
@@ -138,8 +139,8 @@ export default function DivideCard({
   const handleDislike = async (e) => {
     e.stopPropagation();
     if (!user) return alert('Please log in');
-    if (status !== 'active') return; // Can't dislike ended divides
-    if (userLiked || userDisliked) return; // Locked once you've reacted
+    if (status !== 'active') return;
+    if (userLiked || userDisliked) return;
     try {
       const res = await api.post(`/api/divides/${divideId}/dislike`);
       setLocalDislikes(res.dislikes || localDislikes + 1);
@@ -148,8 +149,28 @@ export default function DivideCard({
   };
 
   const handleCardClick = () => {
-    // Navigate to divide detail page
     navigate(`/divide/${divideId}`);
+  };
+
+  // Premium color tokens
+  const colors = {
+    bg: isHovered ? 'rgba(24, 24, 27, 1)' : 'rgba(20, 20, 22, 1)',
+    border: isHovered ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.04)',
+    text: {
+      primary: '#fafafa',
+      secondary: '#a1a1aa',
+      muted: '#71717a',
+    },
+    red: {
+      primary: '#ef4444',
+      bg: 'rgba(239, 68, 68, 0.08)',
+      border: 'rgba(239, 68, 68, 0.2)',
+    },
+    blue: {
+      primary: '#3b82f6',
+      bg: 'rgba(59, 130, 246, 0.08)',
+      border: 'rgba(59, 130, 246, 0.2)',
+    }
   };
 
   return (
@@ -158,44 +179,79 @@ export default function DivideCard({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       style={{
-        background: isHovered ? '#1e1e24' : '#16161a',
-        borderRadius: '8px',
-        padding: '14px',
+        background: colors.bg,
+        borderRadius: '12px',
+        padding: '16px',
         cursor: 'pointer',
-        transition: 'all 0.15s ease',
-        border: '1px solid #2a2a30',
+        transition: 'all 200ms cubic-bezier(0.16, 1, 0.3, 1)',
+        border: `1px solid ${colors.border}`,
         position: 'relative',
-        fontSize: '12px',
-        boxShadow: isHovered ? '0 4px 20px rgba(0,0,0,0.3)' : 'none',
+        transform: isHovered ? 'translateY(-2px)' : 'translateY(0)',
+        boxShadow: isHovered 
+          ? '0 8px 32px rgba(0, 0, 0, 0.24), 0 0 0 1px rgba(255, 255, 255, 0.05)' 
+          : '0 2px 8px rgba(0, 0, 0, 0.15)',
       }}
     >
-      {/* Header: Category + PROMINENT Timer */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-        <span style={{ fontSize: '9px', fontWeight: '600', color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+      {/* Header Row */}
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        marginBottom: '14px' 
+      }}>
+        <span style={{ 
+          fontSize: '10px', 
+          fontWeight: '600', 
+          color: colors.text.muted,
+          textTransform: 'uppercase',
+          letterSpacing: '0.06em',
+        }}>
           {category}
         </span>
+        
         {status === 'active' ? (
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '4px',
-            background: seconds <= 60 ? 'rgba(229, 57, 53, 0.15)' : 'rgba(41, 121, 255, 0.1)',
-            border: `1px solid ${seconds <= 60 ? 'rgba(229, 57, 53, 0.3)' : 'rgba(41, 121, 255, 0.2)'}`,
-            padding: '3px 8px',
-            borderRadius: '12px',
+            gap: '6px',
+            padding: '4px 10px',
+            borderRadius: '20px',
+            background: seconds <= 300 
+              ? 'rgba(239, 68, 68, 0.1)' 
+              : 'rgba(34, 197, 94, 0.1)',
+            border: `1px solid ${seconds <= 300 
+              ? 'rgba(239, 68, 68, 0.2)' 
+              : 'rgba(34, 197, 94, 0.2)'}`,
           }}>
-            <span style={{ fontSize: '10px' }}>⏱️</span>
+            {seconds <= 300 ? null : (
+              <span style={{
+                width: '5px',
+                height: '5px',
+                borderRadius: '50%',
+                background: '#22c55e',
+                animation: 'pulse-dot 2s ease-in-out infinite',
+              }} />
+            )}
             <span style={{ 
               fontSize: '11px', 
-              fontWeight: '700', 
-              color: seconds <= 60 ? '#e53935' : '#2979ff',
-              fontFamily: 'monospace',
+              fontWeight: '600',
+              fontFamily: "'SF Mono', 'JetBrains Mono', monospace",
+              color: seconds <= 300 ? '#ef4444' : '#22c55e',
+              letterSpacing: '-0.02em',
             }}>
               {formatTime(seconds)}
             </span>
           </div>
         ) : (
-          <span style={{ fontSize: '9px', fontWeight: '600', color: '#e53935', background: 'rgba(229, 57, 53, 0.1)', padding: '3px 8px', borderRadius: '12px' }}>
+          <span style={{ 
+            fontSize: '10px', 
+            fontWeight: '600', 
+            color: colors.text.muted,
+            background: 'rgba(113, 113, 122, 0.1)',
+            padding: '4px 10px',
+            borderRadius: '20px',
+            letterSpacing: '0.04em',
+          }}>
             ENDED
           </span>
         )}
@@ -203,21 +259,22 @@ export default function DivideCard({
 
       {/* Title */}
       <div style={{
-        fontSize: '13px',
+        fontSize: '14px',
         fontWeight: '600',
-        color: '#e8e8e8',
-        lineHeight: '1.35',
-        marginBottom: '12px',
+        color: colors.text.primary,
+        lineHeight: '1.4',
+        marginBottom: '16px',
         display: '-webkit-box',
         WebkitLineClamp: 2,
         WebkitBoxOrient: 'vertical',
         overflow: 'hidden',
-        minHeight: '36px',
+        minHeight: '40px',
+        letterSpacing: '-0.01em',
       }}>
         {title}
       </div>
 
-      {/* FINAL COUNTDOWN OVERLAY - Last 5 seconds */}
+      {/* FINAL COUNTDOWN OVERLAY */}
       {isLocked && (
         <div style={{
           position: 'absolute',
@@ -225,224 +282,322 @@ export default function DivideCard({
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0, 0, 0, 0.85)',
-          borderRadius: '8px',
+          background: 'rgba(9, 9, 11, 0.95)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+          borderRadius: '12px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 10,
-          animation: 'pulse 0.5s ease-in-out infinite',
         }}>
           <div style={{
-            fontSize: '10px',
-            fontWeight: '600',
-            color: '#ff1744',
+            fontSize: '9px',
+            fontWeight: '700',
+            color: '#71717a',
             textTransform: 'uppercase',
-            letterSpacing: '2px',
-            marginBottom: '8px',
-            animation: 'blink 1s ease-in-out infinite',
+            letterSpacing: '0.15em',
+            marginBottom: '12px',
           }}>
-            🔒 BETS LOCKED
+            Closing
           </div>
           <div style={{
-            fontSize: '64px',
-            fontWeight: '900',
-            background: 'linear-gradient(135deg, #ff1744 0%, #2979ff 100%)',
+            fontSize: '56px',
+            fontWeight: '700',
+            fontFamily: "'SF Mono', 'JetBrains Mono', monospace",
+            background: 'linear-gradient(135deg, #ef4444 0%, #3b82f6 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
-            textShadow: '0 0 40px rgba(255, 23, 68, 0.5)',
             lineHeight: 1,
           }}>
             {seconds}
           </div>
-          <div style={{
-            fontSize: '11px',
-            color: '#888',
-            marginTop: '8px',
-          }}>
-            Revealing winner...
-          </div>
         </div>
       )}
 
-      {/* Options - Red vs Blue style rows */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px', opacity: isLocked ? 0.3 : 1, pointerEvents: isLocked ? 'none' : 'auto' }}>
-        {/* Option A - RED */}
+      {/* Options */}
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        gap: '8px', 
+        marginBottom: '16px', 
+        opacity: isLocked ? 0.2 : 1, 
+        pointerEvents: isLocked ? 'none' : 'auto' 
+      }}>
+        {/* Option A */}
         <div
           onClick={(e) => handleStartEdit('left', e)}
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: editingSide === 'left' ? '6px 10px' : '10px 12px',
-            borderRadius: '6px',
+            padding: editingSide === 'left' ? '8px 12px' : '12px 14px',
+            borderRadius: '10px',
             cursor: (status === 'active' && !isLocked) ? 'pointer' : 'default',
-            transition: 'all 0.12s ease',
+            transition: 'all 150ms cubic-bezier(0.16, 1, 0.3, 1)',
             background: editingSide === 'left' 
-              ? 'linear-gradient(90deg, #ff1744 0%, #d50000 100%)' 
-              : 'linear-gradient(90deg, rgba(255, 23, 68, 0.25) 0%, rgba(213, 0, 0, 0.15) 100%)',
-            border: `1px solid ${editingSide === 'left' ? '#ff1744' : 'rgba(255, 23, 68, 0.4)'}`,
-            boxShadow: editingSide === 'left' ? '0 0 12px rgba(255, 23, 68, 0.4)' : 'none',
+              ? 'rgba(239, 68, 68, 0.15)' 
+              : colors.red.bg,
+            border: `1px solid ${editingSide === 'left' ? colors.red.primary : colors.red.border}`,
           }}
         >
           {editingSide === 'left' ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', width: '100%' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }} onClick={(e) => e.stopPropagation()}>
               <input
                 type="number"
                 min="0.01"
                 step="0.01"
-                placeholder="$"
+                placeholder="Amount"
                 value={betAmount}
                 onChange={(e) => setBetAmount(e.target.value)}
                 autoFocus
                 style={{
                   flex: 1,
-                  background: 'rgba(0,0,0,0.5)',
-                  border: 'none',
-                  borderRadius: '4px',
-                  padding: '6px 8px',
-                  color: '#fff',
-                  fontSize: '12px',
+                  background: 'rgba(0, 0, 0, 0.4)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '6px',
+                  padding: '8px 12px',
+                  color: '#fafafa',
+                  fontSize: '13px',
+                  fontFamily: "'SF Mono', monospace",
                   outline: 'none',
-                  width: '100%',
                 }}
               />
-              <button onClick={(e) => { e.stopPropagation(); setEditingSide(null); }} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '4px', padding: '6px 8px', color: '#888', fontSize: '11px', cursor: 'pointer' }}>✕</button>
-              <button onClick={(e) => handleSubmitBet('left', e)} style={{ background: '#e53935', border: 'none', borderRadius: '4px', padding: '6px 12px', color: '#fff', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>Buy</button>
+              <button 
+                onClick={(e) => { e.stopPropagation(); setEditingSide(null); }} 
+                style={{ 
+                  background: 'rgba(255, 255, 255, 0.06)', 
+                  border: 'none', 
+                  borderRadius: '6px', 
+                  padding: '8px 10px', 
+                  color: '#71717a', 
+                  fontSize: '12px', 
+                  cursor: 'pointer',
+                  transition: 'all 150ms ease',
+                }}
+              >
+                ✕
+              </button>
+              <button 
+                onClick={(e) => handleSubmitBet('left', e)} 
+                style={{ 
+                  background: colors.red.primary, 
+                  border: 'none', 
+                  borderRadius: '6px', 
+                  padding: '8px 16px', 
+                  color: '#fff', 
+                  fontSize: '12px', 
+                  fontWeight: '600', 
+                  cursor: 'pointer',
+                  transition: 'all 150ms ease',
+                }}
+              >
+                Buy
+              </button>
             </div>
           ) : (
             <>
-              <span style={{ fontSize: '12px', fontWeight: '500', color: '#e0e0e0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '70%' }}>{left}</span>
-              <span style={{ fontSize: '14px', fontWeight: '800', color: '#ff1744', textShadow: '0 0 8px rgba(255, 23, 68, 0.5)' }}>{votesHidden ? '??' : `${leftPct}%`}</span>
+              <span style={{ 
+                fontSize: '13px', 
+                fontWeight: '500', 
+                color: colors.text.primary, 
+                overflow: 'hidden', 
+                textOverflow: 'ellipsis', 
+                whiteSpace: 'nowrap', 
+                maxWidth: '65%' 
+              }}>
+                {left}
+              </span>
+              <span style={{ 
+                fontSize: '15px', 
+                fontWeight: '700', 
+                fontFamily: "'SF Mono', 'JetBrains Mono', monospace",
+                color: colors.red.primary,
+                letterSpacing: '-0.02em',
+              }}>
+                {votesHidden ? '—' : `${leftPct}%`}
+              </span>
             </>
           )}
         </div>
 
-        {/* Option B - BLUE */}
+        {/* Option B */}
         <div
           onClick={(e) => handleStartEdit('right', e)}
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: editingSide === 'right' ? '6px 10px' : '10px 12px',
-            borderRadius: '6px',
+            padding: editingSide === 'right' ? '8px 12px' : '12px 14px',
+            borderRadius: '10px',
             cursor: (status === 'active' && !isLocked) ? 'pointer' : 'default',
-            transition: 'all 0.12s ease',
+            transition: 'all 150ms cubic-bezier(0.16, 1, 0.3, 1)',
             background: editingSide === 'right'
-              ? 'linear-gradient(90deg, #2979ff 0%, #0d47a1 100%)'
-              : 'linear-gradient(90deg, rgba(41, 121, 255, 0.25) 0%, rgba(13, 71, 161, 0.15) 100%)',
-            border: `1px solid ${editingSide === 'right' ? '#2979ff' : 'rgba(41, 121, 255, 0.4)'}`,
-            boxShadow: editingSide === 'right' ? '0 0 12px rgba(41, 121, 255, 0.4)' : 'none',
+              ? 'rgba(59, 130, 246, 0.15)'
+              : colors.blue.bg,
+            border: `1px solid ${editingSide === 'right' ? colors.blue.primary : colors.blue.border}`,
           }}
         >
           {editingSide === 'right' ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', width: '100%' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }} onClick={(e) => e.stopPropagation()}>
               <input
                 type="number"
                 min="0.01"
                 step="0.01"
-                placeholder="$"
+                placeholder="Amount"
                 value={betAmount}
                 onChange={(e) => setBetAmount(e.target.value)}
                 autoFocus
                 style={{
                   flex: 1,
-                  background: 'rgba(0,0,0,0.5)',
-                  border: 'none',
-                  borderRadius: '4px',
-                  padding: '6px 8px',
-                  color: '#fff',
-                  fontSize: '12px',
+                  background: 'rgba(0, 0, 0, 0.4)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '6px',
+                  padding: '8px 12px',
+                  color: '#fafafa',
+                  fontSize: '13px',
+                  fontFamily: "'SF Mono', monospace",
                   outline: 'none',
-                  width: '100%',
                 }}
               />
-              <button onClick={(e) => { e.stopPropagation(); setEditingSide(null); }} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '4px', padding: '6px 8px', color: '#888', fontSize: '11px', cursor: 'pointer' }}>✕</button>
-              <button onClick={(e) => handleSubmitBet('right', e)} style={{ background: '#1e88e5', border: 'none', borderRadius: '4px', padding: '6px 12px', color: '#fff', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>Buy</button>
+              <button 
+                onClick={(e) => { e.stopPropagation(); setEditingSide(null); }} 
+                style={{ 
+                  background: 'rgba(255, 255, 255, 0.06)', 
+                  border: 'none', 
+                  borderRadius: '6px', 
+                  padding: '8px 10px', 
+                  color: '#71717a', 
+                  fontSize: '12px', 
+                  cursor: 'pointer',
+                }}
+              >
+                ✕
+              </button>
+              <button 
+                onClick={(e) => handleSubmitBet('right', e)} 
+                style={{ 
+                  background: colors.blue.primary, 
+                  border: 'none', 
+                  borderRadius: '6px', 
+                  padding: '8px 16px', 
+                  color: '#fff', 
+                  fontSize: '12px', 
+                  fontWeight: '600', 
+                  cursor: 'pointer',
+                }}
+              >
+                Buy
+              </button>
             </div>
           ) : (
             <>
-              <span style={{ fontSize: '12px', fontWeight: '500', color: '#e0e0e0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '70%' }}>{right}</span>
-              <span style={{ fontSize: '14px', fontWeight: '800', color: '#2979ff', textShadow: '0 0 8px rgba(41, 121, 255, 0.5)' }}>{votesHidden ? '??' : `${rightPct}%`}</span>
+              <span style={{ 
+                fontSize: '13px', 
+                fontWeight: '500', 
+                color: colors.text.primary, 
+                overflow: 'hidden', 
+                textOverflow: 'ellipsis', 
+                whiteSpace: 'nowrap', 
+                maxWidth: '65%' 
+              }}>
+                {right}
+              </span>
+              <span style={{ 
+                fontSize: '15px', 
+                fontWeight: '700', 
+                fontFamily: "'SF Mono', 'JetBrains Mono', monospace",
+                color: colors.blue.primary,
+                letterSpacing: '-0.02em',
+              }}>
+                {votesHidden ? '—' : `${rightPct}%`}
+              </span>
             </>
           )}
         </div>
       </div>
 
-      {/* Footer: PROMINENT Pot + Reactions */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '1px solid #2a2a30' }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-          background: 'linear-gradient(135deg, rgba(229, 57, 53, 0.15) 0%, rgba(41, 121, 255, 0.15) 100%)',
-          border: '1px solid rgba(229, 57, 53, 0.2)',
-          padding: '6px 12px',
-          borderRadius: '8px',
-        }}>
-          <span style={{ fontSize: '12px' }}>💰</span>
-          <div>
-            <div style={{ fontSize: '8px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Pot</div>
-            <div style={{ 
-              fontSize: '16px', 
-              fontWeight: '900',
-              background: 'linear-gradient(90deg, #e53935 0%, #2979ff 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-            }}>
-              ${formatCurrency(pot, 0)}
-            </div>
-          </div>
+      {/* Footer */}
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        paddingTop: '14px',
+        borderTop: '1px solid rgba(255, 255, 255, 0.04)',
+      }}>
+        {/* Volume */}
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+          <span style={{ 
+            fontSize: '11px', 
+            color: colors.text.muted,
+            fontWeight: '500',
+          }}>
+            Vol
+          </span>
+          <span style={{ 
+            fontSize: '15px', 
+            fontWeight: '700',
+            fontFamily: "'SF Mono', 'JetBrains Mono', monospace",
+            background: 'linear-gradient(135deg, #ef4444 0%, #3b82f6 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            letterSpacing: '-0.02em',
+          }}>
+            ${formatCurrency(pot, 0)}
+          </span>
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        
+        {/* Reactions - Minimized */}
+        <div style={{ display: 'flex', gap: '4px' }}>
           <button 
             onClick={handleLike}
             disabled={userLiked || userDisliked || status !== 'active'}
             style={{ 
-              background: userLiked ? 'rgba(74, 222, 128, 0.2)' : 'rgba(255,255,255,0.05)',
+              background: 'transparent',
               border: 'none',
               padding: '4px 8px',
               cursor: (userLiked || userDisliked || status !== 'active') ? 'default' : 'pointer',
-              fontSize: '11px',
-              color: userLiked ? '#4ade80' : (userDisliked || status !== 'active' ? '#444' : '#888'),
-              borderRadius: '4px',
+              fontSize: '12px',
+              color: userLiked ? '#22c55e' : colors.text.muted,
+              borderRadius: '6px',
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
-              opacity: (userDisliked || status !== 'active') ? 0.4 : 1,
-              transition: 'all 0.12s ease',
+              opacity: (userDisliked || status !== 'active') ? 0.3 : 1,
+              transition: 'all 150ms ease',
             }}
           >
-            👍 {localLikes}
+            <span style={{ fontSize: '11px' }}>↑</span>
+            <span style={{ fontFamily: "'SF Mono', monospace", fontSize: '11px' }}>{localLikes}</span>
           </button>
           <button 
             onClick={handleDislike}
             disabled={userLiked || userDisliked || status !== 'active'}
             style={{ 
-              background: userDisliked ? 'rgba(248, 113, 113, 0.2)' : 'rgba(255,255,255,0.05)',
+              background: 'transparent',
               border: 'none',
               padding: '4px 8px',
               cursor: (userLiked || userDisliked || status !== 'active') ? 'default' : 'pointer',
-              fontSize: '11px',
-              color: userDisliked ? '#f87171' : (userLiked || status !== 'active' ? '#444' : '#888'),
-              borderRadius: '4px',
+              fontSize: '12px',
+              color: userDisliked ? '#ef4444' : colors.text.muted,
+              borderRadius: '6px',
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
-              opacity: (userLiked || status !== 'active') ? 0.4 : 1,
-              transition: 'all 0.12s ease',
+              opacity: (userLiked || status !== 'active') ? 0.3 : 1,
+              transition: 'all 150ms ease',
             }}
           >
-            👎 {localDislikes}
+            <span style={{ fontSize: '11px' }}>↓</span>
+            <span style={{ fontFamily: "'SF Mono', monospace", fontSize: '11px' }}>{localDislikes}</span>
           </button>
         </div>
       </div>
 
-      {/* Admin Cancel */}
+      {/* Admin Cancel - Subtle */}
       {isAdmin && status === 'active' && (
         <button
           onClick={async (e) => {
@@ -453,7 +608,22 @@ export default function DivideCard({
               alert('Market cancelled');
             } catch (err) { alert(err.message || 'Failed'); }
           }}
-          style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(255,255,255,0.04)', border: 'none', color: '#444', padding: '3px 6px', borderRadius: '4px', fontSize: '9px', cursor: 'pointer' }}
+          style={{ 
+            position: 'absolute', 
+            top: '10px', 
+            right: '10px', 
+            background: 'transparent', 
+            border: 'none', 
+            color: '#52525b', 
+            padding: '4px', 
+            borderRadius: '4px', 
+            fontSize: '10px', 
+            cursor: 'pointer',
+            opacity: 0.5,
+            transition: 'opacity 150ms ease',
+          }}
+          onMouseEnter={(e) => e.target.style.opacity = 1}
+          onMouseLeave={(e) => e.target.style.opacity = 0.5}
         >
           ✕
         </button>
