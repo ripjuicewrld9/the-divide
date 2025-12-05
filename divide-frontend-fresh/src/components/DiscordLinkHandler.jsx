@@ -73,16 +73,41 @@ export default function DiscordLinkHandler() {
     };
 
     linkDiscordAccount();
-  }, [searchParams, navigate, updateUser, hasLinked]);
+  }, [searchParams, navigate, updateUser, hasLinked, refreshUser]);
 
-  // Don't render anything if no discord_link param
+  // Show loading state while checking for token
   if (status === 'idle') {
+    const linkToken = searchParams.get('discord_link');
+    // If we're on /link-discord route but no token, show error
+    if (window.location.pathname === '/link-discord' && !linkToken) {
+      return (
+        <div className="min-h-screen bg-[#0b0b0b] flex items-center justify-center">
+          <div className="bg-[#1a1d29] rounded-lg p-8 max-w-md text-center">
+            <div className="w-16 h-16 bg-yellow-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2">No Link Token Found</h3>
+            <p className="text-gray-400 mb-4">Please start the Discord linking process from your profile page.</p>
+            <button
+              onClick={() => navigate('/profile')}
+              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+            >
+              Go to Profile
+            </button>
+          </div>
+        </div>
+      );
+    }
+    // Otherwise, render nothing (embedded in profile page)
     return null;
   }
 
   if (status === 'linking') {
+    const isStandalonePage = window.location.pathname === '/link-discord';
     return (
-      <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[9999]">
+      <div className={isStandalonePage ? "min-h-screen bg-[#0b0b0b] flex items-center justify-center" : "fixed inset-0 bg-black/80 flex items-center justify-center z-[9999]"}>
         <div className="bg-[#1a1d29] rounded-lg p-8 max-w-md text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
           <h3 className="text-xl font-bold text-white mb-2">Linking Discord Account...</h3>
@@ -102,8 +127,9 @@ export default function DiscordLinkHandler() {
   }
 
   if (status === 'success') {
+    const isStandalonePage = window.location.pathname === '/link-discord';
     return (
-      <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[9999]">
+      <div className={isStandalonePage ? "min-h-screen bg-[#0b0b0b] flex items-center justify-center" : "fixed inset-0 bg-black/80 flex items-center justify-center z-[9999]"}>
         <div className="bg-[#1a1d29] rounded-lg p-8 max-w-md text-center">
           <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -118,8 +144,9 @@ export default function DiscordLinkHandler() {
   }
 
   if (status === 'error') {
+    const isStandalonePage = window.location.pathname === '/link-discord';
     return (
-      <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[9999]">
+      <div className={isStandalonePage ? "min-h-screen bg-[#0b0b0b] flex items-center justify-center" : "fixed inset-0 bg-black/80 flex items-center justify-center z-[9999]"}>
         <div className="bg-[#1a1d29] rounded-lg p-8 max-w-md text-center">
           <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -347,7 +347,7 @@ app.post('/register', async (req, res) => {
       username,
       email,
       password: hashedPassword,
-      balance: 1000, // Starting balance in cents
+      balance: 0, // Starting balance in cents (no free money)
       role,
       createdAt: new Date()
     });
@@ -891,7 +891,7 @@ app.get('/auth/discord/callback', async (req, res) => {
     );
 
     // Redirect back to frontend with the link token
-    res.redirect(`${process.env.FRONTEND_URL || 'https://thedivide.us'}/profile?discord_link=${linkToken}`);
+    res.redirect(`${process.env.FRONTEND_URL || 'https://thedivide.us'}/link-discord?discord_link=${linkToken}`);
   } catch (error) {
     console.error('Discord OAuth error:', error);
     res.redirect(`${process.env.FRONTEND_URL || 'https://thedivide.us'}?error=discord_oauth_error`);
@@ -1009,7 +1009,7 @@ app.get('/auth/discord/login/callback', async (req, res) => {
         username,
         email: discordUser.email || '',
         password: crypto.randomBytes(32).toString('hex'), // Random password (they'll use Discord login)
-        balance: 1000, // Starting balance in cents
+        balance: 0, // Starting balance in cents (no free money)
         discordId: discordUser.id,
         discordUsername: `${discordUser.username}#${discordUser.discriminator}`
       });
@@ -1098,7 +1098,7 @@ app.get('/auth/google/login/callback', async (req, res) => {
         username,
         email: googleUser.email,
         password: crypto.randomBytes(32).toString('hex'), // Random password (they'll use Google login)
-        balance: 1000, // Starting balance in cents
+        balance: 0, // Starting balance in cents (no free money)
         googleId: googleUser.id,
         googleEmail: googleUser.email
       });

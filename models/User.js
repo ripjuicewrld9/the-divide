@@ -8,7 +8,7 @@ const userSchema = new mongoose.Schema({
   marketingConsent: { type: Boolean, default: false },
   marketingConsentDate: { type: Date },
   // balance is stored in integer cents (e.g. $1.23 => 123)
-  balance: { type: Number, default: 1000 }, // default $10.00 => 1000 cents
+  balance: { type: Number, default: 0 }, // default $0.00 => 0 cents
   kenoServerSeed: String,
   kenoServerSeedHashed: String,
   // server-side nonce for Keno: server will reset this to 0 when rotating the seed

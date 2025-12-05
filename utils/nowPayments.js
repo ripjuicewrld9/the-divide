@@ -382,6 +382,133 @@ export async function getCustomerPayments(customerId) {
   return apiRequest(`/customers/${customerId}/payments`);
 }
 
+/**
+ * Get customer's custody balance
+ * Returns balances held in NOWPayments for this customer
+ */
+export async function getCustomerBalance(customerId) {
+  return apiRequest(`/customers/${customerId}/balance`);
+}
+
+/**
+ * Create a deposit address for a specific customer
+ * Funds deposited here go to the customer's sub-account
+ * 
+ * @param {Object} params
+ * @param {string} params.customerId - NOWPayments customer ID
+ * @param {string} params.currency - Crypto currency (btc, eth, etc.)
+ * @param {string} params.orderId - Your internal order/reference ID
+ * @param {number} params.priceAmount - Expected USD amount
+ */
+export async function createCustomerDeposit(params) {
+  const payload = {
+    price_amount: params.priceAmount,
+    price_currency: 'usd',
+    pay_currency: params.currency,
+    order_id: params.orderId,
+    order_description: params.description || 'Deposit',
+    customer_id: params.customerId,
+    ipn_callback_url: process.env.NOWPAYMENTS_IPN_CALLBACK_URL
+  };
+
+  return apiRequest('/payment', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+/**
+ * Internal transfer between customers (FREE - no blockchain fees)
+ * Move funds from one customer to another within your custody
+ * 
+ * @param {Object} params
+ * @param {string} params.fromCustomerId - Source customer ID
+ * @param {string} params.toCustomerId - Destination customer ID
+ * @param {string} params.currency - Currency to transfer (e.g., 'usdcsol', 'btc')
+ * @param {number} params.amount - Amount to transfer
+ */
+export async function internalTransfer(params) {
+  const payload = {
+    from_customer_id: params.fromCustomerId,
+    to_customer_id: params.toCustomerId,
+    currency: params.currency,
+    amount: params.amount
+  };
+
+  return apiRequest('/customers/transfer', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+/**
+ * Transfer from master custody to customer (e.g., for bonuses/rewards)
+ * 
+ * @param {Object} params
+ * @param {string} params.customerId - Destination customer ID
+ * @param {string} params.currency - Currency to transfer
+ * @param {number} params.amount - Amount to transfer
+ */
+export async function transferToCustomer(params) {
+  const payload = {
+    customer_id: params.customerId,
+    currency: params.currency,
+    amount: params.amount
+  };
+
+  return apiRequest('/customers/deposit', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+/**
+ * Transfer from customer to master custody (e.g., for fees/withdrawals to external)
+ * 
+ * @param {Object} params
+ * @param {string} params.customerId - Source customer ID
+ * @param {string} params.currency - Currency to transfer
+ * @param {number} params.amount - Amount to transfer
+ */
+export async function transferFromCustomer(params) {
+  const payload = {
+    customer_id: params.customerId,
+    currency: params.currency,
+    amount: params.amount
+  };
+
+  return apiRequest('/customers/withdraw', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+/**
+ * Create payout from customer's balance to external wallet
+ * 
+ * @param {Object} params
+ * @param {string} params.customerId - Customer ID
+ * @param {string} params.address - Destination wallet address
+ * @param {string} params.currency - Currency to withdraw
+ * @param {number} params.amount - Amount to withdraw
+ */
+export async function createCustomerPayout(params) {
+  // First withdraw from customer to master
+  await transferFromCustomer({
+    customerId: params.customerId,
+    currency: params.currency,
+    amount: params.amount
+  });
+
+  // Then create external payout
+  return createPayout({
+    address: params.address,
+    currency: params.currency,
+    amount: params.amount,
+    ipnCallbackUrl: process.env.NOWPAYMENTS_IPN_CALLBACK_URL
+  });
+}
+
 // ============================================
 // IPN (Instant Payment Notification) Verification
 // ============================================
@@ -552,6 +679,12 @@ export default {
   updateCustomer,
   deleteCustomer,
   getCustomerPayments,
+  getCustomerBalance,
+  createCustomerDeposit,
+  internalTransfer,
+  transferToCustomer,
+  transferFromCustomer,
+  createCustomerPayout,
   
   // IPN
   verifyIPNSignature,
