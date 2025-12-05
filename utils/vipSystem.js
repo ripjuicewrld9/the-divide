@@ -1,65 +1,62 @@
 // VIP System - Based on 30-day rolling wager
 // Rewards go to Dividends balance, not main balance
 
+// GOD-TIER VIP STRUCTURE (2025 whale-approved - never touch again)
+// Rakeback is % of RAKE PAID (not wager) - paid from house profits only
 export const VIP_TIERS = {
   none: {
     name: 'None',
     minWager: 0,
-    withdrawalFeeDiscount: 0, // % discount on withdrawal fees
-    rakeback: 0, // % of rake returned as dividends
+    maxWager: 499999, // Up to $4,999
+    withdrawalFeeDiscount: 0,
+    rakeback: 0, // 0% rakeback
     prioritySupport: false,
     color: '#666666',
     badge: null,
   },
-  bronze: {
-    name: 'Bronze',
-    minWager: 50000, // $500 in cents
-    withdrawalFeeDiscount: 0,
-    rakeback: 0.5, // 0.5% rakeback
-    prioritySupport: false,
-    color: '#CD7F32',
-    badge: 'bronze_badge',
-    perks: ['Basic profile border', 'Bronze chat name color', '0.5% rakeback to Dividends'],
-  },
   silver: {
     name: 'Silver',
     minWager: 500000, // $5,000 in cents
-    withdrawalFeeDiscount: 10, // 10% off withdrawal fees
-    rakeback: 1, // 1% rakeback
-    prioritySupport: true,
+    maxWager: 2499999, // Up to $24,999
+    withdrawalFeeDiscount: 0,
+    rakeback: 5, // 5% of rake paid back
+    prioritySupport: false,
     color: '#C0C0C0',
     badge: 'silver_badge',
-    perks: ['Animated border', 'Silver chat badge', '1% rakeback to Dividends', '10% off withdrawal fees', 'Priority support'],
+    perks: ['Silver chat badge', '5% rakeback on rake paid', 'Priority support'],
   },
   gold: {
     name: 'Gold',
     minWager: 2500000, // $25,000 in cents
-    withdrawalFeeDiscount: 25, // 25% off withdrawal fees
-    rakeback: 1.5, // 1.5% rakeback
+    maxWager: 9999999, // Up to $99,999
+    withdrawalFeeDiscount: 0,
+    rakeback: 10, // 10% of rake paid back
     prioritySupport: true,
     color: '#FFD700',
     badge: 'gold_badge',
-    perks: ['Exclusive animated avatar frame', 'Gold tag in lobbies', '1.5% rakeback to Dividends', '25% off withdrawal fees', 'Priority support'],
+    perks: ['Gold tag in lobbies', '10% rakeback on rake paid', 'Priority support'],
   },
   platinum: {
     name: 'Platinum',
     minWager: 10000000, // $100,000 in cents
-    withdrawalFeeDiscount: 50, // 50% off withdrawal fees
-    rakeback: 2, // 2% rakeback
+    maxWager: 24999999, // Up to $249,999
+    withdrawalFeeDiscount: 0,
+    rakeback: 15, // 15% of rake paid back
     prioritySupport: true,
     color: '#E5E4E2',
     badge: 'platinum_badge',
-    perks: ['Personal animated banner', 'Custom win sound', '2% rakeback to Dividends', '50% off withdrawal fees', 'Priority support'],
+    perks: ['Platinum animated border', '15% rakeback on rake paid', 'Priority support'],
   },
   diamond: {
     name: 'Diamond',
-    minWager: 25000000, // $250,000 in cents (requires manual approval)
-    withdrawalFeeDiscount: 100, // FREE withdrawals
-    rakeback: 3, // 3% rakeback
+    minWager: 25000000, // $250,000 in cents
+    maxWager: Infinity,
+    withdrawalFeeDiscount: 100, // FREE withdrawals FOREVER
+    rakeback: 20, // 20% of rake paid back
     prioritySupport: true,
     color: '#B9F2FF',
     badge: 'diamond_badge',
-    perks: ['Founding Whale badge', '3% rakeback to Dividends', 'Zero withdrawal fees FOREVER', 'Private Discord access', 'Direct line to founders'],
+    perks: ['Founding Whale badge', '20% rakeback on rake paid', 'Zero withdrawal fees FOREVER', 'Private Discord access', 'Direct line to founders'],
     requiresApproval: true,
   },
 };
@@ -78,9 +75,6 @@ export function getVipTier(wagerLast30Days, diamondApproved = false) {
   if (wagerLast30Days >= VIP_TIERS.silver.minWager) {
     return 'silver';
   }
-  if (wagerLast30Days >= VIP_TIERS.bronze.minWager) {
-    return 'bronze';
-  }
   return 'none';
 }
 
@@ -89,16 +83,18 @@ export function getVipTierInfo(tierName) {
   return VIP_TIERS[tierName] || VIP_TIERS.none;
 }
 
-// Calculate rakeback amount (in cents) for a wager
+// Calculate rakeback amount (in cents) for rake paid
+// Rakeback is % of the RAKE the user paid, not their wager
+// House rake is 2.5% of wager, so rakeback = (wager * 0.025) * tier%
 export function calculateRakeback(wagerCents, vipTier) {
   const tier = VIP_TIERS[vipTier] || VIP_TIERS.none;
   if (tier.rakeback === 0) return 0;
   
-  // Rakeback is % of the house rake (2-3% of wager)
-  // We give back a % of what the house takes
-  const houseRakePercent = 0.025; // Average 2.5% house rake
-  const houseRake = wagerCents * houseRakePercent;
-  const rakeback = Math.floor(houseRake * (tier.rakeback / 100));
+  // Calculate the rake this user paid (2.5% of their wager)
+  const rakePaid = wagerCents * 0.025;
+  
+  // Rakeback is % of rake paid (5%, 10%, 15%, or 20%)
+  const rakeback = Math.floor(rakePaid * (tier.rakeback / 100));
   
   return rakeback;
 }
@@ -153,7 +149,7 @@ export function addDailyWager(wagerHistory = [], amountCents) {
 
 // Get progress to next VIP tier
 export function getVipProgress(wagerLast30Days, currentTier) {
-  const tiers = ['none', 'bronze', 'silver', 'gold', 'platinum', 'diamond'];
+  const tiers = ['none', 'silver', 'gold', 'platinum', 'diamond'];
   const currentIndex = tiers.indexOf(currentTier);
   
   if (currentIndex >= tiers.length - 1) {

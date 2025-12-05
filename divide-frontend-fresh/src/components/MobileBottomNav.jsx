@@ -41,7 +41,7 @@ export default function MobileBottomNav({ onOpenChat }) {
                             to={item.path}
                             className="flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors min-w-[60px]"
                             style={{
-                                color: isActive(item.path) ? '#00ffff' : '#6b7280'
+                                color: isActive(item.path) ? '#ff1744' : '#6b7280'
                             }}
                         >
                             {item.icon.startsWith('/') ? (
@@ -51,7 +51,7 @@ export default function MobileBottomNav({ onOpenChat }) {
                                     className="w-5 h-5"
                                     style={{
                                         filter: isActive(item.path)
-                                            ? 'brightness(0) saturate(100%) invert(70%) sepia(98%) saturate(2476%) hue-rotate(150deg) brightness(104%) contrast(101%)'
+                                            ? 'brightness(0) saturate(100%) invert(27%) sepia(95%) saturate(5558%) hue-rotate(346deg) brightness(99%) contrast(107%)'
                                             : 'brightness(0) saturate(100%) invert(47%) sepia(6%) saturate(378%) hue-rotate(180deg) brightness(94%) contrast(87%)'
                                     }}
                                 />

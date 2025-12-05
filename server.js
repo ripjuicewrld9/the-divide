@@ -1535,13 +1535,12 @@ app.post('/Divides/vote', auth, async (req, res) => {
 });
 
 // Creator bonus tier calculator based on their personal contribution
-// Returns percentage of the 1% creator bonus pool they receive (0-100)
+// Returns percentage of the 0.5% creator bonus pool they receive (0-100)
+// Simplified nuclear tiers - whale-approved 2025 structure
 function getCreatorBonusTier(creatorContribution) {
-  if (creatorContribution >= 50000) return 100;  // $50k+ → 100% of the 1%
-  if (creatorContribution >= 20000) return 80;   // $20k-$49,999 → 80%
-  if (creatorContribution >= 5000) return 60;    // $5k-$19,999 → 60%
-  if (creatorContribution >= 1000) return 40;    // $1k-$4,999 → 40%
-  if (creatorContribution >= 1) return 20;       // $1-$999 → 20%
+  if (creatorContribution >= 50000) return 100;  // $50k+ → 100% of the 0.5%
+  if (creatorContribution >= 10000) return 60;   // $10k-$49,999 → 60%
+  if (creatorContribution >= 1) return 30;       // $1-$9,999 → 30%
   return 0;                                       // $0 → 0% (house keeps all)
 }
 
@@ -1562,14 +1561,14 @@ async function endDivideById(divideId, userId) {
 
     const pot = Number(divide.pot);
     
-    // RAKE STRUCTURE:
-    // - 2% House Fee (fixed, untouchable)
-    // - 1% Creator Bonus Pool (split between creator & house based on creator's skin-in-the-game)
-    // - 97% Winner Pool (untouchable, goes to minority side)
+    // GOD-TIER RAKE STRUCTURE (2025 whale-approved - never touch again):
+    // - 2.5% House Fee (fixed, Rollbit/Stake/Duelbits standard)
+    // - 0.5% Creator Bonus Pool (split between creator & house based on skin-in-the-game)
+    // - 97% Winner Pool (SACRED - untouchable, goes to minority side)
     
-    const houseFee = pot * 0.02;           // 2% fixed house fee
-    const creatorBonusPool = pot * 0.01;   // 1% creator bonus pool
-    const winnerPool = pot * 0.97;         // 97% winner pool (sacred, never changes)
+    const houseFee = pot * 0.025;            // 2.5% fixed house fee
+    const creatorBonusPool = pot * 0.005;    // 0.5% creator bonus pool
+    const winnerPool = pot * 0.97;           // 97% winner pool (sacred, never changes)
     
     // Calculate creator's contribution to the pot
     let creatorContribution = 0;

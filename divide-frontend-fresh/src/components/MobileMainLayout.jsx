@@ -26,8 +26,8 @@ export default function MobileMainLayout({ onOpenChat }) {
       title: 'Divides',
       description: 'The Psychology Game. Blind betting where the minority wins. Trust no one.',
       icon: '/elections-poll-svgrepo-com.svg',
-      color: '#ff6b6b',
-      gradient: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)',
+      color: '#e53935',
+      gradient: 'linear-gradient(135deg, #e53935 0%, #1e88e5 100%)',
       path: '/divides',
       tagline: '🎭 The Psychology Game'
     }
@@ -49,7 +49,12 @@ export default function MobileMainLayout({ onOpenChat }) {
         <div className="flex h-14 items-center justify-between px-4">
           {/* Logo */}
           <Link to="/" className="flex items-center">
-            <span className="bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-lg font-black tracking-tight text-transparent">
+            <span style={{ 
+              background: 'linear-gradient(90deg, #ff1744 0%, #2979ff 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }} className="text-lg font-black tracking-tight">
               The Divide
             </span>
           </Link>
@@ -60,16 +65,16 @@ export default function MobileMainLayout({ onOpenChat }) {
               <>
                 {/* Balance with + Button */}
                 <div className="flex items-center gap-2">
-                  <div className="flex flex-col items-end rounded-lg border border-white/10 bg-black/40 px-3 py-1">
-                    <span className="text-[9px] font-medium text-gray-500 uppercase">Balance</span>
-                    <span className="bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-sm font-bold text-transparent leading-none">
+                  <div className="flex flex-col items-end rounded-lg border border-[#2a2a30] bg-[#16161a] px-3 py-1">
+                    <span className="text-[9px] font-medium text-[#666] uppercase">Balance</span>
+                    <span className="text-white text-sm font-bold leading-none">
                       ${formatCurrency(Number(user.balance || 0), 2)}
                     </span>
                   </div>
                   <button
                     onClick={() => setShowDepositModal(true)}
-                    className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-r from-cyan-400 to-emerald-400 hover:from-cyan-500 hover:to-emerald-500 transition-all active:scale-95"
-                    style={{ boxShadow: '0 2px 8px rgba(6, 182, 212, 0.3)' }}
+                    className="flex items-center justify-center w-8 h-8 rounded-full transition-all active:scale-95"
+                    style={{ background: 'linear-gradient(135deg, #e53935 0%, #1e88e5 100%)', boxShadow: '0 2px 8px rgba(229, 57, 53, 0.3)' }}
                     title="Add funds"
                   >
                     <span className="text-black font-bold text-lg leading-none">+</span>
@@ -94,7 +99,7 @@ export default function MobileMainLayout({ onOpenChat }) {
                             setShowUserMenu(false);
                             navigate('/admin');
                           }}
-                          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-cyan-400 hover:bg-cyan-500/10 mb-1"
+                          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-[#1e88e5] hover:bg-[#1e88e5]/10 mb-1"
                         >
                           ⚡ Admin Dashboard
                         </button>
@@ -115,9 +120,10 @@ export default function MobileMainLayout({ onOpenChat }) {
             ) : (
               <button
                 onClick={() => setShowAuthModal(true)}
-                className="rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 px-4 py-2 text-xs font-bold text-white"
+                className="rounded-lg px-4 py-2 text-xs font-bold text-white"
+                style={{ background: 'linear-gradient(135deg, #e53935 0%, #1e88e5 100%)' }}
               >
-                Login
+                Login / Sign Up
               </button>
             )}
           </div>
@@ -128,8 +134,13 @@ export default function MobileMainLayout({ onOpenChat }) {
       <main className="flex-1 overflow-y-auto">
         {/* Hero Section - Larger */}
         <div className="px-4 pt-8 pb-6 text-center relative">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl -z-10" />
-          <h1 className="text-4xl font-black bg-gradient-to-r from-cyan-400 via-blue-400 to-emerald-400 bg-clip-text text-transparent mb-3 tracking-tight">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-red-500/10 rounded-full blur-3xl -z-10" />
+          <h1 className="text-4xl font-black mb-3 tracking-tight" style={{ 
+            background: 'linear-gradient(90deg, #ff1744 0%, #2979ff 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+          }}>
             The Divide
           </h1>
           <p className="text-sm text-gray-400 mb-6">
@@ -143,7 +154,7 @@ export default function MobileMainLayout({ onOpenChat }) {
               placeholder="Search games..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-3 pl-11 rounded-xl bg-black/40 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500/50 transition-colors"
+              className="w-full px-4 py-3 pl-11 rounded-xl bg-[#111] border border-[#1a1a1a] text-white placeholder-gray-500 focus:outline-none focus:border-[#e53935]/50 transition-colors"
               style={{
                 WebkitTextFillColor: 'white',
                 opacity: 1
@@ -234,7 +245,7 @@ export default function MobileMainLayout({ onOpenChat }) {
                       style={{
                         width: '100%',
                         height: '100%',
-                        filter: 'brightness(0) saturate(100%) invert(70%) sepia(50%) saturate(500%) hue-rotate(140deg) brightness(95%) contrast(90%)',
+                        filter: 'brightness(0) saturate(100%) invert(27%) sepia(95%) saturate(5558%) hue-rotate(346deg) brightness(99%) contrast(107%)',
                       }}
                     />
                   </div>
