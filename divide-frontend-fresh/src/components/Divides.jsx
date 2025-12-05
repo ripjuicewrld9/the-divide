@@ -455,7 +455,7 @@ export default function Divides({ onOpenChat }) {
             + Create a Divide
           </button>
         </div>
-        <div className="divides-grid-desktop grid grid-cols-2 gap-6">
+        <div className="divides-grid">
           {activeDivides.map((d) => (
             <DivideCard
               key={d._id || d.id}
@@ -494,7 +494,7 @@ export default function Divides({ onOpenChat }) {
         {previousDivides.length > 0 && (
           <section className="previous-divides-desktop mt-10">
             <h3 className="text-xl font-bold text-gray-300 mb-4">Previous Divides</h3>
-            <div className="divides-grid-desktop grid grid-cols-2 gap-4">
+            <div className="divides-grid">
               {previousDivides.map((d) => (
                 <DivideCard
                   key={`prev-${d._id || d.id}`}
