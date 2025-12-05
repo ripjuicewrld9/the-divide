@@ -2673,6 +2673,53 @@ app.patch('/api/users/:id/avatar', auth, upload.single('avatar'), async (req, re
   }
 });
 
+// Change username (allowed once every 30 days)
+app.post('/api/change-username', auth, async (req, res) => {
+  try {
+    const { newUsername } = req.body;
+    const userId = req.userId;
+
+    if (!newUsername || newUsername.trim().length < 3) {
+      return res.status(400).json({ error: 'Username must be at least 3 characters' });
+    }
+
+    if (newUsername.trim().length > 20) {
+      return res.status(400).json({ error: 'Username must be 20 characters or less' });
+    }
+
+    // Check if username is already taken
+    const existingUser = await User.findOne({ username: newUsername.trim() });
+    if (existingUser && existingUser._id.toString() !== userId) {
+      return res.status(400).json({ error: 'Username already taken' });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Check if 30 days have passed since last change
+    if (user.lastUsernameChange) {
+      const daysSinceLastChange = (Date.now() - new Date(user.lastUsernameChange).getTime()) / (1000 * 60 * 60 * 24);
+      if (daysSinceLastChange < 30) {
+        const daysRemaining = Math.ceil(30 - daysSinceLastChange);
+        return res.status(400).json({ 
+          error: `You can change your username again in ${daysRemaining} day${daysRemaining !== 1 ? 's' : ''}` 
+        });
+      }
+    }
+
+    user.username = newUsername.trim();
+    user.lastUsernameChange = new Date();
+    await user.save();
+
+    res.json({ success: true, username: user.username });
+  } catch (err) {
+    console.error('Change username error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // ==========================================
 // SOCIAL FEED ROUTES
 // ==========================================
