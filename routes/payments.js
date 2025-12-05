@@ -92,9 +92,73 @@ router.get('/estimate', async (req, res) => {
   }
 });
 
+/**
+ * GET /api/payments/balance
+ * Get NOWPayments custody balance (admin only)
+ */
+router.get('/balance', async (req, res) => {
+  try {
+    const balance = await nowPayments.getCustodyBalance();
+    res.json(balance);
+  } catch (err) {
+    console.error('[Payments] Get balance failed:', err.message);
+    res.status(500).json({ error: 'Failed to get custody balance' });
+  }
+});
+
 // ============================================
 // AUTHENTICATED ENDPOINTS
 // ============================================
+
+/**
+ * POST /api/payments/customer/sync
+ * Create or get NOWPayments customer for current user
+ */
+router.post('/customer/sync', async (req, res) => {
+  try {
+    if (!req.userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const user = await User.findById(req.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Check if customer already exists
+    try {
+      const existing = await nowPayments.getCustomerByExternalId(req.userId);
+      if (existing && existing.id) {
+        // Update nowPaymentsCustomerId if not set
+        if (!user.nowPaymentsCustomerId) {
+          user.nowPaymentsCustomerId = existing.id;
+          await user.save();
+        }
+        return res.json({ customerId: existing.id, status: 'existing' });
+      }
+    } catch (e) {
+      // Customer doesn't exist, create new one
+    }
+
+    // Create new customer
+    const customer = await nowPayments.createCustomer({
+      email: user.email || '',
+      name: user.username,
+      externalId: req.userId
+    });
+
+    // Save customer ID to user
+    user.nowPaymentsCustomerId = customer.id;
+    await user.save();
+
+    console.log(`[Payments] Created NOWPayments customer ${customer.id} for user ${user.username}`);
+
+    res.json({ customerId: customer.id, status: 'created' });
+  } catch (err) {
+    console.error('[Payments] Customer sync failed:', err.message);
+    res.status(500).json({ error: 'Failed to sync customer' });
+  }
+});
 
 /**
  * GET /api/payments/transactions

@@ -5,6 +5,7 @@ import React, { useState } from 'react';
 import { formatCurrency } from '../utils/format';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+// eslint-disable-next-line no-unused-vars
 import { AnimatePresence, motion } from 'framer-motion';
 import AuthModal from './AuthModal.jsx';
 import UserAvatar from './UserAvatar.jsx';
@@ -12,6 +13,7 @@ import UserSettingsModal from './UserSettingsModal.jsx';
 import DepositWithdrawModal from './DepositWithdrawModal.jsx';
 import SupportTicket from './SupportTicket.jsx';
 import NotificationBell from './NotificationBell.jsx';
+import HowItWorksModal from './HowItWorksModal.jsx';
 
 export default function Header() {
   const { user, logout } = useAuth();
@@ -21,10 +23,9 @@ export default function Header() {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [isRegister, setIsRegister] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [promoteError, setPromoteError] = useState('');
-  const [promoteSuccess, setPromoteSuccess] = useState('');
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [showSupportModal, setShowSupportModal] = useState(false);
+  const [showHowItWorks, setShowHowItWorks] = useState(false);
 
   const handleUserButton = () => {
     if (!user) {
@@ -128,6 +129,38 @@ export default function Header() {
             alignItems: 'center',
             gap: '12px',
           }}>
+            {/* How It Works Button */}
+            <button
+              onClick={() => setShowHowItWorks(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 12px',
+                borderRadius: '8px',
+                border: '1px solid rgba(255,255,255,0.08)',
+                background: 'transparent',
+                color: 'rgba(255,255,255,0.5)',
+                fontSize: '12px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+                e.currentTarget.style.color = 'rgba(255,255,255,0.7)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.color = 'rgba(255,255,255,0.5)';
+              }}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>How It Works</span>
+            </button>
+
             {/* Support Button */}
             <button
               onClick={() => setShowSupportModal(true)}
@@ -370,17 +403,6 @@ export default function Header() {
                             Sign out
                           </button>
                         </div>
-
-                        {(promoteError || promoteSuccess) && (
-                          <div style={{
-                            borderTop: '1px solid rgba(255,255,255,0.06)',
-                            padding: '8px 12px',
-                            fontSize: '11px',
-                          }}>
-                            {promoteError && <p style={{ color: '#f87171' }}>{promoteError}</p>}
-                            {promoteSuccess && <p style={{ color: '#4ade80' }}>{promoteSuccess}</p>}
-                          </div>
-                        )}
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -424,6 +446,7 @@ export default function Header() {
       </header>
       
       {showSupportModal && <SupportTicket onClose={() => setShowSupportModal(false)} />}
+      <HowItWorksModal isOpen={showHowItWorks} onClose={() => setShowHowItWorks(false)} />
     </>
   );
 }

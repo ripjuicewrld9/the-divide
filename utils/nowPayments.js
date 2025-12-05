@@ -272,6 +272,117 @@ export async function getPayoutStatus(payoutId) {
 }
 
 // ============================================
+// CUSTODY & CONVERSION Functions
+// ============================================
+
+/**
+ * Get custody balance (funds held in NOWPayments)
+ */
+export async function getCustodyBalance() {
+  return apiRequest('/balance');
+}
+
+/**
+ * Create a conversion between currencies (off-chain, no network fees)
+ * Requires Custody to be enabled
+ * 
+ * @param {Object} params
+ * @param {string} params.from - Source currency (e.g., 'btc')
+ * @param {string} params.to - Target currency (e.g., 'usdcsol')
+ * @param {number} params.amount - Amount to convert
+ */
+export async function createConversion(params) {
+  const payload = {
+    from: params.from,
+    to: params.to,
+    amount: params.amount
+  };
+
+  return apiRequest('/conversion', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+/**
+ * Get conversion estimate
+ */
+export async function getConversionEstimate(from, to, amount) {
+  return apiRequest(`/conversion/estimate?from=${from}&to=${to}&amount=${amount}`);
+}
+
+// ============================================
+// CUSTOMER MANAGEMENT Functions
+// Links payments to specific users for tracking
+// ============================================
+
+/**
+ * Create a customer (links to your internal user)
+ * 
+ * @param {Object} params
+ * @param {string} params.email - Customer email
+ * @param {string} params.name - Customer name/username
+ * @param {string} params.externalId - Your internal user ID
+ */
+export async function createCustomer(params) {
+  const payload = {
+    email: params.email || '',
+    name: params.name,
+    external_id: params.externalId
+  };
+
+  return apiRequest('/customers', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+/**
+ * Get customer by external ID (your user ID)
+ */
+export async function getCustomerByExternalId(externalId) {
+  return apiRequest(`/customers?external_id=${externalId}`);
+}
+
+/**
+ * Get customer by NOWPayments customer ID
+ */
+export async function getCustomer(customerId) {
+  return apiRequest(`/customers/${customerId}`);
+}
+
+/**
+ * Update customer
+ */
+export async function updateCustomer(customerId, params) {
+  const payload = {
+    email: params.email,
+    name: params.name
+  };
+
+  return apiRequest(`/customers/${customerId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  });
+}
+
+/**
+ * Delete customer
+ */
+export async function deleteCustomer(customerId) {
+  return apiRequest(`/customers/${customerId}`, {
+    method: 'DELETE'
+  });
+}
+
+/**
+ * Get customer's payment history
+ */
+export async function getCustomerPayments(customerId) {
+  return apiRequest(`/customers/${customerId}/payments`);
+}
+
+// ============================================
 // IPN (Instant Payment Notification) Verification
 // ============================================
 
@@ -397,6 +508,7 @@ export const SUPPORTED_CURRENCIES = [
   { id: 'usdttrc20', name: 'Tether (TRC-20)', symbol: 'USDT' },
   { id: 'usdtbsc', name: 'Tether (BSC)', symbol: 'USDT' },
   { id: 'usdc', name: 'USD Coin', symbol: 'USDC' },
+  { id: 'usdcsol', name: 'USD Coin (Solana)', symbol: 'USDC' },
   { id: 'sol', name: 'Solana', symbol: 'SOL' },
   { id: 'doge', name: 'Dogecoin', symbol: 'DOGE' },
   { id: 'xrp', name: 'Ripple', symbol: 'XRP' },
@@ -427,6 +539,19 @@ export default {
   getPayoutBalance,
   createPayout,
   getPayoutStatus,
+  
+  // Custody & Conversion
+  getCustodyBalance,
+  createConversion,
+  getConversionEstimate,
+  
+  // Customer Management
+  createCustomer,
+  getCustomer,
+  getCustomerByExternalId,
+  updateCustomer,
+  deleteCustomer,
+  getCustomerPayments,
   
   // IPN
   verifyIPNSignature,
