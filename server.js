@@ -4,6 +4,7 @@ dotenv.config();
 
 // Models
 import Divide from './models/Divide.js';
+import DivideComment from './models/DivideComment.js';
 import House from './models/House.js';
 import Ledger from './models/Ledger.js';
 import User from './models/User.js';
@@ -1149,6 +1150,15 @@ app.post('/divides/vote', auth, async (req, res) => {
     else divide.votesB += shortAmount;
     divide.pot = Number((divide.pot + boostAmount).toFixed(2));
 
+    // Track vote history for chart (revealed after divide ends)
+    if (!divide.voteHistory) divide.voteHistory = [];
+    divide.voteHistory.push({
+      timestamp: new Date(),
+      shortsA: divide.votesA,
+      shortsB: divide.votesB,
+      pot: divide.pot,
+    });
+
     user.totalBets = (user.totalBets || 0) + 1;
     user.wagered = (user.wagered || 0) + boostCents;
     
@@ -1227,6 +1237,15 @@ app.post('/Divides/vote', auth, async (req, res) => {
     if (side === 'A') divide.votesA += shortAmount;
     else divide.votesB += shortAmount;
     divide.pot = Number((divide.pot + boostAmount).toFixed(2));
+
+    // Track vote history for chart (revealed after divide ends)
+    if (!divide.voteHistory) divide.voteHistory = [];
+    divide.voteHistory.push({
+      timestamp: new Date(),
+      shortsA: divide.votesA,
+      shortsB: divide.votesB,
+      pot: divide.pot,
+    });
 
     user.totalBets = (user.totalBets || 0) + 1;
     user.wagered = (user.wagered || 0) + boostCents;
@@ -1511,6 +1530,145 @@ app.post('/divides/:id/dislike', auth, async (req, res) => {
     res.json({ success: true, dislikes: divide.dislikes, likedBy: divide.likedBy, dislikedBy: divide.dislikedBy });
   } catch (err) {
     console.error('POST /divides/:id/dislike', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ==========================================
+// DIVIDE DETAIL & COMMENTS
+// ==========================================
+
+// GET single divide with full details
+app.get('/api/divides/:id', async (req, res) => {
+  try {
+    let divide = await Divide.findOne({ id: req.params.id });
+    if (!divide) divide = await Divide.findById(req.params.id);
+    if (!divide) return res.status(404).json({ error: 'Divide not found' });
+
+    // Only return voteHistory if divide has ended (to reveal the chart)
+    const response = {
+      _id: divide._id,
+      id: divide.id,
+      title: divide.title,
+      optionA: divide.optionA,
+      optionB: divide.optionB,
+      imageA: divide.imageA,
+      imageB: divide.imageB,
+      category: divide.category,
+      votesA: divide.votesA,
+      votesB: divide.votesB,
+      pot: divide.pot,
+      endTime: divide.endTime,
+      status: divide.status,
+      loserSide: divide.loserSide,
+      likes: divide.likes,
+      dislikes: divide.dislikes,
+      likedBy: divide.likedBy,
+      dislikedBy: divide.dislikedBy,
+      createdAt: divide.createdAt,
+      isUserCreated: divide.isUserCreated,
+      // Only reveal vote history after ending
+      voteHistory: divide.status !== 'active' ? (divide.voteHistory || []) : [],
+    };
+
+    res.json(response);
+  } catch (err) {
+    console.error('GET /api/divides/:id', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// GET comments for a divide
+app.get('/api/divides/:id/comments', async (req, res) => {
+  try {
+    const comments = await DivideComment.find({ divideId: req.params.id })
+      .sort({ createdAt: -1 })
+      .limit(100)
+      .lean();
+    res.json(comments || []);
+  } catch (err) {
+    console.error('GET /api/divides/:id/comments', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// POST new comment
+app.post('/api/divides/:id/comments', auth, async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text || text.trim().length === 0) {
+      return res.status(400).json({ error: 'Comment text required' });
+    }
+    if (text.length > 500) {
+      return res.status(400).json({ error: 'Comment too long (max 500 chars)' });
+    }
+
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const comment = new DivideComment({
+      divideId: req.params.id,
+      userId: req.userId,
+      username: user.username,
+      text: text.trim(),
+    });
+
+    await comment.save();
+    res.json(comment);
+  } catch (err) {
+    console.error('POST /api/divides/:id/comments', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Like a comment
+app.post('/api/divides/:divideId/comments/:commentId/like', auth, async (req, res) => {
+  try {
+    const comment = await DivideComment.findById(req.params.commentId);
+    if (!comment) return res.status(404).json({ error: 'Comment not found' });
+
+    const userId = req.userId;
+    const alreadyLiked = (comment.likedBy || []).includes(userId);
+    const alreadyDisliked = (comment.dislikedBy || []).includes(userId);
+
+    if (alreadyLiked || alreadyDisliked) {
+      return res.status(400).json({ error: 'Already reacted to this comment' });
+    }
+
+    comment.likedBy = comment.likedBy || [];
+    comment.likedBy.push(userId);
+    comment.likes = (comment.likes || 0) + 1;
+
+    await comment.save();
+    res.json({ success: true, likes: comment.likes, dislikes: comment.dislikes });
+  } catch (err) {
+    console.error('POST /api/divides/:divideId/comments/:commentId/like', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Dislike a comment
+app.post('/api/divides/:divideId/comments/:commentId/dislike', auth, async (req, res) => {
+  try {
+    const comment = await DivideComment.findById(req.params.commentId);
+    if (!comment) return res.status(404).json({ error: 'Comment not found' });
+
+    const userId = req.userId;
+    const alreadyLiked = (comment.likedBy || []).includes(userId);
+    const alreadyDisliked = (comment.dislikedBy || []).includes(userId);
+
+    if (alreadyLiked || alreadyDisliked) {
+      return res.status(400).json({ error: 'Already reacted to this comment' });
+    }
+
+    comment.dislikedBy = comment.dislikedBy || [];
+    comment.dislikedBy.push(userId);
+    comment.dislikes = (comment.dislikes || 0) + 1;
+
+    await comment.save();
+    res.json({ success: true, likes: comment.likes, dislikes: comment.dislikes });
+  } catch (err) {
+    console.error('POST /api/divides/:divideId/comments/:commentId/dislike', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -1896,8 +2054,58 @@ app.use((req, res) => {
 // SOCKET.IO
 // ==========================================
 
+// Store recent chat messages in memory (last 50)
+let chatHistory = [];
+const MAX_CHAT_HISTORY = 50;
+
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
+
+  // Chat: request history
+  socket.on('chat:requestHistory', () => {
+    socket.emit('chat:history', chatHistory);
+  });
+
+  // Chat: send message
+  socket.on('chat:sendMessage', async (data) => {
+    try {
+      const { username, message, userId } = data;
+      if (!message || !message.trim()) return;
+
+      // Get user info for avatar and level
+      let userInfo = { username: username || 'Anonymous', level: 1, profileImage: null };
+      if (userId) {
+        const user = await User.findById(userId).select('username level profileImage').lean();
+        if (user) {
+          userInfo = {
+            username: user.username,
+            level: user.level || 1,
+            profileImage: user.profileImage || null,
+          };
+        }
+      }
+
+      const chatMessage = {
+        id: Date.now().toString(),
+        username: userInfo.username,
+        message: message.trim().substring(0, 500), // Limit message length
+        level: userInfo.level,
+        profileImage: userInfo.profileImage,
+        timestamp: new Date().toISOString(),
+      };
+
+      // Add to history
+      chatHistory.push(chatMessage);
+      if (chatHistory.length > MAX_CHAT_HISTORY) {
+        chatHistory = chatHistory.slice(-MAX_CHAT_HISTORY);
+      }
+
+      // Broadcast to all clients
+      io.emit('chat:message', chatMessage);
+    } catch (err) {
+      console.error('Chat message error:', err);
+    }
+  });
 
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);

@@ -1,6 +1,7 @@
 // src/components/DivideCard.jsx
 // Polymarket-style design with bright Red vs Blue sides
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { formatCurrency } from '../utils/format';
 import api from '../services/api';
@@ -42,6 +43,7 @@ export default function DivideCard({
   });
 
   const { user } = useAuth();
+  const navigate = useNavigate();
   const isAdmin = user && user.role === 'admin';
 
   useEffect(() => { setL(Number(leftVotes) || 0); }, [leftVotes]);
@@ -117,6 +119,7 @@ export default function DivideCard({
   const handleLike = async (e) => {
     e.stopPropagation();
     if (!user) return alert('Please log in');
+    if (status !== 'active') return; // Can't like ended divides
     if (userLiked || userDisliked) return; // Locked once you've reacted
     try {
       const res = await api.post(`/api/divides/${divideId}/like`);
@@ -128,6 +131,7 @@ export default function DivideCard({
   const handleDislike = async (e) => {
     e.stopPropagation();
     if (!user) return alert('Please log in');
+    if (status !== 'active') return; // Can't dislike ended divides
     if (userLiked || userDisliked) return; // Locked once you've reacted
     try {
       const res = await api.post(`/api/divides/${divideId}/dislike`);
@@ -136,13 +140,14 @@ export default function DivideCard({
     } catch (err) { console.error('Dislike failed:', err); }
   };
 
-  const toggleExpand = () => {
-    if (typeof onRequestExpand === 'function') onRequestExpand();
+  const handleCardClick = () => {
+    // Navigate to divide detail page
+    navigate(`/divide/${divideId}`);
   };
 
   return (
     <div
-      onClick={toggleExpand}
+      onClick={handleCardClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       style={{
@@ -294,19 +299,19 @@ export default function DivideCard({
         <div style={{ display: 'flex', gap: '8px' }}>
           <button 
             onClick={handleLike}
-            disabled={userLiked || userDisliked}
+            disabled={userLiked || userDisliked || status !== 'active'}
             style={{ 
               background: userLiked ? 'rgba(74, 222, 128, 0.2)' : 'rgba(255,255,255,0.05)',
               border: 'none',
               padding: '4px 8px',
-              cursor: (userLiked || userDisliked) ? 'default' : 'pointer',
+              cursor: (userLiked || userDisliked || status !== 'active') ? 'default' : 'pointer',
               fontSize: '11px',
-              color: userLiked ? '#4ade80' : (userDisliked ? '#444' : '#888'),
+              color: userLiked ? '#4ade80' : (userDisliked || status !== 'active' ? '#444' : '#888'),
               borderRadius: '4px',
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
-              opacity: userDisliked ? 0.4 : 1,
+              opacity: (userDisliked || status !== 'active') ? 0.4 : 1,
               transition: 'all 0.12s ease',
             }}
           >
@@ -314,19 +319,19 @@ export default function DivideCard({
           </button>
           <button 
             onClick={handleDislike}
-            disabled={userLiked || userDisliked}
+            disabled={userLiked || userDisliked || status !== 'active'}
             style={{ 
               background: userDisliked ? 'rgba(248, 113, 113, 0.2)' : 'rgba(255,255,255,0.05)',
               border: 'none',
               padding: '4px 8px',
-              cursor: (userLiked || userDisliked) ? 'default' : 'pointer',
+              cursor: (userLiked || userDisliked || status !== 'active') ? 'default' : 'pointer',
               fontSize: '11px',
-              color: userDisliked ? '#f87171' : (userLiked ? '#444' : '#888'),
+              color: userDisliked ? '#f87171' : (userLiked || status !== 'active' ? '#444' : '#888'),
               borderRadius: '4px',
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
-              opacity: userLiked ? 0.4 : 1,
+              opacity: (userLiked || status !== 'active') ? 0.4 : 1,
               transition: 'all 0.12s ease',
             }}
           >

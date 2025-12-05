@@ -63,6 +63,13 @@ const divideSchema = new mongoose.Schema({
   dislikes: { type: Number, default: 0 },
   likedBy: [{ type: String }], // userIds who liked
   dislikedBy: [{ type: String }], // userIds who disliked
+  // Vote history for chart (revealed after divide ends)
+  voteHistory: [{
+    timestamp: { type: Date, default: Date.now },
+    shortsA: { type: Number, default: 0 },
+    shortsB: { type: Number, default: 0 },
+    pot: { type: Number, default: 0 },
+  }],
   createdAt: { type: Date, default: Date.now },
 });
 

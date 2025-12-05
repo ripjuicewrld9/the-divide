@@ -104,16 +104,17 @@ export default function Header() {
               <NotificationBell />
 
               {/* Balance & Add Funds */}
-              <div className="flex items-center gap-2 rounded-md border border-[#1a1a1a] bg-[#111] px-2 py-1.5">
+              <div className="flex items-center gap-2 rounded-md border border-[#2a2a30] bg-[#16161a] px-2 py-1.5">
                 <div className="flex flex-col items-end leading-none mr-1">
-                  <span className="text-[9px] font-medium text-[#444] uppercase tracking-wider">Balance</span>
-                  <span className="text-[#6b1c1c] text-sm font-bold">
+                  <span className="text-[9px] font-medium text-[#666] uppercase tracking-wider">Balance</span>
+                  <span className="text-white text-sm font-bold">
                     ${formatCurrency(Number(user.balance || 0), 2)}
                   </span>
                 </div>
                 <button
                   onClick={() => setShowDepositModal(true)}
-                  className="flex h-6 w-6 items-center justify-center rounded bg-[#6b1c1c] text-white transition-all hover:bg-[#7d2121] active:scale-95"
+                  className="flex h-6 w-6 items-center justify-center rounded text-white transition-all hover:opacity-80 active:scale-95"
+                  style={{ background: 'linear-gradient(135deg, #e53935 0%, #1e88e5 100%)' }}
                   title="Add funds"
                 >
                   <span className="font-bold text-sm leading-none">+</span>
@@ -178,7 +179,8 @@ export default function Header() {
           ) : (
             <button
               onClick={() => setShowAuthModal(true)}
-              className="rounded-md bg-[#6b1c1c] px-4 py-1.5 text-xs font-semibold text-white transition-all hover:bg-[#7d2121]"
+              className="rounded-md px-4 py-1.5 text-xs font-semibold text-white transition-all hover:opacity-90"
+              style={{ background: 'linear-gradient(135deg, #e53935 0%, #1e88e5 100%)' }}
             >
               Login / Sign Up
             </button>

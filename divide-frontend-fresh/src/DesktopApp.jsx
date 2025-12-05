@@ -2,6 +2,7 @@ import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthContext } from "./context/AuthContext.jsx";
 import Divides from "./components/Divides.jsx";
+import DivideDetailPage from "./pages/DivideDetailPage.jsx";
 import AdminFinance from "./pages/AdminFinance.jsx";
 import AdminLedger from "./pages/AdminLedger.jsx";
 import AuthModal from "./components/AuthModal.jsx";
@@ -54,6 +55,7 @@ export default function DesktopApp() {
           <Routes>
             <Route path="/" element={<Divides />} />
             <Route path="/divides" element={<Divides />} />
+            <Route path="/divide/:id" element={<DivideDetailPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             
             {/* Support Routes - Moderators get full dashboard, users get simple view */}

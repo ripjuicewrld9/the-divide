@@ -16,17 +16,17 @@
   color: #d4d4d4;
 }
 
-/* GRID – Fixed 5 columns, small cards */
+/* GRID – Fixed 4 columns, small cards */
 .divides-grid {
   display: grid;
-  gap: 8px;
+  gap: 12px;
   padding: 0;
-  max-width: 1600px;
+  max-width: 1400px;
   margin: 0 auto;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, 1fr);
 }
-@media (max-width: 1200px) { .divides-grid { grid-template-columns: repeat(4, 1fr); } }
-@media (max-width: 900px) { .divides-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 1200px) { .divides-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 900px) { .divides-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 640px) { .divides-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 400px) { .divides-grid { grid-template-columns: 1fr; } }
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import useSocket from '../hooks/useSocket';
+import UserAvatar from './UserAvatar';
 
 export default function ChatSidebar({ isOpen, setIsOpen }) {
   const { user } = useAuth();
@@ -55,6 +56,7 @@ export default function ChatSidebar({ isOpen, setIsOpen }) {
     socket.emit('chat:sendMessage', {
       username: user.username,
       message: inputMessage.trim(),
+      userId: user.id,
     });
 
     setInputMessage('');
@@ -73,12 +75,12 @@ export default function ChatSidebar({ isOpen, setIsOpen }) {
             width: '56px',
             height: '56px',
             borderRadius: '50%',
-            background: 'linear-gradient(135deg, #c97586, #a85c6f)',
+            background: 'linear-gradient(135deg, #e53935 0%, #1e88e5 100%)',
             border: 'none',
             color: '#fff',
             fontSize: '24px',
             cursor: 'pointer',
-            boxShadow: '0 4px 12px rgba(139, 69, 88, 0.4)',
+            boxShadow: '0 4px 12px rgba(229, 57, 53, 0.4)',
             transition: 'all 0.3s ease',
             zIndex: 999,
             display: 'flex',
@@ -88,11 +90,11 @@ export default function ChatSidebar({ isOpen, setIsOpen }) {
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.transform = 'scale(1.1)';
-            e.currentTarget.style.boxShadow = '0 6px 20px rgba(255, 50, 50, 0.6)';
+            e.currentTarget.style.boxShadow = '0 6px 20px rgba(229, 57, 53, 0.6)';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.transform = 'scale(1)';
-            e.currentTarget.style.boxShadow = '0 4px 12px rgba(255, 50, 50, 0.4)';
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(229, 57, 53, 0.4)';
           }}
         >
           💬
@@ -187,7 +189,7 @@ export default function ChatSidebar({ isOpen, setIsOpen }) {
           ) : (
             messages.map((msg, idx) => (
               <div
-                key={idx}
+                key={msg.id || idx}
                 style={{
                   padding: '10px 12px',
                   background: 'rgba(255, 255, 255, 0.03)',
@@ -196,23 +198,44 @@ export default function ChatSidebar({ isOpen, setIsOpen }) {
                   transition: 'all 0.2s ease',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 50, 50, 0.05)';
-                  e.currentTarget.style.borderColor = 'rgba(255, 50, 50, 0.2)';
+                  e.currentTarget.style.background = 'rgba(229, 57, 53, 0.05)';
+                  e.currentTarget.style.borderColor = 'rgba(229, 57, 53, 0.2)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
                   e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.05)';
                 }}
               >
-                <div
-                  style={{
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    color: '#ff3232',
-                    marginBottom: '4px',
-                  }}
-                >
-                  {msg.username || 'Anonymous'}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                  {/* Profile Image */}
+                  <UserAvatar 
+                    user={{ username: msg.username, profileImage: msg.profileImage }} 
+                    size={24} 
+                  />
+                  {/* Username */}
+                  <span
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      color: '#e53935',
+                    }}
+                  >
+                    {msg.username || 'Anonymous'}
+                  </span>
+                  {/* Level Badge */}
+                  <span
+                    style={{
+                      fontSize: '9px',
+                      fontWeight: 600,
+                      color: '#1e88e5',
+                      background: 'rgba(30, 136, 229, 0.15)',
+                      padding: '2px 6px',
+                      borderRadius: '10px',
+                      border: '1px solid rgba(30, 136, 229, 0.3)',
+                    }}
+                  >
+                    LVL {msg.level || 1}
+                  </span>
                 </div>
                 <div
                   style={{
@@ -220,6 +243,7 @@ export default function ChatSidebar({ isOpen, setIsOpen }) {
                     color: '#ddd',
                     wordWrap: 'break-word',
                     lineHeight: '1.4',
+                    paddingLeft: '32px',
                   }}
                 >
                   {msg.message}
@@ -228,8 +252,9 @@ export default function ChatSidebar({ isOpen, setIsOpen }) {
                   <div
                     style={{
                       fontSize: '10px',
-                      color: '#666',
+                      color: '#555',
                       marginTop: '4px',
+                      paddingLeft: '32px',
                     }}
                   >
                     {new Date(msg.timestamp).toLocaleTimeString()}
