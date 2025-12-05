@@ -74,6 +74,35 @@ const emailTransporter = nodemailer.createTransport({
 const toCents = (n) => Math.round((Number(n) || 0) * 100);
 const toDollars = (cents) => Number(((Number(cents) || 0) / 100).toFixed(2));
 
+// SECURITY: Sanitize divide data to hide vote counts for active divides
+// This prevents users from seeing which side is winning before the divide ends
+function sanitizeDivide(divide, forceHideVotes = false) {
+  if (!divide) return divide;
+  const d = divide.toObject ? divide.toObject() : { ...divide };
+  
+  // Only hide votes if divide is still active
+  if (d.status === 'active' || forceHideVotes) {
+    // Hide all vote-related data that could reveal which side is winning
+    d.votesA = null;
+    d.votesB = null;
+    d.totalVotes = null;
+    d.votes = []; // Hide individual vote records
+    d.voteHistory = []; // Hide vote history chart data
+    d.shorts = []; // Hide shorts data if present
+  }
+  
+  // Never expose sensitive internal fields
+  delete d.__v;
+  
+  return d;
+}
+
+// Sanitize array of divides
+function sanitizeDivides(divides) {
+  if (!Array.isArray(divides)) return divides;
+  return divides.map(d => sanitizeDivide(d));
+}
+
 // Auth middleware
 function auth(req, res, next) {
   try {
@@ -915,7 +944,8 @@ app.get('/Divides', async (req, res) => {
     );
     
     const list = await Divide.aggregate(pipeline).allowDiskUse(true);
-    res.json(list || []);
+    // SECURITY: Sanitize all divides to hide vote data for active ones
+    res.json(sanitizeDivides(list) || []);
   } catch (e) {
     console.error('GET /Divides error', e);
     try {
@@ -925,7 +955,8 @@ app.get('/Divides', async (req, res) => {
         query.category = category;
       }
       const fallback = await Divide.find(query).sort({ endTime: 1 }).lean();
-      return res.json(fallback || []);
+      // SECURITY: Sanitize fallback response too
+      return res.json(sanitizeDivides(fallback) || []);
     } catch (err) {
       console.error('GET /Divides fallback error', err);
       res.status(500).json({ error: 'Server error' });
@@ -990,8 +1021,9 @@ app.post('/Divides', auth, adminOnly, async (req, res) => {
     });
 
     await doc.save();
-    io.emit('newDivide', doc);
-    res.json(doc);
+    // SECURITY: Sanitize new divide data before emitting
+    io.emit('newDivide', sanitizeDivide(doc));
+    res.json(sanitizeDivide(doc));
   } catch (err) {
     console.error('POST /Divides', err);
     res.status(500).json({ error: 'Server error' });
@@ -1083,8 +1115,9 @@ app.post('/Divides/create-user', auth, async (req, res) => {
     await awardXp(req.userId, 'divideCreated', 0, { divideId: doc.id || doc._id, title, pot: bet });
     await awardXp(req.userId, 'usdWager', betCents, { divideId: doc.id || doc._id, side, amount: bet });
 
-    io.emit('newDivide', doc);
-    res.json(doc);
+    // SECURITY: Sanitize new divide data before emitting
+    io.emit('newDivide', sanitizeDivide(doc));
+    res.json(sanitizeDivide(doc));
   } catch (err) {
     console.error('POST /Divides/create-user', err);
     res.status(500).json({ error: 'Server error' });
@@ -1175,8 +1208,10 @@ app.post('/divides/vote', auth, async (req, res) => {
       meta: { side }
     });
 
-    io.emit('voteUpdate', divide);
-    res.json({ balance: toDollars(user.balance), votesA: divide.votesA, votesB: divide.votesB, pot: divide.pot });
+    // SECURITY: Emit sanitized divide data (hides vote counts for active divides)
+    io.emit('voteUpdate', sanitizeDivide(divide));
+    // SECURITY: Only return pot (total volume), not individual vote counts
+    res.json({ balance: toDollars(user.balance), pot: divide.pot });
   } catch (err) {
     console.error('POST /divides/vote ERROR:', err);
     console.error('Error stack:', err.stack);
@@ -1263,8 +1298,10 @@ app.post('/Divides/vote', auth, async (req, res) => {
       meta: { side }
     });
 
-    io.emit('voteUpdate', divide);
-    res.json({ balance: toDollars(user.balance), votesA: divide.votesA, votesB: divide.votesB, pot: divide.pot });
+    // SECURITY: Emit sanitized divide data (hides vote counts for active divides)
+    io.emit('voteUpdate', sanitizeDivide(divide));
+    // SECURITY: Only return pot (total volume), not individual vote counts
+    res.json({ balance: toDollars(user.balance), pot: divide.pot });
   } catch (err) {
     console.error('POST /Divides/vote ERROR:', err);
     console.error('Error stack:', err.stack);
@@ -1388,8 +1425,9 @@ app.patch('/divides/:id', auth, adminOnly, async (req, res) => {
       }
     }
     await divide.save();
-    io.emit('newDivide', divide);
-    res.json(divide);
+    // SECURITY: Sanitize divide data before emitting
+    io.emit('newDivide', sanitizeDivide(divide));
+    res.json(sanitizeDivide(divide));
   } catch (err) {
     console.error('PATCH /divides/:id', err);
     res.status(500).json({ error: 'Server error' });
@@ -1431,8 +1469,9 @@ app.post('/divides/:id/recreate', auth, adminOnly, async (req, res) => {
     });
 
     await fresh.save();
-    io.emit('newDivide', fresh);
-    res.json(fresh);
+    // SECURITY: Sanitize new divide data before emitting
+    io.emit('newDivide', sanitizeDivide(fresh));
+    res.json(sanitizeDivide(fresh));
   } catch (err) {
     console.error('POST /divides/:id/recreate', err);
     res.status(500).json({ error: 'Server error' });
@@ -1545,7 +1584,9 @@ app.get('/api/divides/:id', async (req, res) => {
     if (!divide) divide = await Divide.findById(req.params.id);
     if (!divide) return res.status(404).json({ error: 'Divide not found' });
 
-    // Only return voteHistory if divide has ended (to reveal the chart)
+    // SECURITY: Build response with vote data hidden for active divides
+    const isActive = divide.status === 'active';
+    
     const response = {
       _id: divide._id,
       id: divide.id,
@@ -1555,11 +1596,13 @@ app.get('/api/divides/:id', async (req, res) => {
       imageA: divide.imageA,
       imageB: divide.imageB,
       category: divide.category,
-      votesA: divide.votesA,
-      votesB: divide.votesB,
-      pot: divide.pot,
+      // SECURITY: Only reveal vote counts after divide has ended
+      votesA: isActive ? null : divide.votesA,
+      votesB: isActive ? null : divide.votesB,
+      pot: divide.pot, // Pot (total volume) is safe to show
       endTime: divide.endTime,
       status: divide.status,
+      winnerSide: divide.winnerSide,
       loserSide: divide.loserSide,
       likes: divide.likes,
       dislikes: divide.dislikes,
@@ -1567,8 +1610,8 @@ app.get('/api/divides/:id', async (req, res) => {
       dislikedBy: divide.dislikedBy,
       createdAt: divide.createdAt,
       isUserCreated: divide.isUserCreated,
-      // Only reveal vote history after ending
-      voteHistory: divide.status !== 'active' ? (divide.voteHistory || []) : [],
+      // SECURITY: Only reveal vote history after ending
+      voteHistory: isActive ? [] : (divide.voteHistory || []),
     };
 
     res.json(response);

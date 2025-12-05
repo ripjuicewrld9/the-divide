@@ -206,8 +206,9 @@ export default function DivideDetailPage() {
   }
 
   const total = (divide.votesA || 0) + (divide.votesB || 0) || 1;
-  const leftPct = Math.round(((divide.votesA || 0) / total) * 100);
-  const rightPct = 100 - leftPct;
+  const votesHidden = divide.votesA === null || divide.votesA === undefined;
+  const leftPct = votesHidden ? null : Math.round(((divide.votesA || 0) / total) * 100);
+  const rightPct = votesHidden ? null : 100 - leftPct;
 
   // Chart data - only shown when divide has ended
   const chartData = {
@@ -280,11 +281,11 @@ export default function DivideDetailPage() {
             <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
               <div style={{ flex: 1, background: 'rgba(229, 57, 53, 0.15)', border: '1px solid rgba(229, 57, 53, 0.3)', borderRadius: '8px', padding: '12px', textAlign: 'center' }}>
                 <div style={{ fontSize: '14px', fontWeight: '600', color: '#e0e0e0', marginBottom: '4px' }}>{divide.optionA}</div>
-                <div style={{ fontSize: '20px', fontWeight: '700', color: '#ff5252' }}>{leftPct}%</div>
+                <div style={{ fontSize: '20px', fontWeight: '700', color: '#ff5252' }}>{votesHidden ? '??' : `${leftPct}%`}</div>
               </div>
               <div style={{ flex: 1, background: 'rgba(30, 136, 229, 0.15)', border: '1px solid rgba(30, 136, 229, 0.3)', borderRadius: '8px', padding: '12px', textAlign: 'center' }}>
                 <div style={{ fontSize: '14px', fontWeight: '600', color: '#e0e0e0', marginBottom: '4px' }}>{divide.optionB}</div>
-                <div style={{ fontSize: '20px', fontWeight: '700', color: '#42a5f5' }}>{rightPct}%</div>
+                <div style={{ fontSize: '20px', fontWeight: '700', color: '#42a5f5' }}>{votesHidden ? '??' : `${rightPct}%`}</div>
               </div>
             </div>
 

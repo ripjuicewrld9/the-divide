@@ -46,6 +46,9 @@ export default function DivideCard({
   const navigate = useNavigate();
   const isAdmin = user && user.role === 'admin';
 
+  // Check if votes are hidden (null = server is hiding them for active divides)
+  const votesHidden = leftVotes === null || leftVotes === undefined;
+  
   useEffect(() => { setL(Number(leftVotes) || 0); }, [leftVotes]);
   useEffect(() => { setR(Number(rightVotes) || 0); }, [rightVotes]);
   useEffect(() => { setLocalLikes(Number(likes) || 0); }, [likes]);
@@ -236,7 +239,7 @@ export default function DivideCard({
           ) : (
             <>
               <span style={{ fontSize: '12px', fontWeight: '500', color: '#e0e0e0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '70%' }}>{left}</span>
-              <span style={{ fontSize: '14px', fontWeight: '800', color: '#ff1744', textShadow: '0 0 8px rgba(255, 23, 68, 0.5)' }}>{leftPct}%</span>
+              <span style={{ fontSize: '14px', fontWeight: '800', color: '#ff1744', textShadow: '0 0 8px rgba(255, 23, 68, 0.5)' }}>{votesHidden ? '??' : `${leftPct}%`}</span>
             </>
           )}
         </div>
@@ -287,7 +290,7 @@ export default function DivideCard({
           ) : (
             <>
               <span style={{ fontSize: '12px', fontWeight: '500', color: '#e0e0e0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '70%' }}>{right}</span>
-              <span style={{ fontSize: '14px', fontWeight: '800', color: '#2979ff', textShadow: '0 0 8px rgba(41, 121, 255, 0.5)' }}>{rightPct}%</span>
+              <span style={{ fontSize: '14px', fontWeight: '800', color: '#2979ff', textShadow: '0 0 8px rgba(41, 121, 255, 0.5)' }}>{votesHidden ? '??' : `${rightPct}%`}</span>
             </>
           )}
         </div>
