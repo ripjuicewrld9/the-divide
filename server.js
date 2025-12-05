@@ -882,22 +882,101 @@ app.post("/api/withdraw", auth, async (req, res) => {
       });
     }
 
-    // Process withdrawal
+    // TIERED WITHDRAWAL FEE STRUCTURE
+    // - Under $1,000 → 2%
+    // - $1,000 – $9,999 → 1.5%
+    // - $10,000 – $49,999 → 1%
+    // - $50,000 – $249,999 → 0.5%
+    // - $250,000+ → FREE
+    let feePercent = 0;
+    if (amount < 1000) {
+      feePercent = 0.02;        // 2%
+    } else if (amount < 10000) {
+      feePercent = 0.015;       // 1.5%
+    } else if (amount < 50000) {
+      feePercent = 0.01;        // 1%
+    } else if (amount < 250000) {
+      feePercent = 0.005;       // 0.5%
+    } else {
+      feePercent = 0;           // FREE for $250k+
+    }
+    
+    const feeAmount = amount * feePercent;
+    const feeCents = Math.round(feeAmount * 100);
+    const netAmount = amount - feeAmount;
+    const netCents = amountCents - feeCents;
+
+    // Process withdrawal (deduct full amount from user)
     user.balance -= amountCents;
-    user.totalWithdrawn = (user.totalWithdrawn || 0) + amountCents;
+    user.totalWithdrawn = (user.totalWithdrawn || 0) + netCents; // Track net withdrawn
     await user.save();
 
-    console.log(`[WITHDRAW] User ${user.username} withdrew $${amount}, new balance: $${toDollars(user.balance)}`);
+    // Track withdrawal fee as house revenue
+    if (feeCents > 0) {
+      await House.findOneAndUpdate(
+        { id: 'global' },
+        { $inc: { houseTotal: feeCents, withdrawalFees: feeCents } },
+        { upsert: true }
+      );
+      
+      await Ledger.create({
+        type: 'withdrawal_fee',
+        amount: feeAmount,
+        userId: req.userId,
+        meta: { 
+          grossAmount: amount,
+          feePercent: feePercent * 100,
+          feeAmount,
+          netAmount
+        }
+      });
+    }
+
+    // Log the withdrawal
+    await Ledger.create({
+      type: 'withdrawal',
+      amount: netAmount,
+      userId: req.userId,
+      meta: { 
+        grossAmount: amount,
+        feePercent: feePercent * 100,
+        feeAmount,
+        netAmount
+      }
+    });
+
+    console.log(`[WITHDRAW] User ${user.username} withdrew $${amount} (fee: $${feeAmount.toFixed(2)}, net: $${netAmount.toFixed(2)}), new balance: $${toDollars(user.balance)}`);
 
     res.json({ 
       success: true, 
       balance: toDollars(user.balance),
-      message: `Successfully withdrew $${amount}` 
+      grossAmount: amount,
+      feePercent: feePercent * 100,
+      feeAmount: Number(feeAmount.toFixed(2)),
+      netAmount: Number(netAmount.toFixed(2)),
+      message: feeAmount > 0 
+        ? `Withdrew $${netAmount.toFixed(2)} (${(feePercent * 100).toFixed(1)}% fee: $${feeAmount.toFixed(2)})`
+        : `Successfully withdrew $${amount} (no fee for $250k+ withdrawals)` 
     });
   } catch (err) {
     console.error('[POST /api/withdraw] error:', err);
     res.status(500).json({ success: false, error: "Server error" });
   }
+});
+
+// GET withdrawal fee info (for frontend display)
+app.get("/api/withdrawal-fees", (req, res) => {
+  res.json({
+    tiers: [
+      { min: 0, max: 999.99, feePercent: 2, label: 'Under $1,000' },
+      { min: 1000, max: 9999.99, feePercent: 1.5, label: '$1k – $10k' },
+      { min: 10000, max: 49999.99, feePercent: 1, label: '$10k – $50k' },
+      { min: 50000, max: 249999.99, feePercent: 0.5, label: '$50k – $250k' },
+      { min: 250000, max: null, feePercent: 0, label: '$250k+' },
+    ],
+    description: 'Withdrawal fees cover network + processing costs. Higher withdrawals = lower fees.',
+    vipNote: 'VIP members may qualify for reduced or zero fees.'
+  });
 });
 
 // ==========================================
@@ -1309,6 +1388,17 @@ app.post('/Divides/vote', auth, async (req, res) => {
   }
 });
 
+// Creator bonus tier calculator based on their personal contribution
+// Returns percentage of the 1% creator bonus pool they receive (0-100)
+function getCreatorBonusTier(creatorContribution) {
+  if (creatorContribution >= 50000) return 100;  // $50k+ → 100% of the 1%
+  if (creatorContribution >= 20000) return 80;   // $20k-$49,999 → 80%
+  if (creatorContribution >= 5000) return 60;    // $5k-$19,999 → 60%
+  if (creatorContribution >= 1000) return 40;    // $1k-$4,999 → 40%
+  if (creatorContribution >= 1) return 20;       // $1-$999 → 20%
+  return 0;                                       // $0 → 0% (house keeps all)
+}
+
 // END divide helper function
 async function endDivideById(divideId, userId) {
   try {
@@ -1325,18 +1415,43 @@ async function endDivideById(divideId, userId) {
     const totalWinnerVotes = winners.reduce((sum, w) => sum + w.voteCount, 0);
 
     const pot = Number(divide.pot);
-    const houseCut = pot * 0.02; // 2% house rake
-    const creatorCut = pot * 0.01; // 1% creator rake
-    const distributed = pot - houseCut - creatorCut;
+    
+    // RAKE STRUCTURE:
+    // - 2% House Fee (fixed, untouchable)
+    // - 1% Creator Bonus Pool (split between creator & house based on creator's skin-in-the-game)
+    // - 97% Winner Pool (untouchable, goes to minority side)
+    
+    const houseFee = pot * 0.02;           // 2% fixed house fee
+    const creatorBonusPool = pot * 0.01;   // 1% creator bonus pool
+    const winnerPool = pot * 0.97;         // 97% winner pool (sacred, never changes)
+    
+    // Calculate creator's contribution to the pot
+    let creatorContribution = 0;
+    if (divide.creatorId) {
+      const creatorVote = divide.votes.find(v => v.userId === divide.creatorId);
+      if (creatorVote) {
+        creatorContribution = creatorVote.voteCount || 0;
+      }
+    }
+    
+    // Get creator's tier percentage (0-100)
+    const creatorTierPercent = getCreatorBonusTier(creatorContribution);
+    
+    // Split the 1% creator bonus pool
+    const creatorCut = (creatorBonusPool * creatorTierPercent) / 100;
+    const houseFromCreatorPool = creatorBonusPool - creatorCut;
+    
+    // Total house take = 2% fixed + whatever creator didn't qualify for from the 1%
+    const totalHouseCut = houseFee + houseFromCreatorPool;
 
     await House.findOneAndUpdate(
       { id: 'global' },
-      { $inc: { houseTotal: toCents(houseCut) } },
+      { $inc: { houseTotal: toCents(totalHouseCut) } },
       { upsert: true }
     );
 
-    // Pay creator their 1% rake
-    if (divide.creatorId) {
+    // Pay creator their earned portion of the 1% bonus
+    if (divide.creatorId && creatorCut > 0) {
       await User.findByIdAndUpdate(
         divide.creatorId,
         { $inc: { balance: toCents(creatorCut) } }
@@ -1347,13 +1462,21 @@ async function endDivideById(divideId, userId) {
         amount: Number(creatorCut),
         userId: divide.creatorId,
         divideId: divide.id || divide._id,
-        meta: { pot, creatorCut }
+        meta: { 
+          pot, 
+          creatorCut, 
+          creatorContribution,
+          creatorTierPercent,
+          creatorBonusPool,
+          houseFromCreatorPool 
+        }
       });
     }
 
+    // Distribute 97% winner pool to minority side
     if (totalWinnerVotes > 0) {
       for (const w of winners) {
-        const share = (w.voteCount / totalWinnerVotes) * distributed;
+        const share = (w.voteCount / totalWinnerVotes) * winnerPool;
         const shareCents = toCents(share);
 
         await User.findByIdAndUpdate(w.userId, { $inc: { balance: shareCents } });
@@ -1363,7 +1486,7 @@ async function endDivideById(divideId, userId) {
           amount: Number(share),
           userId: w.userId,
           divideId: divide.id || divide._id,
-          meta: { side: winnerSide, pot, houseCut, creatorCut }
+          meta: { side: winnerSide, pot, houseFee, creatorCut, winnerPool }
         });
       }
     }
@@ -1375,9 +1498,11 @@ async function endDivideById(divideId, userId) {
       _id: divide._id, 
       winner: winnerSide, 
       pot: divide.pot, 
-      houseCut, 
-      creatorCut, 
-      distributed 
+      houseCut: totalHouseCut,
+      creatorCut,
+      creatorContribution,
+      creatorTierPercent,
+      winnerPool 
     });
 
     return { id: divide.id, winnerSide, pot: divide.pot };
