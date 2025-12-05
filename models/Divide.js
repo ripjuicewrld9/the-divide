@@ -66,6 +66,10 @@ const divideSchema = new mongoose.Schema({
   // Vote history for chart (revealed after divide ends)
   voteHistory: [{
     timestamp: { type: Date, default: Date.now },
+    username: { type: String },
+    userId: { type: String },
+    side: { type: String },
+    amount: { type: Number },
     shortsA: { type: Number, default: 0 },
     shortsB: { type: Number, default: 0 },
     pot: { type: Number, default: 0 },

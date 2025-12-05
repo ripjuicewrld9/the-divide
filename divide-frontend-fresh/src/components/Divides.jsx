@@ -320,7 +320,7 @@ export default function Divides({ onOpenChat }) {
 
   return (
     isMobile() ? (
-      <div className="divides-mobile-container px-2 py-2">
+      <div className="divides-mobile-container">
         {/* Mobile Header - only shows on mobile */}
         <MobileGameHeader title="Divides" onOpenChat={onOpenChat} className="md:hidden mb-4" />
         
@@ -466,6 +466,7 @@ export default function Divides({ onOpenChat }) {
                   dislikes={d.dislikes}
                   likedBy={d.likedBy}
                   dislikedBy={d.dislikedBy}
+                  voteHistory={d.voteHistory || []}
                   onVote={() => { }}
                   imageA={d.imageA}
                   imageB={d.imageB}
@@ -507,8 +508,8 @@ export default function Divides({ onOpenChat }) {
         />
       </div>
     ) : (
-      // Desktop layout (adapted from mobile)
-      <div className="divides-desktop-container px-8 py-8">
+      // Desktop layout - Centered like Polymarket
+      <div className="divides-desktop-container">
         {/* Premium Treasury Banner - Desktop */}
         {treasury && (
           <div style={{
@@ -651,6 +652,7 @@ export default function Divides({ onOpenChat }) {
                   dislikes={d.dislikes}
                   likedBy={d.likedBy}
                   dislikedBy={d.dislikedBy}
+                  voteHistory={d.voteHistory || []}
                   onVote={() => { }}
                   imageA={d.imageA}
                   imageB={d.imageB}

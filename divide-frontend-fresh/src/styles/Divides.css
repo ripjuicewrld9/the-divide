@@ -16,19 +16,30 @@
   color: #d4d4d4;
 }
 
-/* GRID – Fixed 4 columns, small cards */
+/* GRID – Centered single/double column like Polymarket */
 .divides-grid {
   display: grid;
-  gap: 12px;
+  gap: 16px;
   padding: 0;
-  max-width: 1400px;
+  max-width: 800px;
   margin: 0 auto;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(2, 1fr);
 }
-@media (max-width: 1200px) { .divides-grid { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 900px) { .divides-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 640px) { .divides-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 400px) { .divides-grid { grid-template-columns: 1fr; } }
+@media (max-width: 768px) { .divides-grid { grid-template-columns: 1fr; max-width: 420px; } }
+
+/* Desktop container - centered */
+.divides-desktop-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+/* Mobile container */
+.divides-mobile-container {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 16px 12px 100px;
+}
 
 /* CARD – Handled by inline styles in DivideCard.jsx */
 .divide-card {

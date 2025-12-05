@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { formatCurrency } from '../utils/format';
 import api from '../services/api';
+import DualLineChart from './DualLineChart';
 
 export default function DivideCard({
   divideId,
@@ -25,6 +26,7 @@ export default function DivideCard({
   dislikes = 0,
   likedBy = [],
   dislikedBy = [],
+  voteHistory = [],
   onVote,
   // eslint-disable-next-line no-unused-vars
   onRequestExpand,
@@ -628,6 +630,34 @@ export default function DivideCard({
               </span>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Vote History Chart - Only show for ended divides with history */}
+      {status !== 'active' && voteHistory && voteHistory.length > 1 && (
+        <div style={{
+          marginBottom: '12px',
+          padding: '12px',
+          borderRadius: '10px',
+          background: 'rgba(255, 255, 255, 0.02)',
+          border: '1px solid rgba(255, 255, 255, 0.04)',
+        }}>
+          <div style={{
+            fontSize: '9px',
+            fontWeight: '600',
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            color: 'rgba(255, 255, 255, 0.4)',
+            marginBottom: '8px',
+          }}>
+            Price History
+          </div>
+          <DualLineChart 
+            voteHistory={voteHistory}
+            optionALabel={left}
+            optionBLabel={right}
+            height={100}
+          />
         </div>
       )}
 
