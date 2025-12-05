@@ -362,12 +362,20 @@ app.post('/register', async (req, res) => {
 
 app.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Missing email or password' });
+    const { email, username, password } = req.body;
+    const identifier = email || username; // Accept either email or username
+    
+    if (!identifier || !password) {
+      return res.status(400).json({ error: 'Missing email/username or password' });
     }
 
-    const user = await User.findOne({ email });
+    // Try to find user by email or username
+    const user = await User.findOne({ 
+      $or: [
+        { email: identifier },
+        { username: identifier }
+      ]
+    });
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
@@ -378,7 +386,7 @@ app.post('/login', async (req, res) => {
     }
 
     if (user.twoFactorEnabled && user.twoFactorSecret) {
-      return res.json({ requiresTwoFactor: true, userId: user._id.toString() });
+      return res.json({ requires2FA: true, requiresTwoFactor: true, userId: user._id.toString() });
     }
 
     const token = jwt.sign({ userId: user._id.toString() }, JWT_SECRET, { expiresIn: '30d' });

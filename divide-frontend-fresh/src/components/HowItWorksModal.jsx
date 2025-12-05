@@ -68,47 +68,71 @@ export default function HowItWorksModal({ isOpen, onClose }) {
                 exit={{ opacity: 0, x: 20 }}
                 className="space-y-6"
               >
-                {/* The Pitch */}
+                {/* The Core Rule */}
                 <div className="p-5 rounded-xl bg-gradient-to-br from-red-500/10 via-purple-500/10 to-blue-500/10 border border-white/10">
-                  <h3 className="text-lg font-bold text-white mb-3">Create a Divide. Pick a side. Seed the pot.</h3>
-                  <p className="text-gray-300 text-sm leading-relaxed">
-                    iPhone vs Android · Trump vs Biden · Cats vs Dogs · <span className="text-gray-500">anything</span>
-                  </p>
-                  <p className="text-white font-semibold mt-3">
-                    The minority at the end wins <span className="text-green-400">97%</span> of the total pot.
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-yellow-400">⚠️</span>
+                    <h3 className="text-lg font-bold text-white">BLIND BETS — MINORITY WINS</h3>
+                  </div>
+                  <p className="text-white font-semibold">
+                    Every bet is a sacrifice. Win the money, lose the war. Win the war, lose the bet. <span className="text-gray-400">Pick your poison.</span>
                   </p>
                 </div>
 
-                {/* Two Ways to Play */}
+                {/* The Setup */}
+                <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                  <p className="text-gray-300 text-sm leading-relaxed">
+                    <span className="text-white font-semibold">Create a Divide.</span> Pick a side. Seed the pot.<br/>
+                    iPhone vs Android · Trump vs Biden · Cats vs Dogs · <span className="text-gray-500">anything tribal</span>
+                  </p>
+                  <p className="text-white font-semibold mt-3">
+                    The side with <span className="text-green-400">fewer bets</span> wins <span className="text-green-400">97%</span> of the pot. All bets are blind.
+                  </p>
+                </div>
+
+                {/* The Sacrifice - Three Scenarios */}
                 <div>
                   <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">
-                    Two ways to play — both are psychological warfare
+                    The Sacrifice — You Can't Have Both
                   </h3>
                   
                   <div className="space-y-4">
-                    {/* The Ego */}
+                    {/* Scenario 1 */}
                     <div className="p-4 rounded-xl bg-white/5 border border-white/10">
                       <div className="flex items-center gap-3 mb-3">
-                        <span className="w-8 h-8 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center font-bold">1</span>
-                        <h4 className="font-bold text-white">The Ego Play</h4>
+                        <span className="w-8 h-8 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center font-bold text-sm">1</span>
+                        <h4 className="font-bold text-white">The True Believer</h4>
                       </div>
                       <p className="text-gray-300 text-sm leading-relaxed">
-                        You actually believe Trump wins → you bet Trump<br/>
-                        <span className="text-gray-500">...then spend the entire timer trying to trick the world into piling Biden</span><br/>
-                        so Trump becomes the minority and <span className="text-green-400 font-semibold">eats the pot</span>
+                        You LOVE iPhones → you bet iPhone, hoping to be the minority<br/>
+                        <span className="text-gray-500">But if you WIN the money... it means most people DIDN'T pick iPhone</span><br/>
+                        <span className="text-yellow-400 font-semibold">You won cash but your tribe lost the popularity war</span> — ego wounded
                       </p>
                     </div>
 
-                    {/* The Short */}
+                    {/* Scenario 2 */}
                     <div className="p-4 rounded-xl bg-white/5 border border-white/10">
                       <div className="flex items-center gap-3 mb-3">
-                        <span className="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold">2</span>
-                        <h4 className="font-bold text-white">The Short Play</h4>
+                        <span className="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold text-sm">2</span>
+                        <h4 className="font-bold text-white">The Mercenary</h4>
                       </div>
                       <p className="text-gray-300 text-sm leading-relaxed">
-                        You think the herd is going Trump → you "short" Trump<br/>
-                        by betting Biden just to watch the sheep prove you right<br/>
-                        and <span className="text-green-400 font-semibold">cash out when Biden gets crushed</span>... or lose it all if you're wrong
+                        You think Android will be minority → you bet Android even though you're an iPhone person<br/>
+                        <span className="text-gray-500">If Android wins (minority), you get paid</span><br/>
+                        <span className="text-yellow-400 font-semibold">But you just funded the enemy and betrayed your tribe</span> — ego sacrificed for profit
+                      </p>
+                    </div>
+
+                    {/* Scenario 3 */}
+                    <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                      <div className="flex items-center gap-3 mb-3">
+                        <span className="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-sm">3</span>
+                        <h4 className="font-bold text-white">The Manipulator</h4>
+                      </div>
+                      <p className="text-gray-300 text-sm leading-relaxed">
+                        You bet your true side, then try to flip people to the other side<br/>
+                        <span className="text-gray-500">You're literally convincing people your thing sucks so you can profit</span><br/>
+                        <span className="text-yellow-400 font-semibold">You have to trash-talk your own belief to win</span> — ultimate ego death
                       </p>
                     </div>
                   </div>
@@ -116,15 +140,19 @@ export default function HowItWorksModal({ isOpen, onClose }) {
 
                 {/* The Stakes */}
                 <div className="p-5 rounded-xl bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20">
-                  <h3 className="font-bold text-white mb-3">Either way:</h3>
+                  <h3 className="font-bold text-white mb-3">The sacrifice is ALWAYS there:</h3>
                   <ul className="space-y-2 text-sm">
                     <li className="flex items-center gap-2">
-                      <span className="text-red-400">💀</span>
-                      <span className="text-gray-300">Someone's ego gets destroyed</span>
+                      <span className="text-green-400">💰</span>
+                      <span className="text-gray-300">Win money? <span className="text-white">Your side lost the social war.</span></span>
                     </li>
                     <li className="flex items-center gap-2">
-                      <span className="text-green-400">💰</span>
-                      <span className="text-gray-300">Someone eats potentially life-changing money</span>
+                      <span className="text-red-400">👑</span>
+                      <span className="text-gray-300">Win the social war? <span className="text-white">You lost your money.</span></span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="text-purple-400">🎭</span>
+                      <span className="text-gray-300">Try to manipulate? <span className="text-white">You betray your own beliefs publicly.</span></span>
                     </li>
                   </ul>
                 </div>
