@@ -426,6 +426,37 @@ app.post('/verify-2fa', async (req, res) => {
   }
 });
 
+// Public treasury endpoint - shows site volume to all users
+app.get('/api/treasury', async (req, res) => {
+  try {
+    // Calculate total deposits/withdrawals across all users
+    const userStats = await User.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalDeposited: { $sum: '$totalDeposited' },
+          totalWithdrawn: { $sum: '$totalWithdrawn' }
+        }
+      }
+    ]);
+
+    const totalDeposited = userStats.length > 0 ? (userStats[0].totalDeposited || 0) : 0;
+    const totalWithdrawn = userStats.length > 0 ? (userStats[0].totalWithdrawn || 0) : 0;
+
+    // Treasury = Total Deposited - Total Withdrawn (money still on platform)
+    const treasury = totalDeposited - totalWithdrawn;
+
+    res.json({
+      treasury: toDollars(treasury),
+      totalDeposited: toDollars(totalDeposited),
+      totalWithdrawn: toDollars(totalWithdrawn)
+    });
+  } catch (err) {
+    console.error('/api/treasury error', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 app.get('/api/me', auth, async (req, res) => {
   try {
     if (!req.userId) {
@@ -504,7 +535,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     await user.save();
 
     // Send email
-    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
+    const resetUrl = `${process.env.FRONTEND_URL || 'https://the-divide.onrender.com'}/reset-password?token=${resetToken}`;
     
     try {
       await emailTransporter.sendMail({
@@ -583,10 +614,10 @@ app.post('/api/auth/reset-password', async (req, res) => {
 // DISCORD OAUTH FOR ACCOUNT LINKING
 // ==========================================
 
-// Step 1: Redirect to Discord OAuth
+// Step 1: Redirect to Discord OAuth (Account Linking)
 app.get('/auth/discord', (req, res) => {
   const clientId = process.env.DISCORD_CLIENT_ID;
-  const redirectUri = encodeURIComponent(process.env.DISCORD_REDIRECT_URI || 'http://localhost:3000/auth/discord/callback');
+  const redirectUri = encodeURIComponent(process.env.DISCORD_REDIRECT_URI || 'https://the-divide.onrender.com/auth/discord/callback');
   const scope = encodeURIComponent('identify');
   
   const discordAuthUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
@@ -598,7 +629,7 @@ app.get('/auth/discord/callback', async (req, res) => {
   const { code } = req.query;
   
   if (!code) {
-    return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=discord_auth_failed`);
+    return res.redirect(`${process.env.FRONTEND_URL || 'https://the-divide.onrender.com'}?error=discord_auth_failed`);
   }
 
   try {
@@ -613,7 +644,7 @@ app.get('/auth/discord/callback', async (req, res) => {
         client_secret: process.env.DISCORD_CLIENT_SECRET,
         grant_type: 'authorization_code',
         code: code,
-        redirect_uri: process.env.DISCORD_REDIRECT_URI || 'http://localhost:3000/auth/discord/callback',
+        redirect_uri: process.env.DISCORD_REDIRECT_URI || 'https://the-divide.onrender.com/auth/discord/callback',
       }),
     });
 
@@ -621,7 +652,7 @@ app.get('/auth/discord/callback', async (req, res) => {
 
     if (!tokenData.access_token) {
       console.error('Discord OAuth error:', tokenData);
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=discord_token_failed`);
+      return res.redirect(`${process.env.FRONTEND_URL || 'https://the-divide.onrender.com'}?error=discord_token_failed`);
     }
 
     // Get user info from Discord
@@ -635,7 +666,7 @@ app.get('/auth/discord/callback', async (req, res) => {
 
     if (!discordUser.id) {
       console.error('Failed to get Discord user:', discordUser);
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=discord_user_failed`);
+      return res.redirect(`${process.env.FRONTEND_URL || 'https://the-divide.onrender.com'}?error=discord_user_failed`);
     }
 
     // Create a temporary token to link this Discord account to website account
@@ -650,10 +681,10 @@ app.get('/auth/discord/callback', async (req, res) => {
     );
 
     // Redirect back to frontend with the link token
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/profile?discord_link=${linkToken}`);
+    res.redirect(`${process.env.FRONTEND_URL || 'https://the-divide.onrender.com'}/profile?discord_link=${linkToken}`);
   } catch (error) {
     console.error('Discord OAuth error:', error);
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=discord_oauth_error`);
+    res.redirect(`${process.env.FRONTEND_URL || 'https://the-divide.onrender.com'}?error=discord_oauth_error`);
   }
 });
 
@@ -718,7 +749,7 @@ app.get('/auth/discord/login/callback', async (req, res) => {
   const { code } = req.query;
   
   if (!code) {
-    return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=discord_login_failed`);
+    return res.redirect(`${process.env.FRONTEND_URL || 'https://the-divide.onrender.com'}?error=discord_login_failed`);
   }
 
   try {
@@ -741,7 +772,7 @@ app.get('/auth/discord/login/callback', async (req, res) => {
 
     if (!tokenData.access_token) {
       console.error('Discord login error:', tokenData);
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=discord_token_failed`);
+      return res.redirect(`${process.env.FRONTEND_URL || 'https://the-divide.onrender.com'}?error=discord_token_failed`);
     }
 
     // Get user info from Discord
@@ -755,7 +786,7 @@ app.get('/auth/discord/login/callback', async (req, res) => {
 
     if (!discordUser.id) {
       console.error('Failed to get Discord user:', discordUser);
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=discord_user_failed`);
+      return res.redirect(`${process.env.FRONTEND_URL || 'https://the-divide.onrender.com'}?error=discord_user_failed`);
     }
 
     // Check if user exists with this Discord ID
@@ -780,10 +811,10 @@ app.get('/auth/discord/login/callback', async (req, res) => {
     const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '30d' });
 
     // Redirect to frontend with token
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?discord_login=${token}`);
+    res.redirect(`${process.env.FRONTEND_URL || 'https://the-divide.onrender.com'}?discord_login=${token}`);
   } catch (error) {
     console.error('Discord login error:', error);
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=discord_login_error`);
+    res.redirect(`${process.env.FRONTEND_URL || 'https://the-divide.onrender.com'}?error=discord_login_error`);
   }
 });
 
@@ -807,7 +838,7 @@ app.get('/auth/google/login/callback', async (req, res) => {
   
   if (!code) {
     console.error('❌ No authorization code received from Google');
-    return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=google_login_failed`);
+    return res.redirect(`${process.env.FRONTEND_URL || 'https://the-divide.onrender.com'}?error=google_login_failed`);
   }
 
   try {
@@ -830,7 +861,7 @@ app.get('/auth/google/login/callback', async (req, res) => {
 
     if (!tokenData.access_token) {
       console.error('❌ Google login error:', tokenData);
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=google_token_failed`);
+      return res.redirect(`${process.env.FRONTEND_URL || 'https://the-divide.onrender.com'}?error=google_token_failed`);
     }
 
     // Get user info from Google
@@ -844,7 +875,7 @@ app.get('/auth/google/login/callback', async (req, res) => {
 
     if (!googleUser.id) {
       console.error('❌ Failed to get Google user:', googleUser);
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=google_user_failed`);
+      return res.redirect(`${process.env.FRONTEND_URL || 'https://the-divide.onrender.com'}?error=google_user_failed`);
     }
 
     // Check if user exists with this Google ID
@@ -869,10 +900,10 @@ app.get('/auth/google/login/callback', async (req, res) => {
     const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '30d' });
 
     // Redirect to frontend with token
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?google_login=${token}`);
+    res.redirect(`${process.env.FRONTEND_URL || 'https://the-divide.onrender.com'}?google_login=${token}`);
   } catch (error) {
     console.error('❌ Google login error:', error);
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=google_login_error`);
+    res.redirect(`${process.env.FRONTEND_URL || 'https://the-divide.onrender.com'}?error=google_login_error`);
   }
 });
 
@@ -1402,10 +1433,14 @@ app.post('/divides/vote', auth, async (req, res) => {
     else divide.votesB += shortAmount;
     divide.pot = Number((divide.pot + boostAmount).toFixed(2));
 
-    // Track vote history for chart (revealed after divide ends)
+    // Track vote history for chart + transparency (revealed after divide ends)
     if (!divide.voteHistory) divide.voteHistory = [];
     divide.voteHistory.push({
       timestamp: new Date(),
+      username: user.username,
+      userId: req.userId,
+      side: side,
+      amount: boostAmount,
       shortsA: divide.votesA,
       shortsB: divide.votesB,
       pot: divide.pot,
@@ -1495,10 +1530,14 @@ app.post('/Divides/vote', auth, async (req, res) => {
     else divide.votesB += shortAmount;
     divide.pot = Number((divide.pot + boostAmount).toFixed(2));
 
-    // Track vote history for chart (revealed after divide ends)
+    // Track vote history for chart + transparency (revealed after divide ends)
     if (!divide.voteHistory) divide.voteHistory = [];
     divide.voteHistory.push({
       timestamp: new Date(),
+      username: user.username,
+      userId: req.userId,
+      side: side,
+      amount: boostAmount,
       shortsA: divide.votesA,
       shortsB: divide.votesB,
       pot: divide.pot,
@@ -1582,16 +1621,23 @@ async function endDivideById(divideId, userId) {
     // Get creator's tier percentage (0-100)
     const creatorTierPercent = getCreatorBonusTier(creatorContribution);
     
-    // Split the 1% creator bonus pool
+    // Split the 0.5% creator bonus pool
     const creatorCut = (creatorBonusPool * creatorTierPercent) / 100;
     const houseFromCreatorPool = creatorBonusPool - creatorCut;
     
-    // Total house take = 2% fixed + whatever creator didn't qualify for from the 1%
+    // Total house take = 2.5% fixed + whatever creator didn't qualify for from the 0.5%
     const totalHouseCut = houseFee + houseFromCreatorPool;
 
+    // Track house revenue with breakdown
     await House.findOneAndUpdate(
       { id: 'global' },
-      { $inc: { houseTotal: toCents(totalHouseCut) } },
+      { 
+        $inc: { 
+          houseTotal: toCents(totalHouseCut),
+          potFees: toCents(houseFee),              // 2.5% pot fee
+          creatorPoolKept: toCents(houseFromCreatorPool)  // Portion of 0.5% creator pool
+        } 
+      },
       { upsert: true }
     );
 
@@ -1891,6 +1937,50 @@ app.get('/api/divides/:id', async (req, res) => {
   }
 });
 
+// GET recent completed divides ("Recent Eats" - last 10 finished divides)
+app.get('/api/divides/recent-eats', async (req, res) => {
+  try {
+    const recentDivides = await Divide.find({ status: 'ended' })
+      .sort({ endTime: -1 })
+      .limit(10)
+      .lean();
+
+    // Calculate stats for each divide
+    const results = recentDivides.map(d => {
+      const totalA = d.totalA || 0;
+      const totalB = d.totalB || 0;
+      const pot = totalA + totalB;
+      const winnerSide = d.winnerSide;
+      const loserSide = d.loserSide || (winnerSide === 'A' ? 'B' : 'A');
+      
+      // Count unique winners
+      const winnerVotes = (d.voteHistory || []).filter(v => v.side === winnerSide);
+      const winnerCount = new Set(winnerVotes.map(v => v.oddsMultiplier ? v.oddsMultiplier.oddsAt : v.oddsAt)).size || winnerVotes.length;
+      
+      // Calculate minority percentage (what % of pot was on minority/winning side)
+      const minorityAmount = winnerSide === 'A' ? totalA : totalB;
+      const minorityPct = pot > 0 ? Math.round((minorityAmount / pot) * 100) : 0;
+
+      return {
+        _id: d._id,
+        title: d.title,
+        optionA: d.optionA,
+        optionB: d.optionB,
+        pot: pot,
+        winnerSide: winnerSide,
+        winnerCount: winnerVotes.length,
+        minorityPct: minorityPct,
+        endTime: d.endTime,
+      };
+    });
+
+    res.json(results);
+  } catch (err) {
+    console.error('GET /api/divides/recent-eats', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // GET comments for a divide
 app.get('/api/divides/:id/comments', async (req, res) => {
   try {
@@ -2121,22 +2211,32 @@ app.get('/admin/finance', auth, adminOnly, async (req, res) => {
         $group: {
           _id: null,
           totalDeposited: { $sum: '$totalDeposited' },
-          totalWithdrawn: { $sum: '$totalWithdrawn' }
+          totalWithdrawn: { $sum: '$totalWithdrawn' },
+          totalBalance: { $sum: '$balance' }
         }
       }
     ]);
 
     const totalDeposited = userStats.length > 0 ? (userStats[0].totalDeposited || 0) : 0;
     const totalWithdrawn = userStats.length > 0 ? (userStats[0].totalWithdrawn || 0) : 0;
+    const totalUserBalances = userStats.length > 0 ? (userStats[0].totalBalance || 0) : 0;
 
     // Count total redemptions
     const redemptionCount = await Ledger.countDocuments({ type: 'withdrawal' });
 
+    // Treasury = Total Deposited - Total Withdrawn (money still on platform)
+    const treasury = totalDeposited - totalWithdrawn;
+
     res.json({
       global: {
         houseTotal: toDollars(house?.houseTotal || 0),
+        potFees: toDollars(house?.potFees || 0),
+        creatorPoolKept: toDollars(house?.creatorPoolKept || 0),
+        withdrawalFees: toDollars(house?.withdrawalFees || 0),
         totalDeposited: toDollars(totalDeposited),
         totalWithdrawn: toDollars(totalWithdrawn),
+        treasury: toDollars(treasury),
+        totalUserBalances: toDollars(totalUserBalances),
         totalRedemptions: redemptionCount,
         totalRedemptionAmount: toDollars(totalWithdrawn)
       },

@@ -3,6 +3,12 @@ import mongoose from 'mongoose';
 const houseSchema = new mongoose.Schema({
   id: { type: String, default: 'global', index: true },
   houseTotal: { type: Number, default: 0 },
+  
+  // Revenue breakdown (all in cents)
+  potFees: { type: Number, default: 0 },           // 2.5% from Divide pots
+  creatorPoolKept: { type: Number, default: 0 },   // Portion of 0.5% creator pool house keeps
+  withdrawalFees: { type: Number, default: 0 },    // Tiered withdrawal fees
+  
   totalRedemptions: { type: Number, default: 0 }, // count of all user withdrawals
   totalRedemptionAmount: { type: Number, default: 0 }, // total amount withdrawn in cents
   

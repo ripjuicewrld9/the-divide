@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { io } from "socket.io-client";
 import DivideCard from "./DivideCard";
 import CategoryNav from "./CategoryNav";
+import RecentEats from "./RecentEats";
 // Wide modal removed: no pop-out live duet card
 import CreateDivideModal from './CreateDivideModal';
 import VoteWithBetModal from './VoteWithBetModal';
@@ -37,6 +38,7 @@ export default function Divides({ onOpenChat }) {
   const [showCreateDivideModal, setShowCreateDivideModal] = useState(false);
   const [showVoteBetModal, setShowVoteBetModal] = useState(false);
   const [selectedDivideForVote, setSelectedDivideForVote] = useState(null);
+  const [treasury, setTreasury] = useState(null);
   // audio pool: keep a small pool of HTMLAudioElement instances per URL to minimize latency and overlapping clipping
   const audioPoolRef = useRef(new Map()); // url -> { pool: HTMLAudioElement[], idx: number }
   const POOL_SIZE = 3;
@@ -140,8 +142,23 @@ export default function Divides({ onOpenChat }) {
     fetchDivides(category);
   };
 
+  // Fetch treasury data
+  const fetchTreasury = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/treasury`);
+      const data = await res.json();
+      setTreasury(data);
+    } catch (err) {
+      console.error('Failed to fetch treasury:', err);
+    }
+  };
+
   useEffect(() => {
     fetchDivides();
+    fetchTreasury();
+    // Refresh treasury every 30 seconds
+    const treasuryInterval = setInterval(fetchTreasury, 30000);
+    return () => clearInterval(treasuryInterval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -303,11 +320,7 @@ export default function Divides({ onOpenChat }) {
 
   return (
     isMobile() ? (
-      <div className="divides-mobile-container px-2 py-2">
-        {/* Mobile Header - only shows on mobile */}
-        <MobileGameHeader title="Divides" onOpenChat={onOpenChat} className="md:hidden mb-4" />
-        
-        {/* Category Navigation */}
+      <div className=\"divides-mobile-container px-2 py-2\">\n        {/* Mobile Header - only shows on mobile */}\n        <MobileGameHeader title=\"Divides\" onOpenChat={onOpenChat} className=\"md:hidden mb-4\" />\n        \n        {/* Live Treasury Banner */}\n        {treasury && (\n          <div style={{\n            background: 'linear-gradient(135deg, rgba(30, 136, 229, 0.15) 0%, rgba(229, 57, 53, 0.15) 100%)',\n            border: '1px solid rgba(41, 121, 255, 0.3)',\n            borderRadius: '12px',\n            padding: '12px 16px',\n            marginBottom: '16px',\n            display: 'flex',\n            alignItems: 'center',\n            justifyContent: 'space-between',\n          }}>\n            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>\n              <span style={{ fontSize: '20px' }}>\ud83c\udfe6</span>\n              <div>\n                <div style={{ fontSize: '10px', color: '#888', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Live Treasury</div>\n                <div style={{\n                  fontSize: '20px',\n                  fontWeight: '900',\n                  background: 'linear-gradient(90deg, #4ade80 0%, #22d3ee 100%)',\n                  WebkitBackgroundClip: 'text',\n                  WebkitTextFillColor: 'transparent',\n                  backgroundClip: 'text',\n                }}>\n                  ${formatCurrency(treasury.treasury || 0, 0)}\n                </div>\n              </div>\n            </div>\n            <div style={{ fontSize: '9px', color: '#666', textAlign: 'right' }}>\n              <div>\u2191 ${formatCurrency(treasury.totalDeposited || 0, 0)} in</div>\n              <div>\u2193 ${formatCurrency(treasury.totalWithdrawn || 0, 0)} out</div>\n            </div>\n          </div>\n        )}\n        \n        {/* Category Navigation */}", "oldString": "    isMobile() ? (\n      <div className=\"divides-mobile-container px-2 py-2\">\n        {/* Mobile Header - only shows on mobile */}\n        <MobileGameHeader title=\"Divides\" onOpenChat={onOpenChat} className=\"md:hidden mb-4\" />\n        \n        {/* Category Navigation */}"}
         <CategoryNav activeCategory={activeCategory} onCategoryChange={handleCategoryChange} />
         
         <div className="create-divide-section flex justify-center mb-4">
@@ -361,6 +374,10 @@ export default function Divides({ onOpenChat }) {
             />
           ))}
         </div>
+        
+        {/* Recent Eats - Last 10 completed divides */}
+        <RecentEats />
+        
         {previousDivides.length > 0 && (
           <section className="previous-divides-mobile mt-6">
             <h3 className="text-lg font-bold text-gray-300 mb-2">Previous Divides</h3>
@@ -427,6 +444,50 @@ export default function Divides({ onOpenChat }) {
     ) : (
       // Desktop layout (adapted from mobile)
       <div className="divides-desktop-container px-8 py-8">
+        {/* Live Treasury Banner */}
+        {treasury && (
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(30, 136, 229, 0.1) 0%, rgba(229, 57, 53, 0.1) 100%)',
+            border: '1px solid rgba(41, 121, 255, 0.2)',
+            borderRadius: '16px',
+            padding: '20px 32px',
+            marginBottom: '24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <span style={{ fontSize: '32px' }}>🏦</span>
+              <div>
+                <div style={{ fontSize: '11px', color: '#888', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>
+                  Live Site Treasury
+                  <span style={{ marginLeft: '8px', padding: '2px 8px', background: 'rgba(74, 222, 128, 0.2)', color: '#4ade80', borderRadius: '10px', fontSize: '9px', fontWeight: '700' }}>LIVE</span>
+                </div>
+                <div style={{
+                  fontSize: '32px',
+                  fontWeight: '900',
+                  background: 'linear-gradient(90deg, #4ade80 0%, #22d3ee 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                }}>
+                  ${formatCurrency(treasury.treasury || 0, 0)}
+                </div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '32px' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '10px', color: '#666', textTransform: 'uppercase', marginBottom: '4px' }}>Total Deposited</div>
+                <div style={{ fontSize: '18px', fontWeight: '700', color: '#4ade80' }}>${formatCurrency(treasury.totalDeposited || 0, 0)}</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '10px', color: '#666', textTransform: 'uppercase', marginBottom: '4px' }}>Total Withdrawn</div>
+                <div style={{ fontSize: '18px', fontWeight: '700', color: '#f87171' }}>${formatCurrency(treasury.totalWithdrawn || 0, 0)}</div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Category Navigation */}
         <CategoryNav activeCategory={activeCategory} onCategoryChange={handleCategoryChange} />
         
@@ -481,6 +542,10 @@ export default function Divides({ onOpenChat }) {
             />
           ))}
         </div>
+        
+        {/* Recent Eats - Last 10 completed divides */}
+        <RecentEats />
+        
         {previousDivides.length > 0 && (
           <section className="previous-divides-desktop mt-10">
             <h3 className="text-xl font-bold text-gray-300 mb-4">Previous Divides</h3>

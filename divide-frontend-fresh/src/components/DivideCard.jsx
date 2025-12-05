@@ -41,6 +41,9 @@ export default function DivideCard({
     const delta = Math.floor((new Date(endTime) - Date.now()) / 1000);
     return Math.max(0, delta);
   });
+  
+  // Lock betting in last 5 seconds
+  const isLocked = status === 'active' && seconds > 0 && seconds <= 5;
 
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -100,6 +103,7 @@ export default function DivideCard({
   const handleStartEdit = (side, e) => {
     e.stopPropagation();
     if (status !== 'active') return;
+    if (isLocked) return; // Betting locked in final 5 seconds
     setEditingSide(side);
     setBetAmount('');
   };
@@ -165,14 +169,36 @@ export default function DivideCard({
         boxShadow: isHovered ? '0 4px 20px rgba(0,0,0,0.3)' : 'none',
       }}
     >
-      {/* Header: Category + Timer */}
+      {/* Header: Category + PROMINENT Timer */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
         <span style={{ fontSize: '9px', fontWeight: '600', color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
           {category}
         </span>
-        <span style={{ fontSize: '9px', fontWeight: '500', color: status === 'ended' ? '#e53935' : '#888' }}>
-          {status === 'active' ? formatTime(seconds) : 'Ended'}
-        </span>
+        {status === 'active' ? (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            background: seconds <= 60 ? 'rgba(229, 57, 53, 0.15)' : 'rgba(41, 121, 255, 0.1)',
+            border: `1px solid ${seconds <= 60 ? 'rgba(229, 57, 53, 0.3)' : 'rgba(41, 121, 255, 0.2)'}`,
+            padding: '3px 8px',
+            borderRadius: '12px',
+          }}>
+            <span style={{ fontSize: '10px' }}>⏱️</span>
+            <span style={{ 
+              fontSize: '11px', 
+              fontWeight: '700', 
+              color: seconds <= 60 ? '#e53935' : '#2979ff',
+              fontFamily: 'monospace',
+            }}>
+              {formatTime(seconds)}
+            </span>
+          </div>
+        ) : (
+          <span style={{ fontSize: '9px', fontWeight: '600', color: '#e53935', background: 'rgba(229, 57, 53, 0.1)', padding: '3px 8px', borderRadius: '12px' }}>
+            ENDED
+          </span>
+        )}
       </div>
 
       {/* Title */}
@@ -191,8 +217,58 @@ export default function DivideCard({
         {title}
       </div>
 
+      {/* FINAL COUNTDOWN OVERLAY - Last 5 seconds */}
+      {isLocked && (
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.85)',
+          borderRadius: '8px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10,
+          animation: 'pulse 0.5s ease-in-out infinite',
+        }}>
+          <div style={{
+            fontSize: '10px',
+            fontWeight: '600',
+            color: '#ff1744',
+            textTransform: 'uppercase',
+            letterSpacing: '2px',
+            marginBottom: '8px',
+            animation: 'blink 1s ease-in-out infinite',
+          }}>
+            🔒 BETS LOCKED
+          </div>
+          <div style={{
+            fontSize: '64px',
+            fontWeight: '900',
+            background: 'linear-gradient(135deg, #ff1744 0%, #2979ff 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            textShadow: '0 0 40px rgba(255, 23, 68, 0.5)',
+            lineHeight: 1,
+          }}>
+            {seconds}
+          </div>
+          <div style={{
+            fontSize: '11px',
+            color: '#888',
+            marginTop: '8px',
+          }}>
+            Revealing winner...
+          </div>
+        </div>
+      )}
+
       {/* Options - Red vs Blue style rows */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px', opacity: isLocked ? 0.3 : 1, pointerEvents: isLocked ? 'none' : 'auto' }}>
         {/* Option A - RED */}
         <div
           onClick={(e) => handleStartEdit('left', e)}
@@ -202,7 +278,7 @@ export default function DivideCard({
             justifyContent: 'space-between',
             padding: editingSide === 'left' ? '6px 10px' : '10px 12px',
             borderRadius: '6px',
-            cursor: status === 'active' ? 'pointer' : 'default',
+            cursor: (status === 'active' && !isLocked) ? 'pointer' : 'default',
             transition: 'all 0.12s ease',
             background: editingSide === 'left' 
               ? 'linear-gradient(90deg, #ff1744 0%, #d50000 100%)' 
@@ -253,7 +329,7 @@ export default function DivideCard({
             justifyContent: 'space-between',
             padding: editingSide === 'right' ? '6px 10px' : '10px 12px',
             borderRadius: '6px',
-            cursor: status === 'active' ? 'pointer' : 'default',
+            cursor: (status === 'active' && !isLocked) ? 'pointer' : 'default',
             transition: 'all 0.12s ease',
             background: editingSide === 'right'
               ? 'linear-gradient(90deg, #2979ff 0%, #0d47a1 100%)'
@@ -296,11 +372,32 @@ export default function DivideCard({
         </div>
       </div>
 
-      {/* Footer: Volume + Reactions */}
+      {/* Footer: PROMINENT Pot + Reactions */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '1px solid #2a2a30' }}>
-        <span style={{ fontSize: '11px', color: '#666' }}>
-          <span style={{ color: '#e53935', fontWeight: '600' }}>${formatCurrency(pot, 0)}</span> Vol
-        </span>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          background: 'linear-gradient(135deg, rgba(229, 57, 53, 0.15) 0%, rgba(41, 121, 255, 0.15) 100%)',
+          border: '1px solid rgba(229, 57, 53, 0.2)',
+          padding: '6px 12px',
+          borderRadius: '8px',
+        }}>
+          <span style={{ fontSize: '12px' }}>💰</span>
+          <div>
+            <div style={{ fontSize: '8px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Pot</div>
+            <div style={{ 
+              fontSize: '16px', 
+              fontWeight: '900',
+              background: 'linear-gradient(90deg, #e53935 0%, #2979ff 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}>
+              ${formatCurrency(pot, 0)}
+            </div>
+          </div>
+        </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button 
             onClick={handleLike}

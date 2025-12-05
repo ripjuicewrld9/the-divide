@@ -40,164 +40,189 @@ export default function AdminFinance() {
   if (error) return <div className="p-8 text-red-400">Error: {error}</div>;
   if (!data) return <div className="p-8 text-white">No data available</div>;
 
-  const { global, games } = data;
-  
-  // Null safety: ensure games object exists and is not null
-  const safeGames = games && typeof games === 'object' ? games : {};
+  const { global } = data;
 
   return (
-    <div className="min-h-screen bg-[#0b0b0b] p-8 text-white">
+    <div className="min-h-screen bg-[#0a0a0a] p-8 text-white">
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h2 className="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent">
+          <h2 className="text-3xl font-bold" style={{ 
+            background: 'linear-gradient(90deg, #ff1744 0%, #2979ff 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+          }}>
             Admin Finance
           </h2>
-          <p className="text-gray-400 mt-1">PnL & Jackpot Tracking</p>
+          <p className="text-gray-400 mt-1">Revenue & Treasury Tracking</p>
         </div>
         <div className="flex gap-3">
           <button
             onClick={() => navigate('/admin')}
-            className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+            className="px-4 py-2 rounded-lg bg-[#111] border border-[#1a1a1a] hover:bg-[#161616] transition-colors"
           >
             Back
           </button>
           <button
             onClick={() => window.location.reload()}
-            className="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 transition-colors font-bold"
+            className="px-4 py-2 rounded-lg font-bold text-white transition-colors"
+            style={{ background: 'linear-gradient(135deg, #e53935 0%, #1e88e5 100%)' }}
           >
             Refresh
           </button>
         </div>
       </div>
 
-      {/* Global Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <div className="bg-[#151515] border border-white/10 rounded-2xl p-6 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <span className="text-6xl">🎰</span>
+      {/* Live Treasury - Hero Card */}
+      <div className="bg-gradient-to-br from-[#1a1a2e] to-[#16213e] border border-[#2979ff]/30 rounded-2xl p-8 mb-8 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-[#2979ff]/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-[#ff1744]/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+        <div className="relative z-10">
+          <div className="flex items-center gap-3 mb-2">
+            <span className="text-3xl">🏦</span>
+            <h3 className="text-gray-300 font-medium text-lg">Live Treasury</h3>
+            <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs font-bold rounded-full animate-pulse">LIVE</span>
           </div>
-          <h3 className="text-gray-400 font-medium mb-2">Global Jackpot Pool</h3>
-          <div className="text-4xl font-bold text-yellow-400">
-            ${formatCurrency(global.jackpotAmount || 0, 2)}
+          <div className="text-5xl font-black mb-2" style={{ 
+            background: 'linear-gradient(90deg, #4ade80 0%, #22d3ee 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+          }}>
+            ${formatCurrency(global.treasury || 0, 2)}
           </div>
-          <div className="text-sm text-gray-500 mt-2">
-            Accumulated from 1% of all bets
+          <p className="text-gray-500 text-sm">
+            Total money on platform (Deposits - Withdrawals)
+          </p>
+          <div className="mt-4 flex gap-6 text-sm">
+            <div>
+              <span className="text-gray-500">Total Deposited:</span>
+              <span className="text-green-400 font-bold ml-2">${formatCurrency(global.totalDeposited || 0, 2)}</span>
+            </div>
+            <div>
+              <span className="text-gray-500">Total Withdrawn:</span>
+              <span className="text-red-400 font-bold ml-2">${formatCurrency(global.totalWithdrawn || 0, 2)}</span>
+            </div>
+            <div>
+              <span className="text-gray-500">User Balances:</span>
+              <span className="text-blue-400 font-bold ml-2">${formatCurrency(global.totalUserBalances || 0, 2)}</span>
+            </div>
           </div>
         </div>
+      </div>
 
-        <div className="bg-[#151515] border border-white/10 rounded-2xl p-6 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <span className="text-6xl">🏠</span>
+      {/* Revenue Breakdown */}
+      <h3 className="text-xl font-bold text-white mb-4">💰 House Revenue Breakdown</h3>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        {/* Total House Revenue */}
+        <div className="bg-[#111] border border-[#1a1a1a] rounded-xl p-5 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+            <span className="text-4xl">🏠</span>
           </div>
-          <h3 className="text-gray-400 font-medium mb-2">Total House Profit</h3>
-          <div className="text-4xl font-bold text-emerald-400">
+          <h4 className="text-gray-400 font-medium text-sm mb-1">Total House Revenue</h4>
+          <div className="text-3xl font-bold text-emerald-400">
             ${formatCurrency(global.houseTotal || 0, 2)}
           </div>
-          <div className="text-sm text-gray-500 mt-2">
-            Net profit after payouts and jackpot fees
+          <div className="text-xs text-gray-500 mt-1">All-time earnings</div>
+        </div>
+
+        {/* Pot Fees (2.5%) */}
+        <div className="bg-[#111] border border-[#1a1a1a] rounded-xl p-5 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+            <span className="text-4xl">🎯</span>
           </div>
+          <h4 className="text-gray-400 font-medium text-sm mb-1">Pot Fees (2.5%)</h4>
+          <div className="text-3xl font-bold text-blue-400">
+            ${formatCurrency(global.potFees || 0, 2)}
+          </div>
+          <div className="text-xs text-gray-500 mt-1">From Divide pots</div>
+        </div>
+
+        {/* Creator Pool Kept */}
+        <div className="bg-[#111] border border-[#1a1a1a] rounded-xl p-5 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+            <span className="text-4xl">👤</span>
+          </div>
+          <h4 className="text-gray-400 font-medium text-sm mb-1">Creator Pool Kept</h4>
+          <div className="text-3xl font-bold text-purple-400">
+            ${formatCurrency(global.creatorPoolKept || 0, 2)}
+          </div>
+          <div className="text-xs text-gray-500 mt-1">Unclaimed from 0.5%</div>
+        </div>
+
+        {/* Withdrawal Fees */}
+        <div className="bg-[#111] border border-[#1a1a1a] rounded-xl p-5 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+            <span className="text-4xl">💸</span>
+          </div>
+          <h4 className="text-gray-400 font-medium text-sm mb-1">Withdrawal Fees</h4>
+          <div className="text-3xl font-bold text-orange-400">
+            ${formatCurrency(global.withdrawalFees || 0, 2)}
+          </div>
+          <div className="text-xs text-gray-500 mt-1">Tiered fee revenue</div>
         </div>
       </div>
 
-      {/* Per-Game PnL Table */}
-      <div className="bg-[#151515] border border-white/10 rounded-2xl overflow-hidden">
-        <div className="p-6 border-b border-white/10">
-          <h3 className="text-xl font-bold">Game Performance (PnL)</h3>
+      {/* Player Transactions */}
+      <h3 className="text-xl font-bold text-white mb-4">📊 Player Transactions</h3>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="bg-[#111] border border-[#1a1a1a] rounded-xl p-5 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+            <span className="text-4xl">💳</span>
+          </div>
+          <h4 className="text-gray-400 font-medium text-sm mb-1">Total Deposits</h4>
+          <div className="text-3xl font-bold text-green-400">
+            ${formatCurrency(global.totalDeposited || 0, 2)}
+          </div>
+          <div className="text-xs text-gray-500 mt-1">GC purchases by players</div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead className="bg-white/5 text-gray-400 text-sm uppercase">
-              <tr>
-                <th className="px-6 py-4 font-medium">Game</th>
-                <th className="px-6 py-4 font-medium text-right">Handle (Bets)</th>
-                <th className="px-6 py-4 font-medium text-right">Payouts (Wins)</th>
-                <th className="px-6 py-4 font-medium text-right text-yellow-500">Jackpot Fee (1%)</th>
-                <th className="px-6 py-4 font-medium text-right text-emerald-500">House Profit</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5">
-              {Object.entries(safeGames).map(([gameKey, stats]) => (
-                <tr key={gameKey} className="hover:bg-white/5 transition-colors">
-                  <td className="px-6 py-4 font-bold capitalize">{gameKey}</td>
-                  <td className="px-6 py-4 text-right font-mono text-gray-300">
-                    ${formatCurrency(stats.handle || 0, 2)}
-                  </td>
-                  <td className="px-6 py-4 text-right font-mono text-red-400">
-                    -${formatCurrency(stats.payouts || 0, 2)}
-                  </td>
-                  <td className="px-6 py-4 text-right font-mono text-yellow-400">
-                    ${formatCurrency(stats.jackpotFee || 0, 2)}
-                  </td>
-                  <td className={`px-6 py-4 text-right font-mono font-bold ${stats.houseProfit >= 0 ? 'text-emerald-400' : 'text-red-500'}`}>
-                    ${formatCurrency(stats.houseProfit || 0, 2)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot className="bg-white/5 font-bold">
-              <tr>
-                <td className="px-6 py-4">TOTAL</td>
-                <td className="px-6 py-4 text-right text-gray-300">
-                  ${formatCurrency(Object.values(safeGames).reduce((acc, g) => acc + (g?.handle || 0), 0), 2)}
-                </td>
-                <td className="px-6 py-4 text-right text-red-400">
-                  -${formatCurrency(Object.values(safeGames).reduce((acc, g) => acc + (g?.payouts || 0), 0), 2)}
-                </td>
-                <td className="px-6 py-4 text-right text-yellow-400">
-                  ${formatCurrency(Object.values(safeGames).reduce((acc, g) => acc + (g?.jackpotFee || 0), 0), 2)}
-                </td>
-                <td className="px-6 py-4 text-right text-emerald-400">
-                  ${formatCurrency(Object.values(safeGames).reduce((acc, g) => acc + (g?.houseProfit || 0), 0), 2)}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
+
+        <div className="bg-[#111] border border-[#1a1a1a] rounded-xl p-5 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+            <span className="text-4xl">🏧</span>
+          </div>
+          <h4 className="text-gray-400 font-medium text-sm mb-1">Total Withdrawals</h4>
+          <div className="text-3xl font-bold text-red-400">
+            ${formatCurrency(global.totalRedemptionAmount || 0, 2)}
+          </div>
+          <div className="text-xs text-gray-500 mt-1">{global.totalRedemptions || 0} redemptions</div>
+        </div>
+
+        <div className="bg-[#111] border border-[#1a1a1a] rounded-xl p-5 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+            <span className="text-4xl">👥</span>
+          </div>
+          <h4 className="text-gray-400 font-medium text-sm mb-1">Total User Balances</h4>
+          <div className="text-3xl font-bold text-cyan-400">
+            ${formatCurrency(global.totalUserBalances || 0, 2)}
+          </div>
+          <div className="text-xs text-gray-500 mt-1">Sum of all balances</div>
         </div>
       </div>
 
-      {/* Player Transactions Table */}
-      <div className="bg-[#151515] border border-white/10 rounded-2xl overflow-hidden mt-8">
-        <div className="p-6 border-b border-white/10">
-          <h3 className="text-xl font-bold">Player Transactions</h3>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
-          <div className="bg-white/5 rounded-xl p-6 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <span className="text-5xl">💳</span>
-            </div>
-            <h4 className="text-gray-400 font-medium mb-2">Total GC Buys</h4>
-            <div className="text-3xl font-bold text-cyan-400">
-              ${formatCurrency(global.totalDeposited || 0, 2)}
-            </div>
-            <div className="text-sm text-gray-500 mt-2">
-              Gold Coin purchases by players
-            </div>
+      {/* Economics Breakdown */}
+      <div className="bg-[#111] border border-[#1a1a1a] rounded-xl p-6">
+        <h3 className="font-bold text-gray-300 mb-4">📈 Economics Structure</h3>
+        <div className="grid md:grid-cols-2 gap-6">
+          <div>
+            <h4 className="text-sm font-bold text-white mb-2">Divide Pot Split</h4>
+            <ul className="text-sm text-gray-500 space-y-1">
+              <li className="flex justify-between"><span>Winners (minority)</span><span className="text-emerald-400 font-bold">97%</span></li>
+              <li className="flex justify-between"><span>House fee</span><span className="text-blue-400 font-bold">2.5%</span></li>
+              <li className="flex justify-between"><span>Creator pool</span><span className="text-purple-400 font-bold">0.5%</span></li>
+            </ul>
           </div>
-
-          <div className="bg-white/5 rounded-xl p-6 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <span className="text-5xl">💸</span>
-            </div>
-            <h4 className="text-gray-400 font-medium mb-2">Total Redemptions</h4>
-            <div className="text-3xl font-bold text-purple-400">
-              ${formatCurrency(global.totalRedemptionAmount || 0, 2)}
-            </div>
-            <div className="text-sm text-gray-500 mt-2">
-              {global.totalRedemptions || 0} total withdrawals
-            </div>
+          <div>
+            <h4 className="text-sm font-bold text-white mb-2">Withdrawal Fees</h4>
+            <ul className="text-sm text-gray-500 space-y-1">
+              <li className="flex justify-between"><span>Under $1,000</span><span className="text-orange-400 font-bold">2%</span></li>
+              <li className="flex justify-between"><span>$1k - $10k</span><span className="text-orange-400 font-bold">1.5%</span></li>
+              <li className="flex justify-between"><span>$10k - $50k</span><span className="text-orange-400 font-bold">1%</span></li>
+              <li className="flex justify-between"><span>$50k - $250k</span><span className="text-orange-400 font-bold">0.5%</span></li>
+              <li className="flex justify-between"><span>$250k+</span><span className="text-green-400 font-bold">FREE</span></li>
+            </ul>
           </div>
         </div>
-      </div>
-
-      <div className="mt-8 bg-[#151515] border border-white/10 rounded-xl p-6">
-        <h3 className="font-bold text-gray-300 mb-2">How It Works</h3>
-        <ul className="list-disc list-inside text-sm text-gray-500 space-y-1">
-          <li><strong>Handle:</strong> Total amount wagered by players on each game.</li>
-          <li><strong>Payouts:</strong> Total winnings paid out to players.</li>
-          <li><strong>Jackpot Fee:</strong> 1% of every bet is deducted and added to the Global Jackpot Pool.</li>
-          <li><strong>House Profit:</strong> The remaining 99% minus player payouts. Formula: <code>Handle - Payouts - Jackpot Fee</code>.</li>
-          <li>Run <code>node scripts/initialize-house-stats.js</code> to recalculate statistics from existing game data.</li>
-        </ul>
       </div>
     </div>
   );

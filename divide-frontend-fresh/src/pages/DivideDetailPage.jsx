@@ -15,6 +15,7 @@ import {
 import { AuthContext } from '../context/AuthContext';
 import api from '../services/api';
 import html2canvas from 'html2canvas';
+import { formatCurrency } from '../utils/format';
 
 // Register Chart.js components
 ChartJS.register(
@@ -312,6 +313,192 @@ export default function DivideDetailPage() {
           {divide.status === 'active' && (
             <div style={{ background: '#16161a', borderRadius: '12px', padding: '20px', border: '1px solid #2a2a30', marginBottom: '20px', textAlign: 'center', color: '#666' }}>
               <p>📊 Vote history chart will be revealed when this divide ends</p>
+            </div>
+          )}
+
+          {/* RADICAL TRANSPARENCY SECTION - Only shown when divide has ended */}
+          {divide.status !== 'active' && (
+            <div style={{ background: '#16161a', borderRadius: '12px', border: '1px solid #2a2a30', marginBottom: '20px', overflow: 'hidden' }}>
+              {/* Header */}
+              <div style={{ 
+                padding: '16px 20px', 
+                borderBottom: '1px solid #2a2a30',
+                background: 'linear-gradient(135deg, rgba(229, 57, 53, 0.1) 0%, rgba(30, 136, 229, 0.1) 100%)',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ fontSize: '18px' }}>🔍</span>
+                  <div>
+                    <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#fff', margin: 0 }}>FULL TRANSPARENCY REPORT</h3>
+                    <p style={{ fontSize: '10px', color: '#888', margin: '4px 0 0 0' }}>Every bet, every payout, fully auditable</p>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ padding: '20px' }}>
+                {/* Final Amounts Per Side */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+                  <div style={{ 
+                    background: 'rgba(229, 57, 53, 0.1)', 
+                    border: `2px solid ${divide.winnerSide === 'A' ? '#4ade80' : 'rgba(229, 57, 53, 0.3)'}`,
+                    borderRadius: '10px', 
+                    padding: '16px',
+                    position: 'relative',
+                  }}>
+                    {divide.winnerSide === 'A' && (
+                      <div style={{ 
+                        position: 'absolute', top: '-8px', right: '-8px', 
+                        background: '#4ade80', color: '#000', 
+                        padding: '2px 8px', borderRadius: '12px', 
+                        fontSize: '9px', fontWeight: '700' 
+                      }}>
+                        ✓ WINNER
+                      </div>
+                    )}
+                    <div style={{ fontSize: '11px', color: '#888', textTransform: 'uppercase', marginBottom: '4px' }}>{divide.optionA}</div>
+                    <div style={{ fontSize: '24px', fontWeight: '800', color: '#ff5252' }}>
+                      ${formatCurrency(divide.totalA || divide.votesA || 0, 2)}
+                    </div>
+                    <div style={{ fontSize: '10px', color: '#666', marginTop: '4px' }}>
+                      {(() => {
+                        const totalPot = (divide.totalA || divide.votesA || 0) + (divide.totalB || divide.votesB || 0);
+                        const pct = totalPot > 0 ? (((divide.totalA || divide.votesA || 0) / totalPot) * 100).toFixed(1) : 0;
+                        return `${pct}% of total pot`;
+                      })()}
+                    </div>
+                  </div>
+                  <div style={{ 
+                    background: 'rgba(30, 136, 229, 0.1)', 
+                    border: `2px solid ${divide.winnerSide === 'B' ? '#4ade80' : 'rgba(30, 136, 229, 0.3)'}`,
+                    borderRadius: '10px', 
+                    padding: '16px',
+                    position: 'relative',
+                  }}>
+                    {divide.winnerSide === 'B' && (
+                      <div style={{ 
+                        position: 'absolute', top: '-8px', right: '-8px', 
+                        background: '#4ade80', color: '#000', 
+                        padding: '2px 8px', borderRadius: '12px', 
+                        fontSize: '9px', fontWeight: '700' 
+                      }}>
+                        ✓ WINNER
+                      </div>
+                    )}
+                    <div style={{ fontSize: '11px', color: '#888', textTransform: 'uppercase', marginBottom: '4px' }}>{divide.optionB}</div>
+                    <div style={{ fontSize: '24px', fontWeight: '800', color: '#42a5f5' }}>
+                      ${formatCurrency(divide.totalB || divide.votesB || 0, 2)}
+                    </div>
+                    <div style={{ fontSize: '10px', color: '#666', marginTop: '4px' }}>
+                      {(() => {
+                        const totalPot = (divide.totalA || divide.votesA || 0) + (divide.totalB || divide.votesB || 0);
+                        const pct = totalPot > 0 ? (((divide.totalB || divide.votesB || 0) / totalPot) * 100).toFixed(1) : 0;
+                        return `${pct}% of total pot`;
+                      })()}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pot Breakdown */}
+                <div style={{ 
+                  background: '#0d0d0f', 
+                  borderRadius: '10px', 
+                  padding: '16px', 
+                  marginBottom: '20px',
+                  border: '1px solid #1a1a1a',
+                }}>
+                  <h4 style={{ fontSize: '12px', fontWeight: '700', color: '#888', marginBottom: '12px', textTransform: 'uppercase' }}>
+                    💰 Pot Distribution
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                      <span style={{ color: '#888' }}>Total Pot</span>
+                      <span style={{ color: '#fff', fontWeight: '700' }}>${formatCurrency(divide.pot || 0, 2)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                      <span style={{ color: '#888' }}>House Fee (2.5%)</span>
+                      <span style={{ color: '#f87171' }}>-${formatCurrency((divide.pot || 0) * 0.025, 2)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                      <span style={{ color: '#888' }}>Creator Pool (0.5%)</span>
+                      <span style={{ color: '#fbbf24' }}>-${formatCurrency((divide.pot || 0) * 0.005, 2)}</span>
+                    </div>
+                    <div style={{ height: '1px', background: '#2a2a30', margin: '4px 0' }} />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                      <span style={{ color: '#4ade80', fontWeight: '600' }}>Winners Received (97%)</span>
+                      <span style={{ color: '#4ade80', fontWeight: '700' }}>${formatCurrency((divide.pot || 0) * 0.97, 2)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* All Bets - Timestamped Transaction Log */}
+                {divide.voteHistory && divide.voteHistory.length > 0 && (
+                  <div style={{ 
+                    background: '#0d0d0f', 
+                    borderRadius: '10px', 
+                    padding: '16px', 
+                    border: '1px solid #1a1a1a',
+                  }}>
+                    <h4 style={{ fontSize: '12px', fontWeight: '700', color: '#888', marginBottom: '12px', textTransform: 'uppercase' }}>
+                      📋 All Bets ({divide.voteHistory.length} total)
+                    </h4>
+                    <div style={{ maxHeight: '300px', overflowY: 'auto', paddingRight: '8px' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                        <thead>
+                          <tr style={{ borderBottom: '1px solid #2a2a30' }}>
+                            <th style={{ padding: '8px 4px', textAlign: 'left', color: '#666', fontWeight: '600' }}>Time</th>
+                            <th style={{ padding: '8px 4px', textAlign: 'left', color: '#666', fontWeight: '600' }}>User</th>
+                            <th style={{ padding: '8px 4px', textAlign: 'center', color: '#666', fontWeight: '600' }}>Side</th>
+                            <th style={{ padding: '8px 4px', textAlign: 'right', color: '#666', fontWeight: '600' }}>Amount</th>
+                            <th style={{ padding: '8px 4px', textAlign: 'center', color: '#666', fontWeight: '600' }}>Result</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {[...divide.voteHistory].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp)).map((vote, i) => {
+                            const isWinner = vote.side === divide.winnerSide;
+                            const timestamp = new Date(vote.timestamp);
+                            const timeStr = timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                            const dateStr = timestamp.toLocaleDateString([], { month: 'short', day: 'numeric' });
+                            
+                            return (
+                              <tr key={i} style={{ borderBottom: '1px solid #1a1a1a' }}>
+                                <td style={{ padding: '8px 4px', color: '#666' }}>
+                                  <div>{dateStr}</div>
+                                  <div style={{ fontSize: '10px' }}>{timeStr}</div>
+                                </td>
+                                <td style={{ padding: '8px 4px', color: '#e0e0e0', fontFamily: 'monospace' }}>
+                                  {vote.username || vote.oddsMultiplier?.username || `User ${(vote.oddsMultiplier?.oddsAt || '').toString().slice(-4)}`}
+                                </td>
+                                <td style={{ padding: '8px 4px', textAlign: 'center' }}>
+                                  <span style={{ 
+                                    display: 'inline-block',
+                                    padding: '2px 8px', 
+                                    borderRadius: '4px',
+                                    fontSize: '10px',
+                                    fontWeight: '600',
+                                    background: vote.side === 'A' ? 'rgba(229, 57, 53, 0.2)' : 'rgba(30, 136, 229, 0.2)',
+                                    color: vote.side === 'A' ? '#ff5252' : '#42a5f5',
+                                  }}>
+                                    {vote.side === 'A' ? divide.optionA : divide.optionB}
+                                  </span>
+                                </td>
+                                <td style={{ padding: '8px 4px', textAlign: 'right', color: '#fff', fontWeight: '600', fontFamily: 'monospace' }}>
+                                  ${formatCurrency(vote.amount, 2)}
+                                </td>
+                                <td style={{ padding: '8px 4px', textAlign: 'center' }}>
+                                  {isWinner ? (
+                                    <span style={{ color: '#4ade80', fontWeight: '600' }}>✓ WON</span>
+                                  ) : (
+                                    <span style={{ color: '#f87171', fontWeight: '600' }}>✗ LOST</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
