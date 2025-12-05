@@ -39,7 +39,26 @@ import http from 'http';
 
 // Utils
 import { fileURLToPath } from 'url';
+import * as nowPayments from './utils/nowPayments.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Helper: Create NOWPayments custody customer for a user
+async function createNowPaymentsCustomer(user) {
+  try {
+    const customer = await nowPayments.createCustomer({
+      email: user.email || '',
+      name: user.username,
+      externalId: user._id.toString()
+    });
+    user.nowPaymentsCustomerId = customer.id;
+    await user.save();
+    console.log(`[NOWPayments] Created customer ${customer.id} for user ${user.username}`);
+    return customer.id;
+  } catch (err) {
+    console.error(`[NOWPayments] Failed to create customer for ${user.username}:`, err.message);
+    return null;
+  }
+}
 
 const app = express();
 const server = http.createServer(app);
@@ -351,6 +370,9 @@ app.post('/register', async (req, res) => {
       role,
       createdAt: new Date()
     });
+
+    // Create NOWPayments custody customer (async, don't block registration)
+    createNowPaymentsCustomer(user).catch(err => console.error('[Register] NOWPayments customer creation failed:', err));
 
     const token = jwt.sign({ userId: user._id.toString() }, JWT_SECRET, { expiresIn: '30d' });
     
@@ -1015,6 +1037,9 @@ app.get('/auth/discord/login/callback', async (req, res) => {
       });
       await user.save();
       console.log(`✓ New user created via Discord: ${username} (${discordUser.id})`);
+      
+      // Create NOWPayments custody customer (async)
+      createNowPaymentsCustomer(user).catch(err => console.error('[Discord] NOWPayments customer creation failed:', err));
     }
 
     // Create JWT token
@@ -1104,6 +1129,9 @@ app.get('/auth/google/login/callback', async (req, res) => {
       });
       await user.save();
       console.log(`✓ New user created via Google: ${username} (${googleUser.email})`);
+      
+      // Create NOWPayments custody customer (async)
+      createNowPaymentsCustomer(user).catch(err => console.error('[Google] NOWPayments customer creation failed:', err));
     }
 
     // Create JWT token

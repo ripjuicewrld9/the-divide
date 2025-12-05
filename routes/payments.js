@@ -161,6 +161,36 @@ router.post('/customer/sync', async (req, res) => {
 });
 
 /**
+ * GET /api/payments/customer/balance
+ * Get user's custody balance (crypto held in NOWPayments)
+ */
+router.get('/customer/balance', async (req, res) => {
+  try {
+    if (!req.userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const user = await User.findById(req.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (!user.nowPaymentsCustomerId) {
+      return res.json({ balances: [], message: 'No custody account setup yet' });
+    }
+
+    const balance = await nowPayments.getCustomerBalance(user.nowPaymentsCustomerId);
+    res.json({ 
+      customerId: user.nowPaymentsCustomerId,
+      balances: balance || []
+    });
+  } catch (err) {
+    console.error('[Payments] Get customer balance failed:', err.message);
+    res.status(500).json({ error: 'Failed to get custody balance' });
+  }
+});
+
+/**
  * GET /api/payments/transactions
  * Get user's transaction history
  */
@@ -337,7 +367,7 @@ router.post('/deposit', async (req, res) => {
 
 /**
  * POST /api/payments/deposit/direct
- * Create deposit with direct payment address (no hosted checkout)
+ * Create deposit with direct payment address using custody customer mode
  */
 router.post('/deposit/direct', async (req, res) => {
   try {
@@ -365,18 +395,32 @@ router.post('/deposit/direct', async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
+    // Ensure user has a NOWPayments customer ID
+    if (!user.nowPaymentsCustomerId) {
+      try {
+        const customer = await nowPayments.createCustomer({
+          email: user.email || '',
+          name: user.username,
+          externalId: req.userId
+        });
+        user.nowPaymentsCustomerId = customer.id;
+        await user.save();
+        console.log(`[Payments] Created custody customer ${customer.id} for ${user.username}`);
+      } catch (custErr) {
+        console.error('[Payments] Failed to create custody customer:', custErr.message);
+        return res.status(500).json({ error: 'Failed to setup payment account' });
+      }
+    }
+
     const orderId = `DEP-${req.userId}-${Date.now()}`;
 
-    // Create inline payment (returns address directly)
-    const frontendUrl = process.env.FRONTEND_URL || 'https://thedivide.us';
-    const payment = await nowPayments.createPayment({
+    // Create custody customer deposit (funds go to customer's sub-account)
+    const payment = await nowPayments.createCustomerDeposit({
+      customerId: user.nowPaymentsCustomerId,
       priceAmount: amountCents / 100,
-      priceCurrency: 'usd',
-      payCurrency: cryptoCurrency.toLowerCase(),
+      currency: cryptoCurrency.toLowerCase(),
       orderId,
-      orderDescription: `Deposit to The Divide - ${user.username}`,
-      successUrl: `${frontendUrl}/wallet?deposit=success`,
-      cancelUrl: `${frontendUrl}/wallet?deposit=cancelled`
+      description: `Deposit to The Divide - ${user.username}`
     });
 
     const transaction = await Transaction.create({
@@ -390,10 +434,11 @@ router.post('/deposit/direct', async (req, res) => {
       nowPaymentsOrderId: orderId,
       payAddress: payment.pay_address,
       exchangeRate: amountCents / 100 / payment.pay_amount,
-      expiresAt: new Date(Date.now() + 60 * 60 * 1000)
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      custodyMode: true // Flag for custody deposits
     });
 
-    console.log(`[Payments] Direct deposit created: ${transaction._id}, address: ${payment.pay_address}`);
+    console.log(`[Payments] Custody deposit created: ${transaction._id}, customer: ${user.nowPaymentsCustomerId}, address: ${payment.pay_address}`);
 
     res.json({
       transactionId: transaction._id,
@@ -401,17 +446,18 @@ router.post('/deposit/direct', async (req, res) => {
       payAmount: payment.pay_amount,
       payCurrency: payment.pay_currency,
       orderId,
-      expiresAt: transaction.expiresAt
+      expiresAt: transaction.expiresAt,
+      custodyMode: true
     });
   } catch (err) {
-    console.error('[Payments] Create direct deposit failed:', err.message);
+    console.error('[Payments] Create custody deposit failed:', err.message);
     res.status(500).json({ error: err.message || 'Failed to create deposit' });
   }
 });
 
 /**
  * POST /api/payments/withdraw
- * Request a withdrawal to user's wallet
+ * Request a withdrawal using custody customer payout
  */
 router.post('/withdraw', async (req, res) => {
   try {
@@ -446,6 +492,22 @@ router.post('/withdraw', async (req, res) => {
       });
     }
 
+    // Ensure user has a NOWPayments customer ID
+    if (!user.nowPaymentsCustomerId) {
+      try {
+        const customer = await nowPayments.createCustomer({
+          email: user.email || '',
+          name: user.username,
+          externalId: req.userId
+        });
+        user.nowPaymentsCustomerId = customer.id;
+        await user.save();
+      } catch (custErr) {
+        console.error('[Payments] Failed to create custody customer:', custErr.message);
+        return res.status(500).json({ error: 'Failed to setup payment account' });
+      }
+    }
+
     // Calculate fee with VIP discount
     const feePercent = applyVipWithdrawalDiscount(BASE_WITHDRAWAL_FEE_PERCENT, user.vipTier);
     const feeCents = Math.round(amountCents * (feePercent / 100));
@@ -469,7 +531,7 @@ router.post('/withdraw', async (req, res) => {
 
     const orderId = `WD-${req.userId}-${Date.now()}`;
 
-    // Create transaction record (payout initiated separately after admin approval or automatically)
+    // Create transaction record
     const transaction = await Transaction.create({
       userId: req.userId,
       type: 'withdrawal',
@@ -481,7 +543,9 @@ router.post('/withdraw', async (req, res) => {
       withdrawFeePercent: feePercent,
       withdrawFeeCents: feeCents,
       nowPaymentsOrderId: orderId,
-      exchangeRate: amountCents / 100 / estimate.estimated_amount
+      exchangeRate: amountCents / 100 / estimate.estimated_amount,
+      custodyMode: true,
+      nowPaymentsCustomerId: user.nowPaymentsCustomerId
     });
 
     // Deduct from user balance
@@ -658,7 +722,7 @@ router.get('/admin/pending', async (req, res) => {
 
 /**
  * POST /api/payments/admin/process/:id
- * Process a pending withdrawal (admin only)
+ * Process a pending withdrawal using custody customer payout (admin only)
  */
 router.post('/admin/process/:id', async (req, res) => {
   try {
@@ -672,13 +736,27 @@ router.post('/admin/process/:id', async (req, res) => {
       return res.status(400).json({ error: 'Transaction is not a pending withdrawal' });
     }
 
-    // Create payout via NOWPayments
-    const payout = await nowPayments.createPayout({
-      address: transaction.withdrawAddress,
-      amount: transaction.cryptoAmount,
-      currency: transaction.cryptoCurrency,
-      uniqueExternalId: transaction.nowPaymentsOrderId
-    });
+    let payout;
+    
+    // Use custody customer payout if we have customer ID
+    if (transaction.nowPaymentsCustomerId && transaction.custodyMode) {
+      // Custody payout: transfer from customer to external address
+      payout = await nowPayments.createCustomerPayout({
+        customerId: transaction.nowPaymentsCustomerId,
+        address: transaction.withdrawAddress,
+        amount: transaction.cryptoAmount,
+        currency: transaction.cryptoCurrency
+      });
+      console.log(`[Payments] Custody payout created for customer ${transaction.nowPaymentsCustomerId}`);
+    } else {
+      // Legacy: direct payout from master balance
+      payout = await nowPayments.createPayout({
+        address: transaction.withdrawAddress,
+        amount: transaction.cryptoAmount,
+        currency: transaction.cryptoCurrency,
+        uniqueExternalId: transaction.nowPaymentsOrderId
+      });
+    }
 
     transaction.nowPaymentsId = payout.id;
     transaction.status = 'sending';
@@ -689,6 +767,7 @@ router.post('/admin/process/:id', async (req, res) => {
     res.json({
       success: true,
       payoutId: payout.id,
+      custodyMode: transaction.custodyMode || false,
       message: 'Withdrawal is being processed'
     });
   } catch (err) {

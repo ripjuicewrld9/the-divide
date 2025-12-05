@@ -58,6 +58,10 @@ const transactionSchema = new mongoose.Schema({
   withdrawFeePercent: { type: Number }, // Fee percentage charged
   withdrawFeeCents: { type: Number }, // Fee amount in cents
   
+  // Custody customer mode fields
+  custodyMode: { type: Boolean, default: false }, // Whether using custody customer flow
+  nowPaymentsCustomerId: { type: String }, // NOWPayments customer ID for custody mode
+  
   // Timestamps and metadata
   ipnData: { type: mongoose.Schema.Types.Mixed }, // Raw IPN callback data for debugging
   errorMessage: { type: String }, // Error details if failed
