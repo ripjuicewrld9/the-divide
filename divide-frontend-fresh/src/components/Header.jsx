@@ -47,16 +47,16 @@ export default function Header() {
         top: 0,
         zIndex: 50,
         width: '100%',
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
-        background: 'rgba(9,9,11,0.85)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
+        borderBottom: '1px solid rgba(255,255,255,0.08)',
+        background: 'rgba(5,5,7,0.9)',
+        backdropFilter: 'blur(24px)',
+        WebkitBackdropFilter: 'blur(24px)',
       }}>
         <div style={{
           maxWidth: '1400px',
           margin: '0 auto',
           display: 'flex',
-          height: '56px',
+          height: '60px',
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '0 24px',
@@ -73,14 +73,54 @@ export default function Header() {
             }}
           >
             <span style={{
-              fontSize: '18px',
-              fontWeight: '700',
+              fontSize: '20px',
+              fontWeight: '800',
               letterSpacing: '-0.03em',
-              color: 'rgba(255,255,255,0.95)',
+              background: 'linear-gradient(135deg, #ff1744 0%, #d32f2f 40%, #7c4dff 60%, #2979ff 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
             }}>
-              Divide
+              The Divide
             </span>
           </Link>
+
+          {/* Navigation */}
+          <nav style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '24px',
+            marginLeft: '32px',
+          }}>
+            <Link
+              to="/"
+              style={{
+                textDecoration: 'none',
+                fontSize: '14px',
+                fontWeight: '500',
+                color: 'rgba(255,255,255,0.6)',
+                transition: 'color 0.15s ease',
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.color = '#fff'}
+              onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.6)'}
+            >
+              Markets
+            </Link>
+            <Link
+              to="/feed"
+              style={{
+                textDecoration: 'none',
+                fontSize: '14px',
+                fontWeight: '500',
+                color: 'rgba(255,255,255,0.6)',
+                transition: 'color 0.15s ease',
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.color = '#fff'}
+              onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.6)'}
+            >
+              Feed
+            </Link>
+          </nav>
 
           {/* User Area */}
           <div style={{
@@ -350,22 +390,25 @@ export default function Header() {
               <button
                 onClick={() => setShowAuthModal(true)}
                 style={{
-                  padding: '8px 16px',
-                  borderRadius: '8px',
+                  padding: '10px 20px',
+                  borderRadius: '10px',
                   border: 'none',
-                  background: 'rgba(255,255,255,0.95)',
-                  color: '#09090b',
+                  background: 'linear-gradient(135deg, #ff1744 0%, #d32f2f 40%, #7c4dff 60%, #2979ff 100%)',
+                  color: '#ffffff',
                   fontSize: '13px',
-                  fontWeight: '600',
+                  fontWeight: '700',
                   letterSpacing: '-0.01em',
                   cursor: 'pointer',
-                  transition: 'all 0.15s ease',
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 4px 16px rgba(255, 23, 68, 0.25), 0 4px 16px rgba(41, 121, 255, 0.25)',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.85)';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 6px 24px rgba(255, 23, 68, 0.35), 0 6px 24px rgba(41, 121, 255, 0.35)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.95)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 16px rgba(255, 23, 68, 0.25), 0 4px 16px rgba(41, 121, 255, 0.25)';
                 }}
               >
                 Sign in

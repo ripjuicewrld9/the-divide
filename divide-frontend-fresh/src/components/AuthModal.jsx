@@ -58,9 +58,9 @@ export default function AuthModal({ onClose, isRegister, setIsRegister }) {
         bottom: 0,
         width: '100vw',
         height: '100vh',
-        background: 'rgba(0, 0, 0, 0.8)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
+        background: 'rgba(0, 0, 0, 0.85)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -72,26 +72,29 @@ export default function AuthModal({ onClose, isRegister, setIsRegister }) {
     >
       <div
         style={{
-          background: 'rgba(15,15,17,0.98)',
-          padding: '40px',
-          borderRadius: '16px',
-          border: '1px solid rgba(255,255,255,0.08)',
+          background: 'linear-gradient(135deg, rgba(20,20,24,0.98) 0%, rgba(10,10,12,0.99) 100%)',
+          padding: '44px',
+          borderRadius: '20px',
+          border: '1px solid rgba(255,255,255,0.1)',
           width: '100%',
-          maxWidth: '400px',
-          boxShadow: '0 40px 80px rgba(0,0,0,0.5)',
+          maxWidth: '420px',
+          boxShadow: '0 50px 100px rgba(0,0,0,0.6), 0 0 80px rgba(255, 23, 68, 0.05), 0 0 80px rgba(41, 121, 255, 0.05)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div style={{ marginBottom: '32px', textAlign: 'center' }}>
+        <div style={{ marginBottom: '36px', textAlign: 'center' }}>
           <h2 style={{
-            fontSize: '24px',
-            fontWeight: '700',
+            fontSize: '28px',
+            fontWeight: '800',
             letterSpacing: '-0.03em',
-            color: 'rgba(255,255,255,0.95)',
-            marginBottom: '8px',
+            background: 'linear-gradient(135deg, #ff1744 0%, #d32f2f 40%, #7c4dff 60%, #2979ff 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            marginBottom: '10px',
           }}>
-            {isRegister ? 'Create account' : 'Welcome back'}
+            {isRegister ? 'Join The Divide' : 'Welcome back'}
           </h2>
           <p style={{
             fontSize: '14px',
@@ -349,12 +352,12 @@ export default function AuthModal({ onClose, isRegister, setIsRegister }) {
 const inputStyle = {
   display: 'block',
   width: '100%',
-  marginBottom: '12px',
-  padding: '14px 16px',
-  background: 'rgba(255,255,255,0.04)',
-  border: '1px solid rgba(255,255,255,0.1)',
+  marginBottom: '14px',
+  padding: '16px 18px',
+  background: 'rgba(255,255,255,0.05)',
+  border: '1px solid rgba(255,255,255,0.12)',
   color: 'rgba(255,255,255,0.95)',
-  borderRadius: '10px',
+  borderRadius: '12px',
   fontSize: '14px',
   fontWeight: '500',
   outline: 'none',
@@ -364,15 +367,16 @@ const inputStyle = {
 
 const buttonStyle = {
   width: '100%',
-  padding: '14px',
-  background: 'rgba(255,255,255,0.95)',
-  color: '#09090b',
+  padding: '16px',
+  background: 'linear-gradient(135deg, #ff1744 0%, #d32f2f 40%, #7c4dff 60%, #2979ff 100%)',
+  color: '#ffffff',
   border: 'none',
-  borderRadius: '10px',
-  fontWeight: '600',
+  borderRadius: '12px',
+  fontWeight: '700',
   cursor: 'pointer',
-  fontSize: '14px',
+  fontSize: '15px',
   letterSpacing: '-0.01em',
-  transition: 'all 0.15s ease',
+  transition: 'all 0.2s ease',
+  boxShadow: '0 4px 16px rgba(255, 23, 68, 0.25), 0 4px 16px rgba(41, 121, 255, 0.25)',
   marginTop: '8px',
 };

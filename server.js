@@ -14,6 +14,9 @@ import ChatMute from './models/ChatMute.js';
 import ModeratorChatMessage from './models/ModeratorChatMessage.js';
 import Notification from './models/Notification.js';
 import UserEngagement from './models/UserEngagement.js';
+import SocialPost from './models/SocialPost.js';
+import DivideSentiment from './models/DivideSentiment.js';
+import { analyzeDivideSentiment } from './utils/geminiSentiment.js';
 
 // Core dependencies
 import express from 'express';
@@ -2447,6 +2450,543 @@ app.patch('/api/users/:id/avatar', auth, upload.single('avatar'), async (req, re
   } catch (err) {
     console.error('PATCH /api/users/:id/avatar', err);
     res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ==========================================
+// SOCIAL FEED ROUTES
+// ==========================================
+
+// Auth middleware for social routes that sets req.user
+const socialAuth = async (req, res, next) => {
+  try {
+    const a = req.headers && (req.headers.authorization || req.headers.Authorization);
+    if (!a) return res.status(401).json({ error: 'Not authenticated' });
+    const m = String(a).split(' ');
+    if (m.length !== 2 || !/^Bearer$/i.test(m[0])) {
+      return res.status(401).json({ error: 'Invalid auth header' });
+    }
+    const payload = jwt.verify(m[1], JWT_SECRET);
+    const userId = payload && (payload.userId || payload.id) ? String(payload.userId || payload.id) : null;
+    if (!userId) return res.status(401).json({ error: 'Invalid token' });
+    const user = await User.findById(userId).select('_id username role avatar');
+    if (!user) return res.status(401).json({ error: 'User not found' });
+    req.user = { id: user._id.toString(), username: user.username, role: user.role, avatar: user.avatar };
+    return next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+};
+
+// GET /api/social/posts - Get feed (paginated, newest first)
+app.get('/api/social/posts', async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    const posts = await SocialPost.find({ isDeleted: false })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate('author', 'username avatar')
+      .populate('linkedDivide', 'title status')
+      .populate('comments.author', 'username avatar')
+      .lean();
+
+    const total = await SocialPost.countDocuments({ isDeleted: false });
+
+    res.json({
+      posts,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+        hasMore: skip + posts.length < total,
+      }
+    });
+  } catch (err) {
+    console.error('Error fetching posts:', err);
+    res.status(500).json({ error: 'Failed to fetch posts' });
+  }
+});
+
+// GET /api/social/posts/:id - Get single post
+app.get('/api/social/posts/:id', async (req, res) => {
+  try {
+    const post = await SocialPost.findById(req.params.id)
+      .populate('author', 'username avatar')
+      .populate('linkedDivide', 'title status left right')
+      .populate('comments.author', 'username avatar')
+      .lean();
+
+    if (!post || post.isDeleted) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+
+    res.json(post);
+  } catch (err) {
+    console.error('Error fetching post:', err);
+    res.status(500).json({ error: 'Failed to fetch post' });
+  }
+});
+
+// POST /api/social/posts - Create new post (auth required)
+app.post('/api/social/posts', socialAuth, async (req, res) => {
+  try {
+    const { content, imageUrl, linkedDivide } = req.body;
+
+    if (!content || content.trim().length === 0) {
+      return res.status(400).json({ error: 'Content is required' });
+    }
+
+    if (content.length > 1000) {
+      return res.status(400).json({ error: 'Content exceeds 1000 characters' });
+    }
+
+    const post = new SocialPost({
+      author: req.user.id,
+      content: content.trim(),
+      imageUrl: imageUrl || null,
+      linkedDivide: linkedDivide || null,
+    });
+
+    await post.save();
+
+    // Populate author for response
+    const populatedPost = await SocialPost.findById(post._id)
+      .populate('author', 'username avatar')
+      .populate('linkedDivide', 'title status')
+      .lean();
+
+    res.status(201).json(populatedPost);
+  } catch (err) {
+    console.error('Error creating post:', err);
+    res.status(500).json({ error: 'Failed to create post' });
+  }
+});
+
+// DELETE /api/social/posts/:id - Delete own post (auth required)
+app.delete('/api/social/posts/:id', socialAuth, async (req, res) => {
+  try {
+    const post = await SocialPost.findById(req.params.id);
+
+    if (!post || post.isDeleted) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+
+    // Only author or admin can delete
+    if (post.author.toString() !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Not authorized to delete this post' });
+    }
+
+    post.isDeleted = true;
+    post.updatedAt = new Date();
+    await post.save();
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error deleting post:', err);
+    res.status(500).json({ error: 'Failed to delete post' });
+  }
+});
+
+// POST /api/social/posts/:id/like - Like a post (auth required)
+app.post('/api/social/posts/:id/like', socialAuth, async (req, res) => {
+  try {
+    const post = await SocialPost.findById(req.params.id);
+
+    if (!post || post.isDeleted) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+
+    // Check if already liked
+    if (post.likedBy.map(id => id.toString()).includes(req.user.id)) {
+      return res.status(400).json({ error: 'Already liked this post' });
+    }
+
+    // Remove dislike if exists
+    const dislikeIndex = post.dislikedBy.map(id => id.toString()).indexOf(req.user.id);
+    if (dislikeIndex > -1) {
+      post.dislikedBy.splice(dislikeIndex, 1);
+      post.dislikes = Math.max(0, post.dislikes - 1);
+    }
+
+    post.likedBy.push(req.user.id);
+    post.likes += 1;
+    post.updatedAt = new Date();
+    await post.save();
+
+    res.json({ likes: post.likes, dislikes: post.dislikes });
+  } catch (err) {
+    console.error('Error liking post:', err);
+    res.status(500).json({ error: 'Failed to like post' });
+  }
+});
+
+// DELETE /api/social/posts/:id/like - Unlike a post (auth required)
+app.delete('/api/social/posts/:id/like', socialAuth, async (req, res) => {
+  try {
+    const post = await SocialPost.findById(req.params.id);
+
+    if (!post || post.isDeleted) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+
+    const likeIndex = post.likedBy.map(id => id.toString()).indexOf(req.user.id);
+    if (likeIndex === -1) {
+      return res.status(400).json({ error: 'Not liked' });
+    }
+
+    post.likedBy.splice(likeIndex, 1);
+    post.likes = Math.max(0, post.likes - 1);
+    post.updatedAt = new Date();
+    await post.save();
+
+    res.json({ likes: post.likes, dislikes: post.dislikes });
+  } catch (err) {
+    console.error('Error unliking post:', err);
+    res.status(500).json({ error: 'Failed to unlike post' });
+  }
+});
+
+// POST /api/social/posts/:id/dislike - Dislike a post (auth required)
+app.post('/api/social/posts/:id/dislike', socialAuth, async (req, res) => {
+  try {
+    const post = await SocialPost.findById(req.params.id);
+
+    if (!post || post.isDeleted) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+
+    // Check if already disliked
+    if (post.dislikedBy.map(id => id.toString()).includes(req.user.id)) {
+      return res.status(400).json({ error: 'Already disliked this post' });
+    }
+
+    // Remove like if exists
+    const likeIndex = post.likedBy.map(id => id.toString()).indexOf(req.user.id);
+    if (likeIndex > -1) {
+      post.likedBy.splice(likeIndex, 1);
+      post.likes = Math.max(0, post.likes - 1);
+    }
+
+    post.dislikedBy.push(req.user.id);
+    post.dislikes += 1;
+    post.updatedAt = new Date();
+    await post.save();
+
+    res.json({ likes: post.likes, dislikes: post.dislikes });
+  } catch (err) {
+    console.error('Error disliking post:', err);
+    res.status(500).json({ error: 'Failed to dislike post' });
+  }
+});
+
+// POST /api/social/posts/:id/view - Record view
+app.post('/api/social/posts/:id/view', auth, async (req, res) => {
+  try {
+    const post = await SocialPost.findById(req.params.id);
+
+    if (!post || post.isDeleted) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+
+    // Increment view count
+    post.views += 1;
+
+    // Track unique views if user is logged in
+    if (req.userId && !post.viewedBy.map(id => id.toString()).includes(req.userId)) {
+      post.viewedBy.push(req.userId);
+    }
+
+    await post.save();
+    res.json({ views: post.views });
+  } catch (err) {
+    console.error('Error recording view:', err);
+    res.status(500).json({ error: 'Failed to record view' });
+  }
+});
+
+// POST /api/social/posts/:id/comments - Add comment (auth required)
+app.post('/api/social/posts/:id/comments', socialAuth, async (req, res) => {
+  try {
+    const { content } = req.body;
+
+    if (!content || content.trim().length === 0) {
+      return res.status(400).json({ error: 'Comment content is required' });
+    }
+
+    if (content.length > 500) {
+      return res.status(400).json({ error: 'Comment exceeds 500 characters' });
+    }
+
+    const post = await SocialPost.findById(req.params.id);
+
+    if (!post || post.isDeleted) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+
+    const comment = {
+      author: req.user.id,
+      content: content.trim(),
+      createdAt: new Date(),
+    };
+
+    post.comments.push(comment);
+    post.commentCount = post.comments.length;
+    post.updatedAt = new Date();
+    await post.save();
+
+    // Return populated post
+    const populatedPost = await SocialPost.findById(post._id)
+      .populate('author', 'username avatar')
+      .populate('comments.author', 'username avatar')
+      .lean();
+
+    res.status(201).json(populatedPost);
+  } catch (err) {
+    console.error('Error adding comment:', err);
+    res.status(500).json({ error: 'Failed to add comment' });
+  }
+});
+
+// DELETE /api/social/posts/:postId/comments/:commentId - Delete comment (auth required)
+app.delete('/api/social/posts/:postId/comments/:commentId', socialAuth, async (req, res) => {
+  try {
+    const post = await SocialPost.findById(req.params.postId);
+
+    if (!post || post.isDeleted) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+
+    const comment = post.comments.id(req.params.commentId);
+    if (!comment) {
+      return res.status(404).json({ error: 'Comment not found' });
+    }
+
+    // Only comment author, post author, or admin can delete
+    if (
+      comment.author.toString() !== req.user.id &&
+      post.author.toString() !== req.user.id &&
+      req.user.role !== 'admin'
+    ) {
+      return res.status(403).json({ error: 'Not authorized to delete this comment' });
+    }
+
+    post.comments.pull(req.params.commentId);
+    post.commentCount = post.comments.length;
+    post.updatedAt = new Date();
+    await post.save();
+
+    res.json({ success: true, commentCount: post.commentCount });
+  } catch (err) {
+    console.error('Error deleting comment:', err);
+    res.status(500).json({ error: 'Failed to delete comment' });
+  }
+});
+
+// GET /api/social/users/:userId/posts - Get user's posts
+app.get('/api/social/users/:userId/posts', async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    const posts = await SocialPost.find({ 
+      author: req.params.userId, 
+      isDeleted: false 
+    })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate('author', 'username avatar')
+      .populate('linkedDivide', 'title status')
+      .lean();
+
+    const total = await SocialPost.countDocuments({ 
+      author: req.params.userId, 
+      isDeleted: false 
+    });
+
+    res.json({
+      posts,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+        hasMore: skip + posts.length < total,
+      }
+    });
+  } catch (err) {
+    console.error('Error fetching user posts:', err);
+    res.status(500).json({ error: 'Failed to fetch user posts' });
+  }
+});
+
+// ==========================================
+// SENTIMENT ANALYSIS ROUTES
+// ==========================================
+
+// GET /api/divides/:id/sentiment - Get sentiment data for a divide
+app.get('/api/divides/:id/sentiment', async (req, res) => {
+  try {
+    const divideId = req.params.id;
+    
+    // Get existing sentiment data
+    let sentiment = await DivideSentiment.findOne({ divide: divideId }).lean();
+    
+    if (!sentiment) {
+      // Return default neutral sentiment if none exists
+      return res.json({
+        current: {
+          optionA: { score: 50, confidence: 0, label: 'neutral', sampleSize: 0 },
+          optionB: { score: 50, confidence: 0, label: 'neutral', sampleSize: 0 },
+          themes: [],
+          analyzedAt: null,
+        },
+        hasData: false,
+      });
+    }
+
+    res.json({
+      current: sentiment.current,
+      history: sentiment.history?.slice(-10) || [], // Last 10 snapshots
+      totalCommentsAnalyzed: sentiment.totalCommentsAnalyzed,
+      totalPostsAnalyzed: sentiment.totalPostsAnalyzed,
+      hasData: true,
+    });
+  } catch (err) {
+    console.error('Error fetching sentiment:', err);
+    res.status(500).json({ error: 'Failed to fetch sentiment' });
+  }
+});
+
+// POST /api/divides/:id/sentiment/analyze - Trigger sentiment analysis (admin or auto)
+app.post('/api/divides/:id/sentiment/analyze', auth, async (req, res) => {
+  try {
+    const divideId = req.params.id;
+    
+    // Get the divide
+    const divide = await Divide.findById(divideId);
+    if (!divide) {
+      return res.status(404).json({ error: 'Divide not found' });
+    }
+
+    // Get comments for this divide
+    const comments = await DivideComment.find({ divide: divideId })
+      .sort({ createdAt: -1 })
+      .limit(100)
+      .select('content createdAt')
+      .lean();
+
+    // Get social posts that mention this divide (by linked divide or keywords)
+    const posts = await SocialPost.find({
+      $or: [
+        { linkedDivide: divideId },
+        { content: { $regex: divide.title.split(' ').slice(0, 3).join('|'), $options: 'i' } }
+      ],
+      isDeleted: false,
+    })
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .select('content createdAt')
+      .lean();
+
+    // Run Gemini analysis
+    const analysis = await analyzeDivideSentiment({
+      divideTitle: divide.title,
+      optionA: divide.left,
+      optionB: divide.right,
+      comments,
+      posts,
+    });
+
+    if (analysis.error) {
+      return res.status(500).json({ error: analysis.error });
+    }
+
+    // Update or create sentiment record
+    const now = new Date();
+    const sentimentData = {
+      optionA: {
+        score: analysis.optionA.score,
+        confidence: analysis.optionA.confidence,
+        sampleSize: analysis.optionA.sampleSize,
+        label: analysis.optionA.label,
+      },
+      optionB: {
+        score: analysis.optionB.score,
+        confidence: analysis.optionB.confidence,
+        sampleSize: analysis.optionB.sampleSize,
+        label: analysis.optionB.label,
+      },
+      themes: analysis.themes,
+      analyzedAt: now,
+    };
+
+    let sentiment = await DivideSentiment.findOne({ divide: divideId });
+    
+    if (sentiment) {
+      // Add current to history before updating
+      sentiment.history.push({
+        timestamp: sentiment.current.analyzedAt,
+        optionA: sentiment.current.optionA,
+        optionB: sentiment.current.optionB,
+        themes: sentiment.current.themes,
+        rawAnalysis: analysis.rawAnalysis,
+      });
+      
+      // Keep only last 50 history entries
+      if (sentiment.history.length > 50) {
+        sentiment.history = sentiment.history.slice(-50);
+      }
+      
+      sentiment.current = sentimentData;
+      sentiment.totalCommentsAnalyzed += comments.length;
+      sentiment.totalPostsAnalyzed += posts.length;
+      sentiment.updatedAt = now;
+    } else {
+      sentiment = new DivideSentiment({
+        divide: divideId,
+        current: sentimentData,
+        history: [],
+        totalCommentsAnalyzed: comments.length,
+        totalPostsAnalyzed: posts.length,
+      });
+    }
+
+    await sentiment.save();
+
+    res.json({
+      success: true,
+      current: sentiment.current,
+      summary: analysis.summary,
+      commentsAnalyzed: comments.length,
+      postsAnalyzed: posts.length,
+    });
+
+  } catch (err) {
+    console.error('Error analyzing sentiment:', err);
+    res.status(500).json({ error: 'Failed to analyze sentiment' });
+  }
+});
+
+// GET /api/sentiment/trending - Get divides with most active sentiment
+app.get('/api/sentiment/trending', async (req, res) => {
+  try {
+    const sentiments = await DivideSentiment.find({})
+      .sort({ updatedAt: -1 })
+      .limit(10)
+      .populate('divide', 'title left right status')
+      .lean();
+
+    res.json(sentiments.filter(s => s.divide)); // Filter out any with deleted divides
+  } catch (err) {
+    console.error('Error fetching trending sentiment:', err);
+    res.status(500).json({ error: 'Failed to fetch trending' });
   }
 });
 

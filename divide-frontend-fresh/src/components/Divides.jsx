@@ -324,62 +324,48 @@ export default function Divides({ onOpenChat }) {
         {/* Mobile Header - only shows on mobile */}
         <MobileGameHeader title="Divides" onOpenChat={onOpenChat} className="md:hidden mb-4" />
         
-        {/* Premium Treasury Banner - Mobile */}
+        {/* Treasury Banner - Mobile */}
         {treasury && (
           <div style={{
-            background: 'rgba(255,255,255,0.02)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255,255,255,0.06)',
-            borderRadius: '12px',
-            padding: '16px 20px',
-            marginBottom: '20px',
+            display: 'flex',
+            justifyContent: 'center',
+            marginBottom: '16px',
           }}>
             <div style={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between',
+              gap: '8px',
+              padding: '8px 16px',
+              background: 'rgba(255,255,255,0.03)',
+              borderRadius: '20px',
+              border: '1px solid rgba(255,255,255,0.08)',
             }}>
-              <div>
-                <div style={{
-                  fontSize: '10px',
-                  fontWeight: '600',
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  color: 'rgba(255,255,255,0.4)',
-                  marginBottom: '6px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}>
-                  Site Treasury
-                  <span style={{
-                    width: '6px',
-                    height: '6px',
-                    borderRadius: '50%',
-                    background: '#22c55e',
-                    boxShadow: '0 0 8px rgba(34,197,94,0.5)',
-                    animation: 'pulse 2s ease-in-out infinite'
-                  }} />
-                </div>
-                <div style={{
-                  fontSize: '24px',
-                  fontWeight: '700',
-                  letterSpacing: '-0.02em',
-                  color: 'rgba(255,255,255,0.95)',
-                  fontFamily: 'SF Mono, Monaco, Consolas, monospace',
-                }}>
-                  ${formatCurrency(treasury.treasury || 0, 0)}
-                </div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.35)', marginBottom: '2px' }}>
-                  <span style={{ color: '#4ade80' }}>↑</span> ${formatCurrency(treasury.totalDeposited || 0, 0)}
-                </div>
-                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.35)' }}>
-                  <span style={{ color: '#f87171' }}>↓</span> ${formatCurrency(treasury.totalWithdrawn || 0, 0)}
-                </div>
-              </div>
+              <span style={{
+                width: '6px',
+                height: '6px',
+                borderRadius: '50%',
+                background: '#00e676',
+                boxShadow: '0 0 8px rgba(0,230,118,0.5)',
+              }} />
+              <span style={{
+                fontSize: '12px',
+                fontWeight: '600',
+                color: 'rgba(255,255,255,0.5)',
+                letterSpacing: '0.02em',
+              }}>
+                Treasury
+              </span>
+              <span style={{
+                fontSize: '14px',
+                fontWeight: '700',
+                background: 'linear-gradient(135deg, #ff1744 0%, #2979ff 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                fontFamily: 'SF Mono, Monaco, monospace',
+              }}>
+                ${formatCurrency(treasury.treasury || 0, 0)}
+              </span>
             </div>
           </div>
         )}
@@ -389,21 +375,22 @@ export default function Divides({ onOpenChat }) {
         
         <div className="create-divide-section flex justify-center mb-4">
           <button
-            className="btn-create-divide font-semibold px-5 py-2.5 rounded-xl text-sm"
+            className="btn-create-divide font-bold px-6 py-3 rounded-xl text-sm"
             style={{
-              background: 'rgba(255,255,255,0.06)',
-              color: 'rgba(255,255,255,0.9)',
-              border: '1px solid rgba(255,255,255,0.1)',
+              background: 'linear-gradient(135deg, #ff1744 0%, #d32f2f 40%, #7c4dff 60%, #2979ff 100%)',
+              color: '#ffffff',
+              border: 'none',
               letterSpacing: '-0.01em',
               transition: 'all 0.2s ease',
+              boxShadow: '0 4px 16px rgba(255, 23, 68, 0.2), 0 4px 16px rgba(41, 121, 255, 0.2)',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 8px 24px rgba(255, 23, 68, 0.3), 0 8px 24px rgba(41, 121, 255, 0.3)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 4px 16px rgba(255, 23, 68, 0.2), 0 4px 16px rgba(41, 121, 255, 0.2)';
             }}
             onClick={() => {
               if (!user) {
@@ -413,7 +400,7 @@ export default function Divides({ onOpenChat }) {
               }
             }}
           >
-            Create Divide
+            + Create Divide
           </button>
         </div>
         <div className="divides-grid-mobile flex flex-col gap-4">
@@ -525,92 +512,45 @@ export default function Divides({ onOpenChat }) {
         {/* Premium Treasury Banner - Desktop */}
         {treasury && (
           <div style={{
-            background: 'rgba(255,255,255,0.02)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255,255,255,0.06)',
-            borderRadius: '16px',
-            padding: '24px 32px',
-            marginBottom: '32px',
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
+            justifyContent: 'center',
+            marginBottom: '24px',
           }}>
-            <div>
-              <div style={{
-                fontSize: '11px',
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '10px 20px',
+              background: 'rgba(255,255,255,0.03)',
+              borderRadius: '24px',
+              border: '1px solid rgba(255,255,255,0.08)',
+            }}>
+              <span style={{
+                width: '7px',
+                height: '7px',
+                borderRadius: '50%',
+                background: '#00e676',
+                boxShadow: '0 0 10px rgba(0,230,118,0.6)',
+              }} />
+              <span style={{
+                fontSize: '13px',
                 fontWeight: '600',
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-                color: 'rgba(255,255,255,0.4)',
-                marginBottom: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px'
+                color: 'rgba(255,255,255,0.5)',
+                letterSpacing: '0.02em',
               }}>
-                Site Treasury
-                <span style={{
-                  width: '6px',
-                  height: '6px',
-                  borderRadius: '50%',
-                  background: '#22c55e',
-                  boxShadow: '0 0 8px rgba(34,197,94,0.5)',
-                  animation: 'pulse 2s ease-in-out infinite'
-                }} />
-              </div>
-              <div style={{
-                fontSize: '36px',
+                Treasury
+              </span>
+              <span style={{
+                fontSize: '16px',
                 fontWeight: '700',
-                letterSpacing: '-0.02em',
-                color: 'rgba(255,255,255,0.95)',
-                fontFamily: 'SF Mono, Monaco, Consolas, monospace',
+                background: 'linear-gradient(135deg, #ff1744 0%, #2979ff 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                fontFamily: 'SF Mono, Monaco, monospace',
               }}>
                 ${formatCurrency(treasury.treasury || 0, 0)}
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: '48px' }}>
-              <div>
-                <div style={{
-                  fontSize: '10px',
-                  fontWeight: '500',
-                  letterSpacing: '0.05em',
-                  textTransform: 'uppercase',
-                  color: 'rgba(255,255,255,0.35)',
-                  marginBottom: '6px'
-                }}>
-                  Deposited
-                </div>
-                <div style={{
-                  fontSize: '20px',
-                  fontWeight: '600',
-                  color: '#4ade80',
-                  fontFamily: 'SF Mono, Monaco, Consolas, monospace',
-                  letterSpacing: '-0.02em'
-                }}>
-                  ${formatCurrency(treasury.totalDeposited || 0, 0)}
-                </div>
-              </div>
-              <div>
-                <div style={{
-                  fontSize: '10px',
-                  fontWeight: '500',
-                  letterSpacing: '0.05em',
-                  textTransform: 'uppercase',
-                  color: 'rgba(255,255,255,0.35)',
-                  marginBottom: '6px'
-                }}>
-                  Withdrawn
-                </div>
-                <div style={{
-                  fontSize: '20px',
-                  fontWeight: '600',
-                  color: '#f87171',
-                  fontFamily: 'SF Mono, Monaco, Consolas, monospace',
-                  letterSpacing: '-0.02em'
-                }}>
-                  ${formatCurrency(treasury.totalWithdrawn || 0, 0)}
-                </div>
-              </div>
+              </span>
             </div>
           </div>
         )}
@@ -620,21 +560,22 @@ export default function Divides({ onOpenChat }) {
         
         <div className="create-divide-section flex justify-center mb-8">
           <button
-            className="btn-create-divide font-semibold px-6 py-3 rounded-xl text-base"
+            className="btn-create-divide font-bold px-8 py-3.5 rounded-xl text-base"
             style={{
-              background: 'rgba(255,255,255,0.06)',
-              color: 'rgba(255,255,255,0.9)',
-              border: '1px solid rgba(255,255,255,0.1)',
+              background: 'linear-gradient(135deg, #ff1744 0%, #d32f2f 40%, #7c4dff 60%, #2979ff 100%)',
+              color: '#ffffff',
+              border: 'none',
               letterSpacing: '-0.01em',
               transition: 'all 0.2s ease',
+              boxShadow: '0 6px 20px rgba(255, 23, 68, 0.25), 0 6px 20px rgba(41, 121, 255, 0.25)',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 10px 32px rgba(255, 23, 68, 0.35), 0 10px 32px rgba(41, 121, 255, 0.35)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 6px 20px rgba(255, 23, 68, 0.25), 0 6px 20px rgba(41, 121, 255, 0.25)';
             }}
             onClick={() => {
               if (!user) {
@@ -644,7 +585,7 @@ export default function Divides({ onOpenChat }) {
               }
             }}
           >
-            Create Divide
+            + Create Divide
           </button>
         </div>
         <div className="divides-grid">

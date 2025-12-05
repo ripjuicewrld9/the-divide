@@ -39,6 +39,8 @@ export default function DivideCard({
   const [userLiked, setUserLiked] = useState(false);
   const [userDisliked, setUserDisliked] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [sentiment, setSentiment] = useState(null);
   const [seconds, setSeconds] = useState(() => {
     if (!endTime) return 0;
     const delta = Math.floor((new Date(endTime) - Date.now()) / 1000);
@@ -73,6 +75,18 @@ export default function DivideCard({
     const t = setInterval(update, 1000);
     return () => clearInterval(t);
   }, [endTime]);
+
+  // Fetch sentiment data
+  useEffect(() => {
+    if (!divideId) return;
+    api.get(`/api/divides/${divideId}/sentiment`)
+      .then(data => {
+        if (data && data.hasData) {
+          setSentiment(data.current);
+        }
+      })
+      .catch(() => {}); // Silently fail if no sentiment
+  }, [divideId]);
 
   const total = l + r || 1;
   const leftPct = Math.round((l / total) * 100);
@@ -148,28 +162,41 @@ export default function DivideCard({
     } catch (err) { console.error('Dislike failed:', err); }
   };
 
+  const handleShare = (e) => {
+    e.stopPropagation();
+    const url = `${window.location.origin}/divide/${divideId}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(err => {
+      console.error('Copy failed:', err);
+    });
+  };
+
   const handleCardClick = () => {
     navigate(`/divide/${divideId}`);
   };
 
-  // Premium color tokens
+  // Premium color tokens - Bold gradient brand
   const colors = {
-    bg: isHovered ? 'rgba(24, 24, 27, 1)' : 'rgba(20, 20, 22, 1)',
-    border: isHovered ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.04)',
+    bg: isHovered ? 'rgba(18, 18, 22, 1)' : 'rgba(12, 12, 15, 1)',
+    border: isHovered ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.06)',
     text: {
-      primary: '#fafafa',
-      secondary: '#a1a1aa',
-      muted: '#71717a',
+      primary: '#ffffff',
+      secondary: '#b4b4b4',
+      muted: '#808080',
     },
     red: {
-      primary: '#ef4444',
-      bg: 'rgba(239, 68, 68, 0.08)',
-      border: 'rgba(239, 68, 68, 0.2)',
+      primary: '#ff1744',
+      hover: '#ff4569',
+      bg: 'rgba(255, 23, 68, 0.12)',
+      border: 'rgba(255, 23, 68, 0.3)',
     },
     blue: {
-      primary: '#3b82f6',
-      bg: 'rgba(59, 130, 246, 0.08)',
-      border: 'rgba(59, 130, 246, 0.2)',
+      primary: '#2979ff',
+      hover: '#448aff',
+      bg: 'rgba(41, 121, 255, 0.12)',
+      border: 'rgba(41, 121, 255, 0.3)',
     }
   };
 
@@ -180,16 +207,16 @@ export default function DivideCard({
       onMouseLeave={() => setIsHovered(false)}
       style={{
         background: colors.bg,
-        borderRadius: '12px',
-        padding: '16px',
+        borderRadius: '14px',
+        padding: '18px',
         cursor: 'pointer',
-        transition: 'all 200ms cubic-bezier(0.16, 1, 0.3, 1)',
+        transition: 'all 250ms cubic-bezier(0.16, 1, 0.3, 1)',
         border: `1px solid ${colors.border}`,
         position: 'relative',
-        transform: isHovered ? 'translateY(-2px)' : 'translateY(0)',
+        transform: isHovered ? 'translateY(-3px)' : 'translateY(0)',
         boxShadow: isHovered 
-          ? '0 8px 32px rgba(0, 0, 0, 0.24), 0 0 0 1px rgba(255, 255, 255, 0.05)' 
-          : '0 2px 8px rgba(0, 0, 0, 0.15)',
+          ? '0 12px 40px rgba(0, 0, 0, 0.35), 0 0 60px rgba(255, 23, 68, 0.08), 0 0 60px rgba(41, 121, 255, 0.08)' 
+          : '0 4px 16px rgba(0, 0, 0, 0.2)',
       }}
     >
       {/* Header Row */}
@@ -214,29 +241,30 @@ export default function DivideCard({
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
-            padding: '4px 10px',
+            padding: '5px 12px',
             borderRadius: '20px',
             background: seconds <= 300 
-              ? 'rgba(239, 68, 68, 0.1)' 
-              : 'rgba(34, 197, 94, 0.1)',
+              ? 'linear-gradient(135deg, rgba(255,23,68,0.15) 0%, rgba(255,23,68,0.08) 100%)' 
+              : 'linear-gradient(135deg, rgba(0,230,118,0.15) 0%, rgba(0,230,118,0.08) 100%)',
             border: `1px solid ${seconds <= 300 
-              ? 'rgba(239, 68, 68, 0.2)' 
-              : 'rgba(34, 197, 94, 0.2)'}`,
+              ? 'rgba(255, 23, 68, 0.3)' 
+              : 'rgba(0, 230, 118, 0.3)'}`,
           }}>
             {seconds <= 300 ? null : (
               <span style={{
-                width: '5px',
-                height: '5px',
+                width: '6px',
+                height: '6px',
                 borderRadius: '50%',
-                background: '#22c55e',
+                background: '#00e676',
+                boxShadow: '0 0 8px rgba(0, 230, 118, 0.6)',
                 animation: 'pulse-dot 2s ease-in-out infinite',
               }} />
             )}
             <span style={{ 
-              fontSize: '11px', 
-              fontWeight: '600',
+              fontSize: '12px', 
+              fontWeight: '700',
               fontFamily: "'SF Mono', 'JetBrains Mono', monospace",
-              color: seconds <= 300 ? '#ef4444' : '#22c55e',
+              color: seconds <= 300 ? '#ff1744' : '#00e676',
               letterSpacing: '-0.02em',
             }}>
               {formatTime(seconds)}
@@ -282,35 +310,38 @@ export default function DivideCard({
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(9, 9, 11, 0.95)',
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
-          borderRadius: '12px',
+          background: 'linear-gradient(135deg, rgba(10,10,12,0.97) 0%, rgba(5,5,7,0.98) 100%)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          borderRadius: '14px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 10,
+          border: '1px solid rgba(255, 23, 68, 0.2)',
         }}>
           <div style={{
-            fontSize: '9px',
+            fontSize: '10px',
             fontWeight: '700',
-            color: '#71717a',
+            color: '#808080',
             textTransform: 'uppercase',
-            letterSpacing: '0.15em',
-            marginBottom: '12px',
+            letterSpacing: '0.2em',
+            marginBottom: '16px',
           }}>
-            Closing
+            Final Countdown
           </div>
           <div style={{
-            fontSize: '56px',
-            fontWeight: '700',
+            fontSize: '72px',
+            fontWeight: '800',
             fontFamily: "'SF Mono', 'JetBrains Mono', monospace",
-            background: 'linear-gradient(135deg, #ef4444 0%, #3b82f6 100%)',
+            background: 'linear-gradient(135deg, #ff1744 0%, #d32f2f 40%, #7c4dff 60%, #2979ff 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
             lineHeight: 1,
+            textShadow: '0 0 60px rgba(255, 23, 68, 0.3)',
+            animation: 'pulse-scale 1s ease-in-out infinite',
           }}>
             {seconds}
           </div>
@@ -333,14 +364,15 @@ export default function DivideCard({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: editingSide === 'left' ? '8px 12px' : '12px 14px',
-            borderRadius: '10px',
+            padding: editingSide === 'left' ? '10px 14px' : '14px 16px',
+            borderRadius: '12px',
             cursor: (status === 'active' && !isLocked) ? 'pointer' : 'default',
             transition: 'all 150ms cubic-bezier(0.16, 1, 0.3, 1)',
             background: editingSide === 'left' 
-              ? 'rgba(239, 68, 68, 0.15)' 
-              : colors.red.bg,
+              ? 'linear-gradient(135deg, rgba(255,23,68,0.2) 0%, rgba(255,23,68,0.1) 100%)' 
+              : 'linear-gradient(135deg, rgba(255,23,68,0.12) 0%, rgba(255,23,68,0.06) 100%)',
             border: `1px solid ${editingSide === 'left' ? colors.red.primary : colors.red.border}`,
+            boxShadow: editingSide === 'left' ? '0 0 20px rgba(255, 23, 68, 0.15)' : 'none',
           }}
         >
           {editingSide === 'left' ? (
@@ -383,15 +415,16 @@ export default function DivideCard({
               <button 
                 onClick={(e) => handleSubmitBet('left', e)} 
                 style={{ 
-                  background: colors.red.primary, 
+                  background: 'linear-gradient(135deg, #ff1744 0%, #d32f2f 100%)', 
                   border: 'none', 
-                  borderRadius: '6px', 
-                  padding: '8px 16px', 
+                  borderRadius: '8px', 
+                  padding: '8px 18px', 
                   color: '#fff', 
                   fontSize: '12px', 
-                  fontWeight: '600', 
+                  fontWeight: '700', 
                   cursor: 'pointer',
                   transition: 'all 150ms ease',
+                  boxShadow: '0 4px 12px rgba(255, 23, 68, 0.3)',
                 }}
               >
                 Buy
@@ -400,8 +433,8 @@ export default function DivideCard({
           ) : (
             <>
               <span style={{ 
-                fontSize: '13px', 
-                fontWeight: '500', 
+                fontSize: '14px', 
+                fontWeight: '600', 
                 color: colors.text.primary, 
                 overflow: 'hidden', 
                 textOverflow: 'ellipsis', 
@@ -411,11 +444,12 @@ export default function DivideCard({
                 {left}
               </span>
               <span style={{ 
-                fontSize: '15px', 
-                fontWeight: '700', 
+                fontSize: '16px', 
+                fontWeight: '800', 
                 fontFamily: "'SF Mono', 'JetBrains Mono', monospace",
                 color: colors.red.primary,
                 letterSpacing: '-0.02em',
+                textShadow: '0 0 20px rgba(255, 23, 68, 0.3)',
               }}>
                 {votesHidden ? '—' : `${leftPct}%`}
               </span>
@@ -430,14 +464,15 @@ export default function DivideCard({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: editingSide === 'right' ? '8px 12px' : '12px 14px',
-            borderRadius: '10px',
+            padding: editingSide === 'right' ? '10px 14px' : '14px 16px',
+            borderRadius: '12px',
             cursor: (status === 'active' && !isLocked) ? 'pointer' : 'default',
             transition: 'all 150ms cubic-bezier(0.16, 1, 0.3, 1)',
             background: editingSide === 'right'
-              ? 'rgba(59, 130, 246, 0.15)'
-              : colors.blue.bg,
+              ? 'linear-gradient(135deg, rgba(41,121,255,0.2) 0%, rgba(41,121,255,0.1) 100%)'
+              : 'linear-gradient(135deg, rgba(41,121,255,0.12) 0%, rgba(41,121,255,0.06) 100%)',
             border: `1px solid ${editingSide === 'right' ? colors.blue.primary : colors.blue.border}`,
+            boxShadow: editingSide === 'right' ? '0 0 20px rgba(41, 121, 255, 0.15)' : 'none',
           }}
         >
           {editingSide === 'right' ? (
@@ -479,14 +514,15 @@ export default function DivideCard({
               <button 
                 onClick={(e) => handleSubmitBet('right', e)} 
                 style={{ 
-                  background: colors.blue.primary, 
+                  background: 'linear-gradient(135deg, #448aff 0%, #2979ff 100%)', 
                   border: 'none', 
-                  borderRadius: '6px', 
-                  padding: '8px 16px', 
+                  borderRadius: '8px', 
+                  padding: '8px 18px', 
                   color: '#fff', 
                   fontSize: '12px', 
-                  fontWeight: '600', 
+                  fontWeight: '700', 
                   cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(41, 121, 255, 0.3)',
                 }}
               >
                 Buy
@@ -495,8 +531,8 @@ export default function DivideCard({
           ) : (
             <>
               <span style={{ 
-                fontSize: '13px', 
-                fontWeight: '500', 
+                fontSize: '14px', 
+                fontWeight: '600', 
                 color: colors.text.primary, 
                 overflow: 'hidden', 
                 textOverflow: 'ellipsis', 
@@ -506,11 +542,12 @@ export default function DivideCard({
                 {right}
               </span>
               <span style={{ 
-                fontSize: '15px', 
-                fontWeight: '700', 
+                fontSize: '16px', 
+                fontWeight: '800', 
                 fontFamily: "'SF Mono', 'JetBrains Mono', monospace",
                 color: colors.blue.primary,
                 letterSpacing: '-0.02em',
+                textShadow: '0 0 20px rgba(41, 121, 255, 0.3)',
               }}>
                 {votesHidden ? '—' : `${rightPct}%`}
               </span>
@@ -519,28 +556,105 @@ export default function DivideCard({
         </div>
       </div>
 
+      {/* Sentiment Indicator */}
+      {sentiment && sentiment.optionA && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '12px',
+          padding: '8px 12px',
+          borderRadius: '8px',
+          background: 'rgba(255, 255, 255, 0.02)',
+          border: '1px solid rgba(255, 255, 255, 0.04)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{
+              fontSize: '9px',
+              fontWeight: '600',
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              color: 'rgba(255, 255, 255, 0.4)',
+            }}>
+              Sentiment
+            </span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 16v-4M12 8h.01" />
+            </svg>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {/* Option A Sentiment */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{
+                fontSize: '10px',
+                fontWeight: '700',
+                color: sentiment.optionA.label === 'bullish' ? '#22c55e' 
+                     : sentiment.optionA.label === 'bearish' ? '#ef4444' 
+                     : 'rgba(255,255,255,0.5)',
+                textTransform: 'uppercase',
+              }}>
+                {sentiment.optionA.label === 'bullish' ? '↑' : sentiment.optionA.label === 'bearish' ? '↓' : '•'}
+              </span>
+              <span style={{
+                fontSize: '11px',
+                fontWeight: '600',
+                color: colors.red.primary,
+                fontFamily: "'SF Mono', monospace",
+              }}>
+                {sentiment.optionA.score}%
+              </span>
+            </div>
+            <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: '10px' }}>|</span>
+            {/* Option B Sentiment */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{
+                fontSize: '10px',
+                fontWeight: '700',
+                color: sentiment.optionB.label === 'bullish' ? '#22c55e' 
+                     : sentiment.optionB.label === 'bearish' ? '#ef4444' 
+                     : 'rgba(255,255,255,0.5)',
+                textTransform: 'uppercase',
+              }}>
+                {sentiment.optionB.label === 'bullish' ? '↑' : sentiment.optionB.label === 'bearish' ? '↓' : '•'}
+              </span>
+              <span style={{
+                fontSize: '11px',
+                fontWeight: '600',
+                color: colors.blue.primary,
+                fontFamily: "'SF Mono', monospace",
+              }}>
+                {sentiment.optionB.score}%
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Footer */}
       <div style={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center',
-        paddingTop: '14px',
-        borderTop: '1px solid rgba(255, 255, 255, 0.04)',
+        paddingTop: '16px',
+        borderTop: '1px solid rgba(255, 255, 255, 0.06)',
       }}>
         {/* Volume */}
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
           <span style={{ 
             fontSize: '11px', 
             color: colors.text.muted,
-            fontWeight: '500',
+            fontWeight: '600',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
           }}>
             Vol
           </span>
           <span style={{ 
-            fontSize: '15px', 
-            fontWeight: '700',
+            fontSize: '18px', 
+            fontWeight: '800',
             fontFamily: "'SF Mono', 'JetBrains Mono', monospace",
-            background: 'linear-gradient(135deg, #ef4444 0%, #3b82f6 100%)',
+            background: 'linear-gradient(135deg, #ff1744 0%, #d32f2f 35%, #7c4dff 65%, #2979ff 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
@@ -550,8 +664,8 @@ export default function DivideCard({
           </span>
         </div>
         
-        {/* Reactions - Minimized */}
-        <div style={{ display: 'flex', gap: '4px' }}>
+        {/* Reactions & Share */}
+        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
           <button 
             onClick={handleLike}
             disabled={userLiked || userDisliked || status !== 'active'}
@@ -593,6 +707,42 @@ export default function DivideCard({
           >
             <span style={{ fontSize: '11px' }}>↓</span>
             <span style={{ fontFamily: "'SF Mono', monospace", fontSize: '11px' }}>{localDislikes}</span>
+          </button>
+          
+          {/* Share Button */}
+          <button
+            onClick={handleShare}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              padding: '4px 8px',
+              cursor: 'pointer',
+              borderRadius: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              transition: 'all 150ms ease',
+              color: copied ? '#22c55e' : colors.text.muted,
+            }}
+            title={copied ? 'Copied!' : 'Copy link'}
+          >
+            <svg 
+              width="14" 
+              height="14" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+            >
+              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+              <polyline points="16 6 12 2 8 6" />
+              <line x1="12" y1="2" x2="12" y2="15" />
+            </svg>
+            {copied && (
+              <span style={{ fontSize: '10px', fontWeight: '600' }}>Copied!</span>
+            )}
           </button>
         </div>
       </div>

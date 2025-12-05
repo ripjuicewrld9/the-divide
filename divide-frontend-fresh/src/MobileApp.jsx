@@ -9,6 +9,7 @@ import ForgotPassword from "./pages/ForgotPassword.jsx";
 import ResetPassword from "./pages/ResetPassword.jsx";
 import DiscordLinkHandler from "./components/DiscordLinkHandler.jsx";
 import OAuthLoginHandler from "./components/OAuthLoginHandler.jsx";
+import SocialFeed from "./components/SocialFeed.jsx";
 
 function ProtectedRoute({ children, requiredRole = null }) {
     const { user } = React.useContext(AuthContext);
@@ -29,6 +30,7 @@ export default function MobileApp() {
                 {/* Divides - Default landing page */}
                 <Route path="/" element={<Divides onOpenChat={() => setIsChatOpen(true)} />} />
                 <Route path="/divides" element={<Divides onOpenChat={() => setIsChatOpen(true)} />} />
+                <Route path="/feed" element={<SocialFeed />} />
 
                 {/* Profile */}
                 <Route path="/profile" element={<ProfilePage onOpenChat={() => setIsChatOpen(true)} />} />

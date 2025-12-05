@@ -1,46 +1,56 @@
 /* 
  * PREMIUM DESIGN SYSTEM
- * Billion-dollar minimalist aesthetic
- * Inspired by: Apple, Stripe, Linear, Vercel
+ * Billion-dollar aesthetic with bold brand gradients
+ * Inspired by: Stripe, Linear, Vercel + Bold Brand Identity
  */
 
 /* ============================================
    DESIGN TOKENS
    ============================================ */
 :root {
-  /* Premium Color Palette - Refined & Sophisticated */
-  --bg-primary: #09090b;
-  --bg-secondary: #0f0f11;
-  --bg-tertiary: #141416;
-  --bg-elevated: #18181b;
-  --bg-hover: #1c1c1f;
+  /* Premium Color Palette */
+  --bg-primary: #050507;
+  --bg-secondary: #0a0a0c;
+  --bg-tertiary: #111114;
+  --bg-elevated: #16161a;
+  --bg-hover: #1a1a1f;
   
-  /* Borders - Ultra subtle */
+  /* Brand Gradients - The Signature Look */
+  --gradient-brand: linear-gradient(135deg, #ff1744 0%, #d32f2f 35%, #7c4dff 65%, #2979ff 100%);
+  --gradient-brand-subtle: linear-gradient(135deg, rgba(255,23,68,0.15) 0%, rgba(41,121,255,0.15) 100%);
+  --gradient-brand-glow: linear-gradient(135deg, rgba(255,23,68,0.3) 0%, rgba(41,121,255,0.3) 100%);
+  --gradient-red: linear-gradient(135deg, #ff1744 0%, #d32f2f 100%);
+  --gradient-blue: linear-gradient(135deg, #448aff 0%, #2979ff 100%);
+  
+  /* Borders - Subtle with gradient accents */
   --border-subtle: rgba(255, 255, 255, 0.04);
-  --border-default: rgba(255, 255, 255, 0.06);
-  --border-hover: rgba(255, 255, 255, 0.1);
-  --border-focus: rgba(255, 255, 255, 0.15);
+  --border-default: rgba(255, 255, 255, 0.08);
+  --border-hover: rgba(255, 255, 255, 0.12);
+  --border-focus: rgba(255, 255, 255, 0.2);
+  --border-gradient: linear-gradient(135deg, rgba(255,23,68,0.4) 0%, rgba(41,121,255,0.4) 100%);
   
   /* Text - Refined hierarchy */
-  --text-primary: #fafafa;
-  --text-secondary: #a1a1aa;
-  --text-tertiary: #71717a;
-  --text-muted: #52525b;
+  --text-primary: #ffffff;
+  --text-secondary: #b4b4b4;
+  --text-tertiary: #808080;
+  --text-muted: #5a5a5a;
   
-  /* Accent colors - Sophisticated, not garish */
-  --accent-red: #ef4444;
-  --accent-red-soft: rgba(239, 68, 68, 0.12);
-  --accent-red-glow: rgba(239, 68, 68, 0.25);
+  /* Accent colors - Bold & Vibrant */
+  --accent-red: #ff1744;
+  --accent-red-hover: #ff4569;
+  --accent-red-soft: rgba(255, 23, 68, 0.15);
+  --accent-red-glow: rgba(255, 23, 68, 0.4);
   
-  --accent-blue: #3b82f6;
-  --accent-blue-soft: rgba(59, 130, 246, 0.12);
-  --accent-blue-glow: rgba(59, 130, 246, 0.25);
+  --accent-blue: #2979ff;
+  --accent-blue-hover: #448aff;
+  --accent-blue-soft: rgba(41, 121, 255, 0.15);
+  --accent-blue-glow: rgba(41, 121, 255, 0.4);
   
-  --accent-green: #22c55e;
-  --accent-green-soft: rgba(34, 197, 94, 0.12);
+  --accent-green: #00e676;
+  --accent-green-soft: rgba(0, 230, 118, 0.15);
   
-  --accent-gold: #eab308;
-  --accent-gold-soft: rgba(234, 179, 8, 0.12);
+  --accent-gold: #ffd600;
+  --accent-gold-soft: rgba(255, 214, 0, 0.15);
   
   /* Typography Scale */
   --font-sans: 'SF Pro Display', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
