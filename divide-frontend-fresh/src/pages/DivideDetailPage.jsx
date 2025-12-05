@@ -294,8 +294,9 @@ export default function DivideDetailPage() {
               <span style={{ fontSize: '13px', color: '#888' }}>
                 Vol: <span style={{ color: '#e53935', fontWeight: '600' }}>${divide.pot?.toFixed(2) || '0.00'}</span>
               </span>
-              <button onClick={handleShare} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '6px', padding: '6px 12px', color: '#888', cursor: 'pointer', fontSize: '12px' }}>
-                📤 Share
+              <button onClick={handleShare} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '6px', padding: '6px 12px', color: '#888', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style={{ width: '14px', height: '14px' }}><path fillRule="evenodd" d="M15.75 4.5a3 3 0 11.825 2.066l-8.421 4.679a3.002 3.002 0 010 1.51l8.421 4.679a3 3 0 11-.729 1.31l-8.421-4.678a3 3 0 110-4.132l8.421-4.679a3 3 0 01-.096-.755z" clipRule="evenodd" /></svg>
+                Share
               </button>
             </div>
           </div>
@@ -311,8 +312,9 @@ export default function DivideDetailPage() {
           )}
 
           {divide.status === 'active' && (
-            <div style={{ background: '#16161a', borderRadius: '12px', padding: '20px', border: '1px solid #2a2a30', marginBottom: '20px', textAlign: 'center', color: '#666' }}>
-              <p>📊 Vote history chart will be revealed when this divide ends</p>
+            <div style={{ background: '#16161a', borderRadius: '12px', padding: '20px', border: '1px solid #2a2a30', marginBottom: '20px', textAlign: 'center', color: '#666', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style={{ width: '16px', height: '16px' }}><path d="M18.375 2.25c-1.035 0-1.875.84-1.875 1.875v15.75c0 1.035.84 1.875 1.875 1.875h.75c1.035 0 1.875-.84 1.875-1.875V4.125c0-1.036-.84-1.875-1.875-1.875h-.75zM9.75 8.625c0-1.036.84-1.875 1.875-1.875h.75c1.036 0 1.875.84 1.875 1.875v11.25c0 1.035-.84 1.875-1.875 1.875h-.75a1.875 1.875 0 01-1.875-1.875V8.625zM3 13.125c0-1.036.84-1.875 1.875-1.875h.75c1.036 0 1.875.84 1.875 1.875v6.75c0 1.035-.84 1.875-1.875 1.875h-.75A1.875 1.875 0 013 19.875v-6.75z" /></svg>
+              <p style={{ margin: 0 }}>Vote history chart will be revealed when this divide ends</p>
             </div>
           )}
 
@@ -326,7 +328,7 @@ export default function DivideDetailPage() {
                 background: 'linear-gradient(135deg, rgba(229, 57, 53, 0.1) 0%, rgba(30, 136, 229, 0.1) 100%)',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ fontSize: '18px' }}>🔍</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style={{ width: '18px', height: '18px', color: '#888' }}><path fillRule="evenodd" d="M10.5 3.75a6.75 6.75 0 100 13.5 6.75 6.75 0 000-13.5zM2.25 10.5a8.25 8.25 0 1114.59 5.28l4.69 4.69a.75.75 0 11-1.06 1.06l-4.69-4.69A8.25 8.25 0 012.25 10.5z" clipRule="evenodd" /></svg>
                   <div>
                     <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#fff', margin: 0 }}>FULL TRANSPARENCY REPORT</h3>
                     <p style={{ fontSize: '10px', color: '#888', margin: '4px 0 0 0' }}>Every bet, every payout, fully auditable</p>
@@ -405,8 +407,9 @@ export default function DivideDetailPage() {
                   marginBottom: '20px',
                   border: '1px solid #1a1a1a',
                 }}>
-                  <h4 style={{ fontSize: '12px', fontWeight: '700', color: '#888', marginBottom: '12px', textTransform: 'uppercase' }}>
-                    💰 Pot Distribution
+                  <h4 style={{ fontSize: '12px', fontWeight: '700', color: '#888', marginBottom: '12px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style={{ width: '14px', height: '14px' }}><path d="M12 7.5a2.25 2.25 0 100 4.5 2.25 2.25 0 000-4.5z" /><path fillRule="evenodd" d="M1.5 4.875C1.5 3.839 2.34 3 3.375 3h17.25c1.035 0 1.875.84 1.875 1.875v9.75c0 1.036-.84 1.875-1.875 1.875H3.375A1.875 1.875 0 011.5 14.625v-9.75zM8.25 9.75a3.75 3.75 0 117.5 0 3.75 3.75 0 01-7.5 0zM18.75 9a.75.75 0 00-.75.75v.008c0 .414.336.75.75.75h.008a.75.75 0 00.75-.75V9.75a.75.75 0 00-.75-.75h-.008zM4.5 9.75A.75.75 0 015.25 9h.008a.75.75 0 01.75.75v.008a.75.75 0 01-.75.75H5.25a.75.75 0 01-.75-.75V9.75z" clipRule="evenodd" /></svg>
+                    Pot Distribution
                   </h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
@@ -437,8 +440,9 @@ export default function DivideDetailPage() {
                     padding: '16px', 
                     border: '1px solid #1a1a1a',
                   }}>
-                    <h4 style={{ fontSize: '12px', fontWeight: '700', color: '#888', marginBottom: '12px', textTransform: 'uppercase' }}>
-                      📋 All Bets ({divide.voteHistory.length} total)
+                    <h4 style={{ fontSize: '12px', fontWeight: '700', color: '#888', marginBottom: '12px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style={{ width: '14px', height: '14px' }}><path fillRule="evenodd" d="M10.5 3A1.501 1.501 0 009 4.5h6A1.5 1.5 0 0013.5 3h-3zm-2.693.178A3 3 0 0110.5 1.5h3a3 3 0 012.694 1.678c.497.042.992.092 1.486.15 1.497.173 2.57 1.46 2.57 2.929V19.5a3 3 0 01-3 3H6.75a3 3 0 01-3-3V6.257c0-1.47 1.073-2.756 2.57-2.93.493-.057.989-.107 1.487-.15z" clipRule="evenodd" /></svg>
+                      All Bets ({divide.voteHistory.length} total)
                     </h4>
                     <div style={{ maxHeight: '300px', overflowY: 'auto', paddingRight: '8px' }}>
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
@@ -571,9 +575,13 @@ export default function DivideDetailPage() {
                           cursor: hasReacted ? 'default' : 'pointer',
                           fontSize: '12px',
                           opacity: userDisliked ? 0.4 : 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
                         }}
                       >
-                        👍 {c.likes || 0}
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style={{ width: '14px', height: '14px' }}><path d="M7.493 18.75c-.425 0-.82-.236-.975-.632A7.48 7.48 0 016 15.375c0-1.75.599-3.358 1.602-4.634.151-.192.373-.309.6-.397.473-.183.89-.514 1.212-.924a9.042 9.042 0 012.861-2.4c.723-.384 1.35-.956 1.653-1.715a4.498 4.498 0 00.322-1.672V3a.75.75 0 01.75-.75 2.25 2.25 0 012.25 2.25c0 1.152-.26 2.243-.723 3.218-.266.558.107 1.282.725 1.282h3.126c1.026 0 1.945.694 2.054 1.715.045.422.068.85.068 1.285a11.95 11.95 0 01-2.649 7.521c-.388.482-.987.729-1.605.729H14.23c-.483 0-.964-.078-1.423-.23l-3.114-1.04a4.501 4.501 0 00-1.423-.23h-.777zM2.331 10.977a11.969 11.969 0 00-.831 4.398 12 12 0 00.52 3.507c.26.85 1.084 1.368 1.973 1.368H4.9c.445 0 .72-.498.523-.898a8.963 8.963 0 01-.924-3.977c0-1.708.476-3.305 1.302-4.666.245-.403-.028-.959-.5-.959H4.25c-.832 0-1.612.453-1.918 1.227z" /></svg>
+                        {c.likes || 0}
                       </button>
                       <button
                         onClick={() => handleCommentDislike(c._id)}
@@ -585,9 +593,13 @@ export default function DivideDetailPage() {
                           cursor: hasReacted ? 'default' : 'pointer',
                           fontSize: '12px',
                           opacity: userLiked ? 0.4 : 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
                         }}
                       >
-                        👎 {c.dislikes || 0}
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style={{ width: '14px', height: '14px' }}><path d="M15.73 5.25h1.035A7.465 7.465 0 0118 9.375a7.465 7.465 0 01-1.235 4.125h-.148c-.806 0-1.534.446-2.031 1.08a9.04 9.04 0 01-2.861 2.4c-.723.384-1.35.956-1.653 1.715a4.498 4.498 0 00-.322 1.672V21a.75.75 0 01-.75.75 2.25 2.25 0 01-2.25-2.25c0-1.152.26-2.243.723-3.218C7.74 15.724 7.366 15 6.748 15H3.622c-1.026 0-1.945-.694-2.054-1.715A12.134 12.134 0 011.5 12c0-2.848.992-5.464 2.649-7.521.388-.482.987-.729 1.605-.729H9.77a4.5 4.5 0 011.423.23l3.114 1.04a4.5 4.5 0 001.423.23zM21.669 13.773c.536-1.362.831-2.845.831-4.398 0-1.22-.182-2.398-.52-3.507-.26-.85-1.084-1.368-1.973-1.368H19.1c-.445 0-.72.498-.523.898.591 1.2.924 2.55.924 3.977a8.959 8.959 0 01-1.302 4.666c-.245.403.028.959.5.959h1.053c.832 0 1.612-.453 1.918-1.227z" /></svg>
+                        {c.dislikes || 0}
                       </button>
                     </div>
                   </div>

@@ -16,8 +16,9 @@ export default function AuthModal({ onClose, isRegister, setIsRegister }) {
   const [marketingConsent, setMarketingConsent] = useState(false);
   const [twoFactorToken, setTwoFactorToken] = useState('');
   const [requires2FA, setRequires2FA] = useState(false);
+  const [pendingUserId, setPendingUserId] = useState(null);
   const [error, setError] = useState('');
-  const { login, register } = useContext(AuthContext);
+  const { login, register, verify2FA } = useContext(AuthContext);
 
   const handleDiscordLogin = () => {
     window.location.href = `${API_BASE}/auth/discord/login`;
@@ -34,12 +35,24 @@ export default function AuthModal({ onClose, isRegister, setIsRegister }) {
       if (isRegister) {
         await register(username, password, email, dateOfBirth, marketingConsent);
         onClose();
+      } else if (requires2FA && pendingUserId) {
+        // User is submitting 2FA code
+        if (!twoFactorToken || twoFactorToken.length !== 6) {
+          setError('Please enter a valid 6-digit code');
+          return;
+        }
+        const result = await verify2FA(pendingUserId, twoFactorToken);
+        if (result && result.success) {
+          onClose();
+        }
       } else {
-        const result = await login(username, password, twoFactorToken);
+        // Initial login
+        const result = await login(username, password);
         if (result && result.requires2FA) {
           setRequires2FA(true);
+          setPendingUserId(result.userId);
           setError('Please enter your 2FA code');
-        } else {
+        } else if (result && result.success) {
           onClose();
         }
       }

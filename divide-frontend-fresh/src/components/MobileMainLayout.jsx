@@ -29,7 +29,7 @@ export default function MobileMainLayout({ onOpenChat }) {
       color: '#e53935',
       gradient: 'linear-gradient(135deg, #e53935 0%, #1e88e5 100%)',
       path: '/divides',
-      tagline: '🎭 The Psychology Game'
+      tagline: 'The Psychology Game'
     }
   ];
 
@@ -101,7 +101,8 @@ export default function MobileMainLayout({ onOpenChat }) {
                           }}
                           className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-[#1e88e5] hover:bg-[#1e88e5]/10 mb-1"
                         >
-                          ⚡ Admin Dashboard
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M14.615 1.595a.75.75 0 01.359.852L12.982 9.75h7.268a.75.75 0 01.548 1.262l-10.5 11.25a.75.75 0 01-1.272-.71l1.992-7.302H3.75a.75.75 0 01-.548-1.262l10.5-11.25a.75.75 0 01.913-.143z" clipRule="evenodd" /></svg>
+                          Admin Dashboard
                         </button>
                       )}
                       <button
@@ -111,7 +112,8 @@ export default function MobileMainLayout({ onOpenChat }) {
                         }}
                         className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-400 hover:bg-red-500/10"
                       >
-                        🚪 Logout
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M7.5 3.75A1.5 1.5 0 006 5.25v13.5a1.5 1.5 0 001.5 1.5h6a1.5 1.5 0 001.5-1.5V15a.75.75 0 011.5 0v3.75a3 3 0 01-3 3h-6a3 3 0 01-3-3V5.25a3 3 0 013-3h6a3 3 0 013 3V9A.75.75 0 0115 9V5.25a1.5 1.5 0 00-1.5-1.5h-6zm10.72 4.72a.75.75 0 011.06 0l3 3a.75.75 0 010 1.06l-3 3a.75.75 0 11-1.06-1.06l1.72-1.72H9a.75.75 0 010-1.5h10.94l-1.72-1.72a.75.75 0 010-1.06z" clipRule="evenodd" /></svg>
+                        Logout
                       </button>
                     </div>
                   </div>
@@ -160,8 +162,8 @@ export default function MobileMainLayout({ onOpenChat }) {
                 opacity: 1
               }}
             />
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-lg">
-              🔍
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path fillRule="evenodd" d="M10.5 3.75a6.75 6.75 0 100 13.5 6.75 6.75 0 000-13.5zM2.25 10.5a8.25 8.25 0 1114.59 5.28l4.69 4.69a.75.75 0 11-1.06 1.06l-4.69-4.69A8.25 8.25 0 012.25 10.5z" clipRule="evenodd" /></svg>
             </div>
           </div>
         </div>

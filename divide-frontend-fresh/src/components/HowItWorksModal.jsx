@@ -71,7 +71,10 @@ export default function HowItWorksModal({ isOpen, onClose }) {
                 {/* The Core Rule */}
                 <div className="p-5 rounded-xl bg-gradient-to-br from-red-500/10 via-purple-500/10 to-blue-500/10 border border-white/10">
                   <div className="flex items-center gap-2 mb-3">
-                    <span className="text-yellow-400">⚠️</span>
+                    <svg className="w-5 h-5 text-yellow-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                      <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
                     <h3 className="text-lg font-bold text-white">BLIND BETS — MINORITY WINS</h3>
                   </div>
                   <p className="text-white font-semibold">
@@ -143,15 +146,21 @@ export default function HowItWorksModal({ isOpen, onClose }) {
                   <h3 className="font-bold text-white mb-3">The sacrifice is ALWAYS there:</h3>
                   <ul className="space-y-2 text-sm">
                     <li className="flex items-center gap-2">
-                      <span className="text-green-400">💰</span>
+                      <svg className="w-4 h-4 text-green-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
+                      </svg>
                       <span className="text-gray-300">Win money? <span className="text-white">Your side lost the social war.</span></span>
                     </li>
                     <li className="flex items-center gap-2">
-                      <span className="text-red-400">👑</span>
+                      <svg className="w-4 h-4 text-red-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M12 22V12"/><path d="M20 7v10"/><path d="M4 7v10"/>
+                      </svg>
                       <span className="text-gray-300">Win the social war? <span className="text-white">You lost your money.</span></span>
                     </li>
                     <li className="flex items-center gap-2">
-                      <span className="text-purple-400">🎭</span>
+                      <svg className="w-4 h-4 text-purple-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>
+                      </svg>
                       <span className="text-gray-300">Try to manipulate? <span className="text-white">You betray your own beliefs publicly.</span></span>
                     </li>
                   </ul>
@@ -300,7 +309,7 @@ export default function HowItWorksModal({ isOpen, onClose }) {
                       <span><span className="text-white">Creators earn up to 0.5%</span> — but only with skin in the game</span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <span className="text-yellow-400 mt-0.5">⚡</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-yellow-400 mt-0.5 flex-shrink-0"><path fillRule="evenodd" d="M14.615 1.595a.75.75 0 01.359.852L12.982 9.75h7.268a.75.75 0 01.548 1.262l-10.5 11.25a.75.75 0 01-1.272-.71l1.992-7.302H3.75a.75.75 0 01-.548-1.262l10.5-11.25a.75.75 0 01.913-.143z" clipRule="evenodd" /></svg>
                       <span>No skin = no bonus — house keeps the creator pool</span>
                     </li>
                   </ul>

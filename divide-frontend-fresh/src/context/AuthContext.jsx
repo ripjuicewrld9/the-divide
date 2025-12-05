@@ -111,18 +111,18 @@ export const AuthProvider = ({ children }) => {
     };
 
     // LOGIN
-    const login = async (username, password, twoFactorToken = null) => {
+    const login = async (username, password) => {
         try {
             const res = await fetch(`${API_BASE}/login`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username, password, twoFactorToken }),
+                body: JSON.stringify({ username, password }),
             });
             const data = await res.json();
 
             // Check if 2FA is required
             if (data.requires2FA) {
-                return { requires2FA: true };
+                return { requires2FA: true, userId: data.userId };
             }
 
             if (!res.ok) throw new Error(data.error || "Login failed");
@@ -132,6 +132,27 @@ export const AuthProvider = ({ children }) => {
             return { success: true };
         } catch (err) {
             console.error("Login error:", err);
+            throw err;
+        }
+    };
+
+    // VERIFY 2FA
+    const verify2FA = async (userId, tfaToken) => {
+        try {
+            const res = await fetch(`${API_BASE}/verify-2fa`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ userId, token: tfaToken }),
+            });
+            const data = await res.json();
+
+            if (!res.ok) throw new Error(data.error || "Invalid 2FA code");
+
+            setToken(data.token);
+            setUser({ id: data.userId, role: data.role || 'user' });
+            return { success: true };
+        } catch (err) {
+            console.error("2FA verification error:", err);
             throw err;
         }
     };
@@ -283,7 +304,7 @@ export const AuthProvider = ({ children }) => {
 
     return (
         <AuthContext.Provider
-            value={{ user, balance: user?.balance ?? 0, token, setToken, login, register, logout, addFunds, withdrawFunds, deductForVote, refreshUser, updateUser, setBalance }}
+            value={{ user, balance: user?.balance ?? 0, token, setToken, login, register, verify2FA, logout, addFunds, withdrawFunds, deductForVote, refreshUser, updateUser, setBalance }}
         >
             {children}
         </AuthContext.Provider>

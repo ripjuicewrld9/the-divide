@@ -5,11 +5,39 @@ export default function MobileBottomNav({ onOpenChat }) {
     const location = useLocation();
 
     const navItems = [
-        { id: 'divides', label: 'Divides', icon: '/elections-poll-svgrepo-com.svg', path: '/' },
-        { id: 'feed', label: 'Feed', icon: '📝', path: '/feed' },
-        { id: 'chat', label: 'Chat', icon: '💬', path: '/chat' },
-        { id: 'profile', label: 'Profile', icon: '👤', path: '/profile' },
+        { id: 'divides', label: 'Divides', icon: 'divides', path: '/' },
+        { id: 'feed', label: 'Feed', icon: 'feed', path: '/feed' },
+        { id: 'chat', label: 'Chat', icon: 'chat', path: '/chat' },
+        { id: 'profile', label: 'Profile', icon: 'profile', path: '/profile' },
     ];
+
+    // SVG icons for high-end look
+    const icons = {
+        divides: (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                <path d="M2 17l10 5 10-5"/>
+                <path d="M2 12l10 5 10-5"/>
+            </svg>
+        ),
+        feed: (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                <path d="M22 6l-10 7L2 6"/>
+            </svg>
+        ),
+        chat: (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+            </svg>
+        ),
+        profile: (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+            </svg>
+        )
+    };
 
     const isActive = (path) => {
         if (path === '/') return location.pathname === '/';
@@ -29,7 +57,7 @@ export default function MobileBottomNav({ onOpenChat }) {
                                 className="flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors min-w-[60px]"
                                 style={{ color: '#6b7280' }}
                             >
-                                <span className="text-xl">{item.icon}</span>
+                                <span className="w-5 h-5">{icons[item.icon]}</span>
                                 <span className="text-[10px] font-medium">{item.label}</span>
                             </button>
                         );
@@ -45,20 +73,7 @@ export default function MobileBottomNav({ onOpenChat }) {
                                 color: isActive(item.path) ? '#ff1744' : '#6b7280'
                             }}
                         >
-                            {item.icon.startsWith('/') ? (
-                                <img
-                                    src={item.icon}
-                                    alt={item.label}
-                                    className="w-5 h-5"
-                                    style={{
-                                        filter: isActive(item.path)
-                                            ? 'brightness(0) saturate(100%) invert(27%) sepia(95%) saturate(5558%) hue-rotate(346deg) brightness(99%) contrast(107%)'
-                                            : 'brightness(0) saturate(100%) invert(47%) sepia(6%) saturate(378%) hue-rotate(180deg) brightness(94%) contrast(87%)'
-                                    }}
-                                />
-                            ) : (
-                                <span className="text-xl">{item.icon}</span>
-                            )}
+                            <span className="w-5 h-5">{icons[item.icon]}</span>
                             <span className="text-[10px] font-medium">{item.label}</span>
                         </Link>
                     );

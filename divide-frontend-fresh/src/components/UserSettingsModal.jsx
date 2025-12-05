@@ -250,10 +250,10 @@ export default function UserSettingsModal({ isOpen, onClose }) {
                   gap: '16px'
                 }}>
                   {[
-                    { label: 'Total Wagered', value: `$${(user?.wagered || 0).toFixed(2)}`, icon: '💰' },
-                    { label: 'Total Won', value: `$${(user?.totalWon || 0).toFixed(2)}`, icon: '🎉' },
-                    { label: 'Total Deposited', value: `$${(user?.totalDeposited || 0).toFixed(2)}`, icon: '📥' },
-                    { label: 'Total Withdrawn', value: `$${(user?.totalWithdrawn || 0).toFixed(2)}`, icon: '📤' }
+                    { label: 'Total Wagered', value: `$${(user?.wagered || 0).toFixed(2)}`, icon: 'money' },
+                    { label: 'Total Won', value: `$${(user?.totalWon || 0).toFixed(2)}`, icon: 'trophy' },
+                    { label: 'Total Deposited', value: `$${(user?.totalDeposited || 0).toFixed(2)}`, icon: 'download' },
+                    { label: 'Total Withdrawn', value: `$${(user?.totalWithdrawn || 0).toFixed(2)}`, icon: 'upload' }
                   ].map((stat, idx) => (
                     <div
                       key={idx}
@@ -265,7 +265,12 @@ export default function UserSettingsModal({ isOpen, onClose }) {
                         textAlign: 'center'
                       }}
                     >
-                      <div style={{ fontSize: '28px', marginBottom: '8px' }}>{stat.icon}</div>
+                      <div style={{ marginBottom: '8px', display: 'flex', justifyContent: 'center' }}>
+                        {stat.icon === 'money' && <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#22c55e" style={{ width: '28px', height: '28px' }}><path d="M12 7.5a2.25 2.25 0 100 4.5 2.25 2.25 0 000-4.5z" /><path fillRule="evenodd" d="M1.5 4.875C1.5 3.839 2.34 3 3.375 3h17.25c1.035 0 1.875.84 1.875 1.875v9.75c0 1.036-.84 1.875-1.875 1.875H3.375A1.875 1.875 0 011.5 14.625v-9.75zM8.25 9.75a3.75 3.75 0 117.5 0 3.75 3.75 0 01-7.5 0zM18.75 9a.75.75 0 00-.75.75v.008c0 .414.336.75.75.75h.008a.75.75 0 00.75-.75V9.75a.75.75 0 00-.75-.75h-.008zM4.5 9.75A.75.75 0 015.25 9h.008a.75.75 0 01.75.75v.008a.75.75 0 01-.75.75H5.25a.75.75 0 01-.75-.75V9.75z" clipRule="evenodd" /><path d="M2.25 18a.75.75 0 000 1.5c5.4 0 10.63.722 15.6 2.075 1.19.324 2.4-.558 2.4-1.82V18.75a.75.75 0 00-.75-.75H2.25z" /></svg>}
+                        {stat.icon === 'trophy' && <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#f59e0b" style={{ width: '28px', height: '28px' }}><path fillRule="evenodd" d="M5.166 2.621v.858c-1.035.148-2.059.33-3.071.543a.75.75 0 00-.584.859 6.753 6.753 0 006.138 5.6 6.73 6.73 0 002.743 1.346A6.707 6.707 0 019.279 15H8.54c-1.036 0-1.875.84-1.875 1.875V19.5h-.75a.75.75 0 000 1.5h12.17a.75.75 0 000-1.5h-.75v-2.625c0-1.036-.84-1.875-1.875-1.875h-.739a6.707 6.707 0 01-1.112-3.173 6.73 6.73 0 002.743-1.347 6.753 6.753 0 006.139-5.6.75.75 0 00-.585-.858 47.077 47.077 0 00-3.07-.543V2.62a.75.75 0 00-.658-.744 49.22 49.22 0 00-6.093-.377c-2.063 0-4.096.128-6.093.377a.75.75 0 00-.657.744zm0 2.629c0 1.196.312 2.32.857 3.294A5.266 5.266 0 013.16 5.337a45.6 45.6 0 012.006-.343v.256zm13.5 0v-.256c.674.1 1.343.214 2.006.343a5.265 5.265 0 01-2.863 3.207 6.72 6.72 0 00.857-3.294z" clipRule="evenodd" /></svg>}
+                        {stat.icon === 'download' && <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#3b82f6" style={{ width: '28px', height: '28px' }}><path fillRule="evenodd" d="M12 2.25a.75.75 0 01.75.75v11.69l3.22-3.22a.75.75 0 111.06 1.06l-4.5 4.5a.75.75 0 01-1.06 0l-4.5-4.5a.75.75 0 111.06-1.06l3.22 3.22V3a.75.75 0 01.75-.75zm-9 13.5a.75.75 0 01.75.75v2.25a1.5 1.5 0 001.5 1.5h13.5a1.5 1.5 0 001.5-1.5V16.5a.75.75 0 011.5 0v2.25a3 3 0 01-3 3H5.25a3 3 0 01-3-3V16.5a.75.75 0 01.75-.75z" clipRule="evenodd" /></svg>}
+                        {stat.icon === 'upload' && <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#a855f7" style={{ width: '28px', height: '28px' }}><path fillRule="evenodd" d="M11.47 2.47a.75.75 0 011.06 0l4.5 4.5a.75.75 0 01-1.06 1.06l-3.22-3.22V16.5a.75.75 0 01-1.5 0V4.81L8.03 8.03a.75.75 0 01-1.06-1.06l4.5-4.5zM3 15.75a.75.75 0 01.75.75v2.25a1.5 1.5 0 001.5 1.5h13.5a1.5 1.5 0 001.5-1.5V16.5a.75.75 0 011.5 0v2.25a3 3 0 01-3 3H5.25a3 3 0 01-3-3V16.5a.75.75 0 01.75-.75z" clipRule="evenodd" /></svg>}
+                      </div>
                       <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                         {stat.label}
                       </div>

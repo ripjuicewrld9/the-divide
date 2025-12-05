@@ -239,7 +239,7 @@ export default function SupportTickets() {
                     {/* Header */}
                     <div className="mb-6">
                         <div className="flex items-center gap-2 text-sm text-gray-400 mb-2">
-                            <span>📋</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M10.5 3A1.501 1.501 0 009 4.5h6A1.5 1.5 0 0013.5 3h-3zm-2.693.178A3 3 0 0110.5 1.5h3a3 3 0 012.694 1.678c.497.042.992.092 1.486.15 1.497.173 2.57 1.46 2.57 2.929V19.5a3 3 0 01-3 3H6.75a3 3 0 01-3-3V6.257c0-1.47 1.073-2.756 2.57-2.93.493-.057.989-.107 1.487-.15z" clipRule="evenodd" /></svg>
                             <span>Tickets / Support Management</span>
                         </div>
                         <h1 className="text-3xl font-bold">All Tickets</h1>
@@ -410,7 +410,7 @@ export default function SupportTickets() {
                                                     <UserAvatar user={ticket.assignedTo} size={32} />
                                                 </div>
                                             ) : ticket.escalated ? (
-                                                <span className="text-xs text-red-400">🚨</span>
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-red-400"><path fillRule="evenodd" d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003zM12 8.25a.75.75 0 01.75.75v3.75a.75.75 0 01-1.5 0V9a.75.75 0 01.75-.75zm0 8.25a.75.75 0 100-1.5.75.75 0 000 1.5z" clipRule="evenodd" /></svg>
                                             ) : (
                                                 <button
                                                     onClick={(e) => handleAssignToMe(e, ticket._id)}
