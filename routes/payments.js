@@ -783,4 +783,144 @@ router.post('/admin/reject/:id', async (req, res) => {
   }
 });
 
+/**
+ * POST /api/payments/admin/credit-deposit/:id
+ * Manually credit a deposit that didn't auto-credit via webhook (admin only)
+ */
+router.post('/admin/credit-deposit/:id', async (req, res) => {
+  try {
+    const transaction = await Transaction.findById(req.params.id);
+    
+    if (!transaction) {
+      return res.status(404).json({ error: 'Transaction not found' });
+    }
+
+    if (transaction.type !== 'deposit') {
+      return res.status(400).json({ error: 'Transaction is not a deposit' });
+    }
+
+    if (transaction.status === 'finished') {
+      return res.status(400).json({ error: 'Deposit already credited' });
+    }
+
+    // Credit user balance
+    const user = await User.findById(transaction.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    user.balance += transaction.amountCents;
+    user.totalDeposited = (user.totalDeposited || 0) + transaction.amountCents;
+    // Add 1x playthrough requirement for deposits
+    user.wagerRequirement = (user.wagerRequirement || 0) + transaction.amountCents;
+    await user.save();
+
+    // Update transaction
+    const oldStatus = transaction.status;
+    transaction.status = 'finished';
+    transaction.completedAt = new Date();
+    transaction.adminCredited = true;
+    transaction.adminCreditedAt = new Date();
+    await transaction.save();
+
+    console.log(`[Payments] Deposit ${transaction._id} manually credited by admin: $${(transaction.amountCents / 100).toFixed(2)} to ${user.username}`);
+
+    res.json({
+      success: true,
+      message: `Credited $${(transaction.amountCents / 100).toFixed(2)} to ${user.username}`,
+      transaction: {
+        id: transaction._id,
+        oldStatus,
+        newStatus: 'finished',
+        amountUsd: (transaction.amountCents / 100).toFixed(2),
+        user: user.username,
+        newBalance: (user.balance / 100).toFixed(2)
+      }
+    });
+  } catch (err) {
+    console.error('[Payments] Manual credit deposit failed:', err.message);
+    res.status(500).json({ error: 'Failed to credit deposit' });
+  }
+});
+
+/**
+ * GET /api/payments/admin/deposits
+ * Get all deposits with optional status filter (admin only)
+ */
+router.get('/admin/deposits', async (req, res) => {
+  try {
+    const { status, limit = 50 } = req.query;
+    
+    const query = { type: 'deposit' };
+    if (status) {
+      query.status = status;
+    }
+
+    const deposits = await Transaction.find(query)
+      .populate('userId', 'username email')
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit));
+
+    res.json({
+      deposits: deposits.map(d => ({
+        id: d._id,
+        user: d.userId?.username || 'Unknown',
+        email: d.userId?.email,
+        amountUsd: (d.amountCents / 100).toFixed(2),
+        cryptoCurrency: d.cryptoCurrency,
+        cryptoAmount: d.cryptoAmount,
+        payAddress: d.payAddress,
+        status: d.status,
+        nowPaymentsId: d.nowPaymentsId,
+        orderId: d.nowPaymentsOrderId,
+        createdAt: d.createdAt,
+        completedAt: d.completedAt,
+        adminCredited: d.adminCredited || false
+      }))
+    });
+  } catch (err) {
+    console.error('[Payments] Get deposits failed:', err.message);
+    res.status(500).json({ error: 'Failed to fetch deposits' });
+  }
+});
+
+/**
+ * POST /api/payments/admin/check-status/:id
+ * Check NOWPayments status for a transaction and update if needed (admin only)
+ */
+router.post('/admin/check-status/:id', async (req, res) => {
+  try {
+    const transaction = await Transaction.findById(req.params.id);
+    
+    if (!transaction) {
+      return res.status(404).json({ error: 'Transaction not found' });
+    }
+
+    if (!transaction.nowPaymentsId) {
+      return res.status(400).json({ error: 'Transaction has no NOWPayments ID' });
+    }
+
+    // Fetch current status from NOWPayments
+    const paymentStatus = await nowPayments.getPaymentStatus(transaction.nowPaymentsId);
+    
+    const oldStatus = transaction.status;
+    const newStatus = nowPayments.mapPaymentStatus(paymentStatus.payment_status);
+
+    res.json({
+      transactionId: transaction._id,
+      nowPaymentsId: transaction.nowPaymentsId,
+      localStatus: oldStatus,
+      remoteStatus: paymentStatus.payment_status,
+      mappedStatus: newStatus,
+      actuallyPaid: paymentStatus.actually_paid,
+      payAmount: paymentStatus.pay_amount,
+      needsCredit: transaction.type === 'deposit' && newStatus === 'finished' && oldStatus !== 'finished',
+      rawResponse: paymentStatus
+    });
+  } catch (err) {
+    console.error('[Payments] Check status failed:', err.message);
+    res.status(500).json({ error: err.message || 'Failed to check status' });
+  }
+});
+
 export default router;
