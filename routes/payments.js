@@ -613,20 +613,47 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
     transaction.cryptoAmountReceived = body.actually_paid || body.pay_amount;
     transaction.payinHash = body.payin_hash;
 
-    // Handle completion for deposits
-    if (transaction.type === 'deposit' && newStatus === 'finished' && oldStatus !== 'finished') {
-      // Credit user balance
-      const user = await User.findById(transaction.userId);
-      if (user) {
-        user.balance += transaction.amountCents;
-        user.totalDeposited = (user.totalDeposited || 0) + transaction.amountCents;
-        // Add 1x playthrough requirement for deposits
-        user.wagerRequirement = (user.wagerRequirement || 0) + transaction.amountCents;
-        await user.save();
+    // Handle deposits - credit on finished OR partially_paid
+    if (transaction.type === 'deposit' && !transaction.completedAt) {
+      const shouldCredit = newStatus === 'finished' || newStatus === 'partially_paid';
+      
+      if (shouldCredit) {
+        const user = await User.findById(transaction.userId);
+        if (user) {
+          // Calculate credit amount based on what was actually received
+          let creditCents;
+          
+          if (newStatus === 'finished') {
+            // Full payment - credit the expected amount
+            creditCents = transaction.amountCents;
+          } else if (newStatus === 'partially_paid') {
+            // Partial payment - credit based on actually_paid at current exchange rate
+            const actuallyPaid = parseFloat(body.actually_paid) || 0;
+            const expectedCrypto = parseFloat(transaction.cryptoAmount) || 1;
+            const ratio = actuallyPaid / expectedCrypto;
+            creditCents = Math.floor(transaction.amountCents * ratio);
+            
+            // Store partial payment details
+            transaction.partialPayment = true;
+            transaction.partialRatio = ratio;
+            transaction.partialCreditCents = creditCents;
+          }
+          
+          if (creditCents > 0) {
+            user.balance += creditCents;
+            user.totalDeposited = (user.totalDeposited || 0) + creditCents;
+            // Add 1x playthrough requirement for deposits
+            user.wagerRequirement = (user.wagerRequirement || 0) + creditCents;
+            await user.save();
 
-        console.log(`[Payments] Deposit completed: ${transaction._id}, credited $${(transaction.amountCents / 100).toFixed(2)} to ${user.username}`);
+            // Update transaction with actual credited amount
+            transaction.creditedAmountCents = creditCents;
+            transaction.completedAt = new Date();
+
+            console.log(`[Payments] Deposit ${newStatus}: ${transaction._id}, credited $${(creditCents / 100).toFixed(2)} to ${user.username}${newStatus === 'partially_paid' ? ` (partial: ${(ratio * 100).toFixed(1)}%)` : ''}`);
+          }
+        }
       }
-      transaction.completedAt = new Date();
     }
 
     // Handle withdrawal completion
@@ -786,9 +813,11 @@ router.post('/admin/reject/:id', async (req, res) => {
 /**
  * POST /api/payments/admin/credit-deposit/:id
  * Manually credit a deposit that didn't auto-credit via webhook (admin only)
+ * Supports partial payments - credits based on actually received amount
  */
 router.post('/admin/credit-deposit/:id', async (req, res) => {
   try {
+    const { forceFullAmount } = req.body; // Optional: force credit full amount even if partial
     const transaction = await Transaction.findById(req.params.id);
     
     if (!transaction) {
@@ -799,7 +828,7 @@ router.post('/admin/credit-deposit/:id', async (req, res) => {
       return res.status(400).json({ error: 'Transaction is not a deposit' });
     }
 
-    if (transaction.status === 'finished') {
+    if (transaction.completedAt) {
       return res.status(400).json({ error: 'Deposit already credited' });
     }
 
@@ -809,30 +838,51 @@ router.post('/admin/credit-deposit/:id', async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    user.balance += transaction.amountCents;
-    user.totalDeposited = (user.totalDeposited || 0) + transaction.amountCents;
+    // Calculate credit amount
+    let creditCents = transaction.amountCents;
+    let isPartial = false;
+    
+    // If we have actually_paid info and it's less than expected, calculate partial credit
+    const actuallyPaid = parseFloat(transaction.cryptoAmountReceived) || 0;
+    const expectedCrypto = parseFloat(transaction.cryptoAmount) || 0;
+    
+    if (actuallyPaid > 0 && expectedCrypto > 0 && actuallyPaid < expectedCrypto && !forceFullAmount) {
+      const ratio = actuallyPaid / expectedCrypto;
+      creditCents = Math.floor(transaction.amountCents * ratio);
+      isPartial = true;
+      transaction.partialPayment = true;
+      transaction.partialRatio = ratio;
+      transaction.partialCreditCents = creditCents;
+    }
+
+    user.balance += creditCents;
+    user.totalDeposited = (user.totalDeposited || 0) + creditCents;
     // Add 1x playthrough requirement for deposits
-    user.wagerRequirement = (user.wagerRequirement || 0) + transaction.amountCents;
+    user.wagerRequirement = (user.wagerRequirement || 0) + creditCents;
     await user.save();
 
     // Update transaction
     const oldStatus = transaction.status;
     transaction.status = 'finished';
     transaction.completedAt = new Date();
+    transaction.creditedAmountCents = creditCents;
     transaction.adminCredited = true;
     transaction.adminCreditedAt = new Date();
     await transaction.save();
 
-    console.log(`[Payments] Deposit ${transaction._id} manually credited by admin: $${(transaction.amountCents / 100).toFixed(2)} to ${user.username}`);
+    console.log(`[Payments] Deposit ${transaction._id} manually credited by admin: $${(creditCents / 100).toFixed(2)} to ${user.username}${isPartial ? ' (partial)' : ''}`);
 
     res.json({
       success: true,
-      message: `Credited $${(transaction.amountCents / 100).toFixed(2)} to ${user.username}`,
+      message: `Credited $${(creditCents / 100).toFixed(2)} to ${user.username}${isPartial ? ' (partial payment)' : ''}`,
       transaction: {
         id: transaction._id,
         oldStatus,
         newStatus: 'finished',
-        amountUsd: (transaction.amountCents / 100).toFixed(2),
+        expectedAmountUsd: (transaction.amountCents / 100).toFixed(2),
+        creditedAmountUsd: (creditCents / 100).toFixed(2),
+        isPartial,
+        partialRatio: isPartial ? (actuallyPaid / expectedCrypto) : 1,
         user: user.username,
         newBalance: (user.balance / 100).toFixed(2)
       }
