@@ -395,40 +395,16 @@ router.post('/deposit/direct', async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Ensure user has a NOWPayments customer ID
-    if (!user.nowPaymentsCustomerId) {
-      try {
-        const customer = await nowPayments.createCustomer({
-          email: user.email || '',
-          name: user.username,
-          externalId: req.userId
-        });
-        user.nowPaymentsCustomerId = customer.id;
-        await user.save();
-        console.log(`[Payments] Created custody customer ${customer.id} for ${user.username}`);
-      } catch (custErr) {
-        console.error('[Payments] Failed to create custody customer:', custErr.message);
-        if (custErr.statusCode) console.error('[Payments] Status code:', custErr.statusCode);
-        if (custErr.response) console.error('[Payments] Response:', JSON.stringify(custErr.response));
-        return res.status(500).json({ 
-          error: 'Failed to setup payment account',
-          details: custErr.message,
-          hint: custErr.statusCode === 401 || custErr.statusCode === 403 
-            ? 'NOWPayments Custody API may require a special subscription' 
-            : undefined
-        });
-      }
-    }
-
     const orderId = `DEP-${req.userId}-${Date.now()}`;
 
-    // Create custody customer deposit (funds go to customer's sub-account)
-    const payment = await nowPayments.createCustomerDeposit({
-      customerId: user.nowPaymentsCustomerId,
+    // Create standard payment (non-custody) - funds go to your main wallet
+    const payment = await nowPayments.createPayment({
       priceAmount: amountCents / 100,
-      currency: cryptoCurrency.toLowerCase(),
+      priceCurrency: 'usd',
+      payCurrency: cryptoCurrency.toLowerCase(),
       orderId,
-      description: `Deposit to The Divide - ${user.username}`
+      orderDescription: `Deposit to The Divide - ${user.username}`,
+      ipnCallbackUrl: process.env.NOWPAYMENTS_IPN_CALLBACK_URL
     });
 
     const transaction = await Transaction.create({
@@ -442,11 +418,10 @@ router.post('/deposit/direct', async (req, res) => {
       nowPaymentsOrderId: orderId,
       payAddress: payment.pay_address,
       exchangeRate: amountCents / 100 / payment.pay_amount,
-      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
-      custodyMode: true // Flag for custody deposits
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000)
     });
 
-    console.log(`[Payments] Custody deposit created: ${transaction._id}, customer: ${user.nowPaymentsCustomerId}, address: ${payment.pay_address}`);
+    console.log(`[Payments] Deposit created: ${transaction._id}, payment: ${payment.payment_id}, address: ${payment.pay_address}`);
 
     res.json({
       transactionId: transaction._id,
@@ -454,11 +429,10 @@ router.post('/deposit/direct', async (req, res) => {
       payAmount: payment.pay_amount,
       payCurrency: payment.pay_currency,
       orderId,
-      expiresAt: transaction.expiresAt,
-      custodyMode: true
+      expiresAt: transaction.expiresAt
     });
   } catch (err) {
-    console.error('[Payments] Create custody deposit failed:', err.message);
+    console.error('[Payments] Create deposit failed:', err.message);
     res.status(500).json({ error: err.message || 'Failed to create deposit' });
   }
 });
@@ -500,30 +474,6 @@ router.post('/withdraw', async (req, res) => {
       });
     }
 
-    // Ensure user has a NOWPayments customer ID
-    if (!user.nowPaymentsCustomerId) {
-      try {
-        const customer = await nowPayments.createCustomer({
-          email: user.email || '',
-          name: user.username,
-          externalId: req.userId
-        });
-        user.nowPaymentsCustomerId = customer.id;
-        await user.save();
-      } catch (custErr) {
-        console.error('[Payments] Failed to create custody customer for withdrawal:', custErr.message);
-        if (custErr.statusCode) console.error('[Payments] Status code:', custErr.statusCode);
-        if (custErr.response) console.error('[Payments] Response:', JSON.stringify(custErr.response));
-        return res.status(500).json({ 
-          error: 'Failed to setup payment account',
-          details: custErr.message,
-          hint: custErr.statusCode === 401 || custErr.statusCode === 403 
-            ? 'NOWPayments Custody API may require a special subscription' 
-            : undefined
-        });
-      }
-    }
-
     // Calculate fee with VIP discount
     const feePercent = applyVipWithdrawalDiscount(BASE_WITHDRAWAL_FEE_PERCENT, user.vipTier);
     const feeCents = Math.round(amountCents * (feePercent / 100));
@@ -559,9 +509,7 @@ router.post('/withdraw', async (req, res) => {
       withdrawFeePercent: feePercent,
       withdrawFeeCents: feeCents,
       nowPaymentsOrderId: orderId,
-      exchangeRate: amountCents / 100 / estimate.estimated_amount,
-      custodyMode: true,
-      nowPaymentsCustomerId: user.nowPaymentsCustomerId
+      exchangeRate: amountCents / 100 / estimate.estimated_amount
     });
 
     // Deduct from user balance

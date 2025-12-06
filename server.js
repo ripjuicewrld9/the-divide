@@ -42,40 +42,6 @@ import { fileURLToPath } from 'url';
 import * as nowPayments from './utils/nowPayments.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Helper: Create NOWPayments custody customer for a user
-async function createNowPaymentsCustomer(user) {
-  try {
-    // Skip if no API key configured
-    if (!process.env.NOWPAYMENTS_API_KEY) {
-      console.log(`[NOWPayments] Skipping customer creation - no API key configured`);
-      return null;
-    }
-    
-    const customer = await nowPayments.createCustomer({
-      email: user.email || '',
-      name: user.username,
-      externalId: user._id.toString()
-    });
-    
-    if (customer && customer.id) {
-      user.nowPaymentsCustomerId = customer.id;
-      await user.save();
-      console.log(`[NOWPayments] Created customer ${customer.id} for user ${user.username}`);
-      return customer.id;
-    } else {
-      console.error(`[NOWPayments] Customer creation returned no ID for ${user.username}:`, customer);
-      return null;
-    }
-  } catch (err) {
-    // Log full error details for debugging
-    console.error(`[NOWPayments] Failed to create customer for ${user.username}:`);
-    console.error(`  - Error: ${err.message}`);
-    if (err.statusCode) console.error(`  - Status: ${err.statusCode}`);
-    if (err.response) console.error(`  - Response:`, JSON.stringify(err.response));
-    return null;
-  }
-}
-
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -386,9 +352,6 @@ app.post('/register', async (req, res) => {
       role,
       createdAt: new Date()
     });
-
-    // Create NOWPayments custody customer (async, don't block registration)
-    createNowPaymentsCustomer(user).catch(err => console.error('[Register] NOWPayments customer creation failed:', err));
 
     const token = jwt.sign({ userId: user._id.toString() }, JWT_SECRET, { expiresIn: '30d' });
     
@@ -1075,9 +1038,6 @@ app.get('/auth/discord/login/callback', async (req, res) => {
       });
       await user.save();
       console.log(`✓ New user created via Discord: ${username} (${discordUser.id})`);
-      
-      // Create NOWPayments custody customer (async)
-      createNowPaymentsCustomer(user).catch(err => console.error('[Discord] NOWPayments customer creation failed:', err));
     } else {
       // Update existing user's Discord info and avatar on each login
       user.discordUsername = `${discordUser.username}#${discordUser.discriminator}`;
@@ -1174,9 +1134,6 @@ app.get('/auth/google/login/callback', async (req, res) => {
       });
       await user.save();
       console.log(`✓ New user created via Google: ${username} (${googleUser.email})`);
-      
-      // Create NOWPayments custody customer (async)
-      createNowPaymentsCustomer(user).catch(err => console.error('[Google] NOWPayments customer creation failed:', err));
     }
 
     // Create JWT token
