@@ -35,7 +35,7 @@ export default function SupportTeams() {
 
     const fetchTeamMembers = async () => {
         try {
-            const res = await fetch(`${API_BASE}/api/support/team`, {
+            const res = await fetch(`${API_BASE}/api/team`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();
@@ -50,15 +50,15 @@ export default function SupportTeams() {
     const handleAddTeamMember = async (e) => {
         e.preventDefault();
         setAddError('');
-        
+
         if (!newUsername.trim()) {
             setAddError('Please enter a username');
             return;
         }
-        
+
         setAddLoading(true);
         try {
-            const res = await fetch(`${API_BASE}/api/support/team/add`, {
+            const res = await fetch(`${API_BASE}/api/team`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -66,16 +66,16 @@ export default function SupportTeams() {
                 },
                 body: JSON.stringify({ username: newUsername.trim(), role: newRole })
             });
-            
+
             const data = await res.json();
-            
+
             if (!res.ok) {
                 setAddError(data.error || 'Failed to add team member');
                 return;
             }
-            
-            // Add new member to list
-            setTeamMembers(prev => [...prev, data.user]);
+
+            // Refresh team list
+            fetchTeamMembers();
             setShowAddModal(false);
             setNewUsername('');
             setNewRole('moderator');
@@ -85,6 +85,42 @@ export default function SupportTeams() {
             console.error('Failed to add team member:', err);
         } finally {
             setAddLoading(false);
+        }
+    };
+
+    const handleRemoveMember = async (memberId, memberUsername) => {
+        if (!confirm(`Remove ${memberUsername} from the team?`)) return;
+
+        try {
+            const res = await fetch(`${API_BASE}/api/team/${memberId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (res.ok) {
+                fetchTeamMembers();
+            }
+        } catch (err) {
+            console.error('Failed to remove team member:', err);
+        }
+    };
+
+    const handleUpdateRole = async (memberId, newRole) => {
+        try {
+            const res = await fetch(`${API_BASE}/api/team/${memberId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ role: newRole })
+            });
+
+            if (res.ok) {
+                fetchTeamMembers();
+            }
+        } catch (err) {
+            console.error('Failed to update role:', err);
         }
     };
 
@@ -155,6 +191,26 @@ export default function SupportTeams() {
                                             </p>
                                         </div>
                                     </div>
+
+                                    {/* Admin controls */}
+                                    {isAdmin && member._id !== user?.id && (
+                                        <div className="mt-4 pt-4 border-t border-white/10 flex gap-2">
+                                            <select
+                                                value={member.role}
+                                                onChange={(e) => handleUpdateRole(member._id, e.target.value)}
+                                                className="flex-1 px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-sm focus:border-cyan-500 outline-none"
+                                            >
+                                                <option value="moderator">Moderator</option>
+                                                <option value="admin">Admin</option>
+                                            </select>
+                                            <button
+                                                onClick={() => handleRemoveMember(member._id, member.username)}
+                                                className="px-3 py-1.5 bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg text-sm hover:bg-red-500/20 transition"
+                                            >
+                                                Remove
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             ))}
                         </div>
@@ -187,7 +243,7 @@ export default function SupportTeams() {
                                     disabled={addLoading}
                                 />
                             </div>
-                            
+
                             <div className="mb-4">
                                 <label className="block text-sm font-medium mb-2 text-gray-300">
                                     Role
@@ -202,13 +258,13 @@ export default function SupportTeams() {
                                     <option value="admin">Admin</option>
                                 </select>
                             </div>
-                            
+
                             {addError && (
                                 <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
                                     {addError}
                                 </div>
                             )}
-                            
+
                             <div className="flex gap-3">
                                 <button
                                     type="button"

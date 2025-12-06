@@ -6,15 +6,78 @@ import crypto from 'crypto';
  * 
  * This utility handles all interactions with NOWPayments for crypto deposits and withdrawals.
  * Uses Sub-Partner API for customer/custody management.
+ * 
+ * Required Environment Variables:
+ * - NOWPAYMENTS_API_KEY: Your API key from NOWPayments dashboard
+ * - NOWPAYMENTS_EMAIL: Email for NOWPayments dashboard login (for Sub-Partner API)
+ * - NOWPAYMENTS_PASSWORD: Password for NOWPayments dashboard login (for Sub-Partner API)
  */
 
 const API_BASE_URL = 'https://api.nowpayments.io/v1';
 const SANDBOX_API_BASE_URL = 'https://api-sandbox.nowpayments.io/v1';
 
+// JWT token cache - tokens expire every 5 minutes, we refresh at 4.5 minutes
+let cachedJwtToken = null;
+let jwtTokenExpiresAt = 0;
+const JWT_CACHE_DURATION_MS = 4.5 * 60 * 1000; // 4.5 minutes
+
 // Use sandbox in development
 const getBaseUrl = () => {
   return process.env.NOWPAYMENTS_SANDBOX === 'true' ? SANDBOX_API_BASE_URL : API_BASE_URL;
 };
+
+/**
+ * Get a fresh JWT token from NOWPayments API
+ * Tokens expire every 5 minutes, so we cache them for 4.5 minutes
+ */
+async function getJwtToken() {
+  const now = Date.now();
+
+  // Return cached token if still valid
+  if (cachedJwtToken && now < jwtTokenExpiresAt) {
+    return cachedJwtToken;
+  }
+
+  const email = process.env.NOWPAYMENTS_EMAIL;
+  const password = process.env.NOWPAYMENTS_PASSWORD;
+
+  if (!email || !password) {
+    throw new Error('NOWPAYMENTS_EMAIL and NOWPAYMENTS_PASSWORD environment variables required for Sub-Partner API');
+  }
+
+  console.log('[NOWPayments] Fetching fresh JWT token...');
+
+  const response = await fetch(`${getBaseUrl()}/auth`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    console.error('[NOWPayments] JWT auth failed:', data);
+    throw new Error(data.message || 'Failed to authenticate with NOWPayments');
+  }
+
+  if (!data.token) {
+    throw new Error('No token returned from NOWPayments auth endpoint');
+  }
+
+  // Cache the token
+  cachedJwtToken = data.token;
+  jwtTokenExpiresAt = now + JWT_CACHE_DURATION_MS;
+
+  console.log('[NOWPayments] JWT token obtained successfully');
+  return cachedJwtToken;
+}
+
+/**
+ * Check if Sub-Partner API is available (have credentials configured)
+ */
+export function isSubPartnerApiAvailable() {
+  return !!(process.env.NOWPAYMENTS_EMAIL && process.env.NOWPAYMENTS_PASSWORD);
+}
 
 /**
  * Make an authenticated request to NOWPayments API (standard endpoints)
@@ -51,18 +114,17 @@ async function apiRequest(endpoint, options = {}) {
 
 /**
  * Make an authenticated request to NOWPayments Sub-Partner API
- * Requires both Bearer token and API key
+ * Automatically fetches and caches JWT token
  */
 async function subPartnerRequest(endpoint, options = {}) {
   const apiKey = process.env.NOWPAYMENTS_API_KEY;
-  const jwtToken = process.env.NOWPAYMENTS_JWT_TOKEN;
-  
+
   if (!apiKey) {
     throw new Error('NOWPAYMENTS_API_KEY environment variable not set');
   }
-  if (!jwtToken) {
-    throw new Error('NOWPAYMENTS_JWT_TOKEN environment variable not set - required for sub-partner/custody API');
-  }
+
+  // Get JWT token (auto-fetches if expired)
+  const jwtToken = await getJwtToken();
 
   const url = `${getBaseUrl()}${endpoint}`;
   const headers = {
@@ -83,6 +145,15 @@ async function subPartnerRequest(endpoint, options = {}) {
 
   if (!response.ok) {
     console.error(`[NOWPayments] Sub-partner API error:`, data);
+
+    // If unauthorized, clear cached token and retry once
+    if (response.status === 401 && cachedJwtToken) {
+      console.log('[NOWPayments] Token expired, refreshing...');
+      cachedJwtToken = null;
+      jwtTokenExpiresAt = 0;
+      return subPartnerRequest(endpoint, options); // Retry with fresh token
+    }
+
     const error = new Error(data.message || data.statusCode || `NOWPayments API error: ${response.status}`);
     error.statusCode = response.status;
     error.response = data;
@@ -288,7 +359,7 @@ export async function createPayout(params) {
   // First, verify we have enough balance
   const balance = await getPayoutBalance();
   const currencyBalance = balance.find(b => b.currency.toLowerCase() === params.currency.toLowerCase());
-  
+
   if (!currencyBalance || currencyBalance.amount < params.amount) {
     throw new Error(`Insufficient ${params.currency.toUpperCase()} balance for payout`);
   }
@@ -379,7 +450,7 @@ export async function createCustomer(params) {
     method: 'POST',
     body: JSON.stringify(payload)
   });
-  
+
   // The API returns { result: { id: "...", ... } }
   return result.result || result;
 }
@@ -592,7 +663,7 @@ function sortObject(obj) {
   if (typeof obj !== 'object' || obj === null) {
     return obj;
   }
-  
+
   if (Array.isArray(obj)) {
     return obj.map(sortObject);
   }
@@ -683,31 +754,31 @@ export const SUPPORTED_CURRENCIES = [
 export default {
   // Status
   getStatus,
-  
+
   // Currencies
   getAvailableCurrencies,
   getAvailableCheckedCurrencies,
-  
+
   // Pricing
   getMinimumPaymentAmount,
   getEstimatedPrice,
-  
+
   // Payments (Deposits)
   createPayment,
   createInvoice,
   getPaymentStatus,
   getPayments,
-  
+
   // Payouts (Withdrawals)
   getPayoutBalance,
   createPayout,
   getPayoutStatus,
-  
+
   // Custody & Conversion
   getCustodyBalance,
   createConversion,
   getConversionEstimate,
-  
+
   // Sub-Partner / Customer Management
   createCustomer,
   getCustomer,
@@ -718,16 +789,16 @@ export default {
   transferFromCustomer,
   getTransferStatus,
   createCustomerPayout,
-  
+
   // Legacy (deprecated)
   getCustomerByExternalId,
   updateCustomer,
   deleteCustomer,
   internalTransfer,
-  
+
   // IPN
   verifyIPNSignature,
-  
+
   // Helpers
   mapPaymentStatus,
   isPaymentFinal,

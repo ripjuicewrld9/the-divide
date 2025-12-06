@@ -80,7 +80,7 @@ router.get('/estimate', async (req, res) => {
     if (!amount || !currency) {
       return res.status(400).json({ error: 'Amount and currency required' });
     }
-    
+
     const result = await nowPayments.getEstimatedPrice(
       parseFloat(amount),
       'usd',
@@ -181,7 +181,7 @@ router.get('/customer/balance', async (req, res) => {
     }
 
     const balance = await nowPayments.getCustomerBalance(user.nowPaymentsCustomerId);
-    res.json({ 
+    res.json({
       customerId: user.nowPaymentsCustomerId,
       balances: balance || []
     });
@@ -252,7 +252,7 @@ router.get('/transaction/:id', async (req, res) => {
       try {
         const paymentStatus = await nowPayments.getPaymentStatus(transaction.nowPaymentsId);
         const newStatus = nowPayments.mapPaymentStatus(paymentStatus.payment_status);
-        
+
         if (newStatus !== transaction.status) {
           transaction.status = newStatus;
           transaction.cryptoAmountReceived = paymentStatus.actually_paid;
@@ -298,16 +298,16 @@ router.post('/deposit', async (req, res) => {
     }
 
     const { amountUsd, currency } = req.body;
-    
+
     if (!amountUsd || !currency) {
       return res.status(400).json({ error: 'Amount and currency required' });
     }
 
     const amountCents = Math.round(parseFloat(amountUsd) * 100);
-    
+
     if (amountCents < MIN_DEPOSIT_CENTS) {
-      return res.status(400).json({ 
-        error: `Minimum deposit is $${(MIN_DEPOSIT_CENTS / 100).toFixed(2)}` 
+      return res.status(400).json({
+        error: `Minimum deposit is $${(MIN_DEPOSIT_CENTS / 100).toFixed(2)}`
       });
     }
 
@@ -368,7 +368,7 @@ router.post('/deposit', async (req, res) => {
 
 /**
  * POST /api/payments/deposit/direct
- * Create deposit with direct payment address using custody customer mode
+ * Create deposit with direct payment address using custody customer mode when available
  */
 router.post('/deposit/direct', async (req, res) => {
   try {
@@ -378,16 +378,16 @@ router.post('/deposit/direct', async (req, res) => {
 
     const { amountUsd, currency, payCurrency } = req.body;
     const cryptoCurrency = currency || payCurrency; // Accept both field names
-    
+
     if (!amountUsd || !cryptoCurrency) {
       return res.status(400).json({ error: 'Amount and currency required' });
     }
 
     const amountCents = Math.round(parseFloat(amountUsd) * 100);
-    
+
     if (amountCents < MIN_DEPOSIT_CENTS) {
-      return res.status(400).json({ 
-        error: `Minimum deposit is $${(MIN_DEPOSIT_CENTS / 100).toFixed(2)}` 
+      return res.status(400).json({
+        error: `Minimum deposit is $${(MIN_DEPOSIT_CENTS / 100).toFixed(2)}`
       });
     }
 
@@ -397,16 +397,55 @@ router.post('/deposit/direct', async (req, res) => {
     }
 
     const orderId = `DEP-${req.userId}-${Date.now()}`;
+    let payment = null;
+    let custodyMode = false;
 
-    // Create standard payment (non-custody) - funds go to your main wallet
-    const payment = await nowPayments.createPayment({
-      priceAmount: amountCents / 100,
-      priceCurrency: 'usd',
-      payCurrency: cryptoCurrency.toLowerCase(),
-      orderId,
-      orderDescription: `Deposit to The Divide - ${user.username}`,
-      ipnCallbackUrl: process.env.NOWPAYMENTS_IPN_CALLBACK_URL
-    });
+    // Try to ensure customer exists if credentials are configured
+    if (nowPayments.isSubPartnerApiAvailable() && !user.nowPaymentsCustomerId) {
+      try {
+        const customer = await nowPayments.createCustomer({
+          name: user.username,
+          externalId: user._id.toString()
+        });
+        if (customer && customer.id) {
+          user.nowPaymentsCustomerId = customer.id;
+          await user.save();
+          console.log(`[Payments] Created NOWPayments customer ${customer.id} for ${user.username} during deposit`);
+        }
+      } catch (custErr) {
+        console.warn('[Payments] Failed to create customer, using standard payment:', custErr.message);
+      }
+    }
+
+    // Try to use custody customer deposit if available
+    if (user.nowPaymentsCustomerId && nowPayments.isSubPartnerApiAvailable()) {
+      try {
+        payment = await nowPayments.createCustomerDeposit({
+          customerId: user.nowPaymentsCustomerId,
+          currency: cryptoCurrency.toLowerCase(),
+          priceAmount: amountCents / 100,
+          orderId,
+          ipnCallbackUrl: process.env.NOWPAYMENTS_IPN_CALLBACK_URL
+        });
+        custodyMode = true;
+        console.log(`[Payments] Using custody deposit for customer ${user.nowPaymentsCustomerId}`);
+      } catch (custodyErr) {
+        console.warn('[Payments] Custody deposit failed, falling back to standard:', custodyErr.message);
+        payment = null;
+      }
+    }
+
+    // Fallback to standard payment if custody not available
+    if (!payment) {
+      payment = await nowPayments.createPayment({
+        priceAmount: amountCents / 100,
+        priceCurrency: 'usd',
+        payCurrency: cryptoCurrency.toLowerCase(),
+        orderId,
+        orderDescription: `Deposit to The Divide - ${user.username}`,
+        ipnCallbackUrl: process.env.NOWPAYMENTS_IPN_CALLBACK_URL
+      });
+    }
 
     const transaction = await Transaction.create({
       userId: req.userId,
@@ -414,23 +453,26 @@ router.post('/deposit/direct', async (req, res) => {
       status: 'waiting',
       amountCents,
       cryptoCurrency: cryptoCurrency.toLowerCase(),
-      cryptoAmount: payment.pay_amount,
-      nowPaymentsId: payment.payment_id,
+      cryptoAmount: payment.pay_amount || payment.amount,
+      nowPaymentsId: payment.payment_id || payment.id,
       nowPaymentsOrderId: orderId,
-      payAddress: payment.pay_address,
-      exchangeRate: amountCents / 100 / payment.pay_amount,
-      expiresAt: new Date(Date.now() + 60 * 60 * 1000)
+      payAddress: payment.pay_address || payment.address,
+      exchangeRate: (payment.pay_amount || payment.amount) ? (amountCents / 100 / (payment.pay_amount || payment.amount)) : null,
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      custodyMode,
+      nowPaymentsCustomerId: custodyMode ? user.nowPaymentsCustomerId : null
     });
 
-    console.log(`[Payments] Deposit created: ${transaction._id}, payment: ${payment.payment_id}, address: ${payment.pay_address}`);
+    console.log(`[Payments] Deposit created: ${transaction._id}, payment: ${payment.payment_id || payment.id}, address: ${payment.pay_address || payment.address}, custody: ${custodyMode}`);
 
     res.json({
       transactionId: transaction._id,
-      payAddress: payment.pay_address,
-      payAmount: payment.pay_amount,
-      payCurrency: payment.pay_currency,
+      payAddress: payment.pay_address || payment.address,
+      payAmount: payment.pay_amount || payment.amount,
+      payCurrency: payment.pay_currency || cryptoCurrency.toLowerCase(),
       orderId,
-      expiresAt: transaction.expiresAt
+      expiresAt: transaction.expiresAt,
+      custodyMode
     });
   } catch (err) {
     console.error('[Payments] Create deposit failed:', err.message);
@@ -449,16 +491,16 @@ router.post('/withdraw', async (req, res) => {
     }
 
     const { amountUsd, currency, address } = req.body;
-    
+
     if (!amountUsd || !currency || !address) {
       return res.status(400).json({ error: 'Amount, currency, and address required' });
     }
 
     const amountCents = Math.round(parseFloat(amountUsd) * 100);
-    
+
     if (amountCents < MIN_WITHDRAWAL_CENTS) {
-      return res.status(400).json({ 
-        error: `Minimum withdrawal is $${(MIN_WITHDRAWAL_CENTS / 100).toFixed(2)}` 
+      return res.status(400).json({
+        error: `Minimum withdrawal is $${(MIN_WITHDRAWAL_CENTS / 100).toFixed(2)}`
       });
     }
 
@@ -469,7 +511,7 @@ router.post('/withdraw', async (req, res) => {
 
     // Check wager requirement
     if ((user.wagerRequirement || 0) > 0) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: `You must wager $${((user.wagerRequirement || 0) / 100).toFixed(2)} more before withdrawing`,
         wagerRequired: (user.wagerRequirement || 0) / 100
       });
@@ -481,7 +523,7 @@ router.post('/withdraw', async (req, res) => {
     const totalDeductCents = amountCents + feeCents;
 
     if (user.balance < totalDeductCents) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: `Insufficient balance. You need $${(totalDeductCents / 100).toFixed(2)} (including $${(feeCents / 100).toFixed(2)} fee)`,
         required: totalDeductCents / 100,
         fee: feeCents / 100,
@@ -560,7 +602,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
   try {
     // Get signature from header
     const signature = req.headers['x-nowpayments-sig'];
-    
+
     // Parse body
     let body;
     if (Buffer.isBuffer(req.body)) {
@@ -593,7 +635,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
 
     // Find transaction
     let transaction = await Transaction.findByNowPaymentsId(String(paymentId));
-    
+
     if (!transaction && orderId) {
       transaction = await Transaction.findOne({ nowPaymentsOrderId: orderId });
     }
@@ -617,13 +659,13 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
     // Handle deposits - credit on finished OR partially_paid
     if (transaction.type === 'deposit' && !transaction.completedAt) {
       const shouldCredit = newStatus === 'finished' || newStatus === 'partially_paid';
-      
+
       if (shouldCredit) {
         const user = await User.findById(transaction.userId);
         if (user) {
           // Calculate credit amount based on what was actually received
           let creditCents;
-          
+
           if (newStatus === 'finished') {
             // Full payment - credit the expected amount
             creditCents = transaction.amountCents;
@@ -633,13 +675,13 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
             const expectedCrypto = parseFloat(transaction.cryptoAmount) || 1;
             const ratio = actuallyPaid / expectedCrypto;
             creditCents = Math.floor(transaction.amountCents * ratio);
-            
+
             // Store partial payment details
             transaction.partialPayment = true;
             transaction.partialRatio = ratio;
             transaction.partialCreditCents = creditCents;
           }
-          
+
           if (creditCents > 0) {
             user.balance += creditCents;
             user.totalDeposited = (user.totalDeposited || 0) + creditCents;
@@ -730,7 +772,7 @@ router.get('/admin/pending', async (req, res) => {
 router.post('/admin/process/:id', async (req, res) => {
   try {
     const transaction = await Transaction.findById(req.params.id);
-    
+
     if (!transaction) {
       return res.status(404).json({ error: 'Transaction not found' });
     }
@@ -740,7 +782,7 @@ router.post('/admin/process/:id', async (req, res) => {
     }
 
     let payout;
-    
+
     // Use custody customer payout if we have customer ID
     if (transaction.nowPaymentsCustomerId && transaction.custodyMode) {
       // Custody payout: transfer from customer to external address
@@ -787,7 +829,7 @@ router.post('/admin/reject/:id', async (req, res) => {
   try {
     const { reason } = req.body;
     const transaction = await Transaction.findById(req.params.id);
-    
+
     if (!transaction) {
       return res.status(404).json({ error: 'Transaction not found' });
     }
@@ -831,7 +873,7 @@ router.post('/admin/credit-deposit/:id', async (req, res) => {
   try {
     const { forceFullAmount } = req.body; // Optional: force credit full amount even if partial
     const transaction = await Transaction.findById(req.params.id);
-    
+
     if (!transaction) {
       return res.status(404).json({ error: 'Transaction not found' });
     }
@@ -853,11 +895,11 @@ router.post('/admin/credit-deposit/:id', async (req, res) => {
     // Calculate credit amount
     let creditCents = transaction.amountCents;
     let isPartial = false;
-    
+
     // If we have actually_paid info and it's less than expected, calculate partial credit
     const actuallyPaid = parseFloat(transaction.cryptoAmountReceived) || 0;
     const expectedCrypto = parseFloat(transaction.cryptoAmount) || 0;
-    
+
     if (actuallyPaid > 0 && expectedCrypto > 0 && actuallyPaid < expectedCrypto && !forceFullAmount) {
       const ratio = actuallyPaid / expectedCrypto;
       creditCents = Math.floor(transaction.amountCents * ratio);
@@ -923,7 +965,7 @@ router.post('/admin/credit-deposit/:id', async (req, res) => {
 router.get('/admin/deposits', async (req, res) => {
   try {
     const { status, limit = 50 } = req.query;
-    
+
     const query = { type: 'deposit' };
     if (status) {
       query.status = status;
@@ -964,7 +1006,7 @@ router.get('/admin/deposits', async (req, res) => {
 router.post('/admin/check-status/:id', async (req, res) => {
   try {
     const transaction = await Transaction.findById(req.params.id);
-    
+
     if (!transaction) {
       return res.status(404).json({ error: 'Transaction not found' });
     }
@@ -975,7 +1017,7 @@ router.post('/admin/check-status/:id', async (req, res) => {
 
     // Fetch current status from NOWPayments
     const paymentStatus = await nowPayments.getPaymentStatus(transaction.nowPaymentsId);
-    
+
     const oldStatus = transaction.status;
     const newStatus = nowPayments.mapPaymentStatus(paymentStatus.payment_status);
 

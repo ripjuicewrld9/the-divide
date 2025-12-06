@@ -287,6 +287,44 @@ async function awardXp(userId, type, amount = 0, extra = {}) {
   }
 }
 
+/**
+ * Ensure user has a NOWPayments custody customer account (sub-wallet)
+ * Non-blocking: failures are logged but don't break the flow
+ * @param {Object} user - Mongoose user document
+ * @returns {string|null} - Customer ID if successful, null if failed
+ */
+async function ensureNowPaymentsCustomer(user) {
+  try {
+    // Skip if already has customer ID
+    if (user.nowPaymentsCustomerId) {
+      return user.nowPaymentsCustomerId;
+    }
+
+    // Skip if Sub-Partner API credentials not configured
+    if (!nowPayments.isSubPartnerApiAvailable()) {
+      console.log('[Payments] Sub-Partner API not configured, skipping customer creation');
+      return null;
+    }
+
+    const customer = await nowPayments.createCustomer({
+      name: user.username,
+      externalId: user._id.toString()
+    });
+
+    if (customer && customer.id) {
+      user.nowPaymentsCustomerId = customer.id;
+      await user.save();
+      console.log(`[Payments] Created NOWPayments customer ${customer.id} for user ${user.username}`);
+      return customer.id;
+    }
+
+    return null;
+  } catch (err) {
+    console.error(`[Payments] Failed to create NOWPayments customer for ${user.username}:`, err.message);
+    return null; // Non-blocking failure
+  }
+}
+
 // Middleware
 app.use(cors({
   origin: process.env.CORS_ORIGIN || '*',
@@ -316,6 +354,9 @@ const twoFactorLimiter = rateLimit({
 app.use('/login', authLimiter);
 app.use('/register', authLimiter);
 app.use('/api/', generalLimiter);
+
+// Mount payment routes
+app.use('/api/payments', paymentRoutes);
 
 // File upload
 const storage = multer.diskStorage({
@@ -357,6 +398,11 @@ app.post('/register', async (req, res) => {
       balance: 0, // Starting balance in cents (no free money)
       role,
       createdAt: new Date()
+    });
+
+    // Create NOWPayments customer sub-wallet (fire and forget - don't slow down registration)
+    ensureNowPaymentsCustomer(user).catch(err => {
+      console.error('[Register] Background customer creation failed:', err.message);
     });
 
     const token = jwt.sign({ userId: user._id.toString() }, JWT_SECRET, { expiresIn: '30d' });
@@ -1045,6 +1091,11 @@ app.get('/auth/discord/login/callback', async (req, res) => {
       });
       await user.save();
       console.log(`✓ New user created via Discord: ${username} (${discordUser.id})`);
+
+      // Create NOWPayments customer sub-wallet (fire and forget)
+      ensureNowPaymentsCustomer(user).catch(err => {
+        console.error('[Discord OAuth] Background customer creation failed:', err.message);
+      });;
     } else {
       // Update existing user's Discord info and avatar on each login
       user.discordUsername = `${discordUser.username}#${discordUser.discriminator}`;
@@ -1141,6 +1192,11 @@ app.get('/auth/google/login/callback', async (req, res) => {
       });
       await user.save();
       console.log(`✓ New user created via Google: ${username} (${googleUser.email})`);
+
+      // Create NOWPayments customer sub-wallet (fire and forget)
+      ensureNowPaymentsCustomer(user).catch(err => {
+        console.error('[Google OAuth] Background customer creation failed:', err.message);
+      });
     }
 
     // Create JWT token
@@ -2801,14 +2857,49 @@ app.post('/api/support/tickets', auth, async (req, res) => {
       return res.status(400).json({ error: 'Subject and message required' });
     }
 
+    // Get user info for the ticket
+    const user = await User.findById(req.userId).select('username email').lean();
+
     const ticket = await SupportTicket.create({
       userId: req.userId,
       subject,
-      description: message, // Model uses 'description' field
+      description: message,
       category: category || 'general',
       status: 'open',
+      email: user?.email || '',
       createdAt: new Date()
     });
+
+    // Send Discord webhook notification
+    const discordWebhookUrl = process.env.DISCORD_SUPPORT_WEBHOOK_URL;
+    if (discordWebhookUrl) {
+      try {
+        const webhookPayload = {
+          embeds: [{
+            title: '🎫 New Support Ticket',
+            color: 0xff1744,
+            fields: [
+              { name: 'Ticket ID', value: ticket._id.toString().slice(-8).toUpperCase(), inline: true },
+              { name: 'Category', value: category || 'general', inline: true },
+              { name: 'Status', value: 'Open', inline: true },
+              { name: 'Created By', value: user?.username || 'Unknown', inline: true },
+              { name: 'Subject', value: subject.substring(0, 100), inline: false },
+              { name: 'Message', value: message.substring(0, 500), inline: false },
+            ],
+            timestamp: new Date().toISOString(),
+            footer: { text: 'The Divide Support System' }
+          }]
+        };
+
+        fetch(discordWebhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(webhookPayload)
+        }).catch(e => console.error('Discord webhook failed:', e));
+      } catch (webhookErr) {
+        console.error('Discord webhook error:', webhookErr);
+      }
+    }
 
     res.json(ticket);
   } catch (err) {
@@ -2819,7 +2910,9 @@ app.post('/api/support/tickets', auth, async (req, res) => {
 
 app.get('/api/support/tickets', auth, async (req, res) => {
   try {
-    const tickets = await SupportTicket.find({ userId: req.userId }).sort({ createdAt: -1 });
+    const tickets = await SupportTicket.find({ userId: req.userId })
+      .sort({ createdAt: -1 })
+      .lean();
     res.json(tickets);
   } catch (err) {
     console.error('GET /api/support/tickets', err);
@@ -2829,8 +2922,23 @@ app.get('/api/support/tickets', auth, async (req, res) => {
 
 app.get('/api/support/tickets/all', auth, moderatorOnly, async (req, res) => {
   try {
-    const tickets = await SupportTicket.find({}).sort({ createdAt: -1 }).limit(200);
-    res.json({ tickets });
+    const tickets = await SupportTicket.find({})
+      .populate('userId', 'username email profileImage')
+      .populate('assignedTo', 'username')
+      .sort({ createdAt: -1 })
+      .limit(200)
+      .lean();
+
+    // Transform to include user info in a consistent format
+    const transformedTickets = tickets.map(ticket => ({
+      ...ticket,
+      createdBy: ticket.userId?.username || 'Unknown',
+      createdByEmail: ticket.userId?.email || '',
+      createdByAvatar: ticket.userId?.profileImage || null,
+      assignedToName: ticket.assignedTo?.username || null,
+    }));
+
+    res.json({ tickets: transformedTickets });
   } catch (err) {
     console.error('GET /api/support/tickets/all', err);
     res.status(500).json({ error: 'Server error' });
@@ -2848,7 +2956,9 @@ app.patch('/api/support/tickets/:id', auth, moderatorOnly, async (req, res) => {
       updates.respondedAt = new Date();
     }
 
-    const ticket = await SupportTicket.findByIdAndUpdate(req.params.id, updates, { new: true });
+    const ticket = await SupportTicket.findByIdAndUpdate(req.params.id, updates, { new: true })
+      .populate('userId', 'username email')
+      .lean();
     res.json(ticket);
   } catch (err) {
     console.error('PATCH /api/support/tickets/:id', err);
@@ -2863,12 +2973,158 @@ app.patch('/api/support/tickets/:id', auth, moderatorOnly, async (req, res) => {
 app.get('/api/team', auth, moderatorOnly, async (req, res) => {
   try {
     const team = await User.find({ role: { $in: ['moderator', 'admin'] } })
-      .select('username role profileImage')
+      .select('username role profileImage email createdAt level')
       .sort({ role: 1, username: 1 })
       .lean();
     res.json({ team });
   } catch (err) {
     console.error('GET /api/team', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Add new team member (admin only)
+app.post('/api/team', auth, async (req, res) => {
+  try {
+    // Only admins can add team members
+    const requestingUser = await User.findById(req.userId).lean();
+    if (!requestingUser || requestingUser.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { username, role } = req.body;
+    if (!username || !role) {
+      return res.status(400).json({ error: 'Username and role required' });
+    }
+
+    if (!['moderator', 'admin'].includes(role)) {
+      return res.status(400).json({ error: 'Invalid role. Must be moderator or admin' });
+    }
+
+    const userToPromote = await User.findOne({ username: { $regex: new RegExp(`^${username}$`, 'i') } });
+    if (!userToPromote) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (userToPromote.role === role) {
+      return res.status(400).json({ error: `User is already a ${role}` });
+    }
+
+    userToPromote.role = role;
+    await userToPromote.save();
+
+    res.json({
+      success: true,
+      message: `${username} is now a ${role}`,
+      user: {
+        _id: userToPromote._id,
+        username: userToPromote.username,
+        role: userToPromote.role,
+        profileImage: userToPromote.profileImage,
+      }
+    });
+  } catch (err) {
+    console.error('POST /api/team', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Update team member role (admin only)
+app.patch('/api/team/:userId', auth, async (req, res) => {
+  try {
+    const requestingUser = await User.findById(req.userId).lean();
+    if (!requestingUser || requestingUser.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { role } = req.body;
+    if (!role || !['user', 'moderator', 'admin'].includes(role)) {
+      return res.status(400).json({ error: 'Invalid role' });
+    }
+
+    // Prevent removing own admin role
+    if (req.params.userId === req.userId && role !== 'admin') {
+      return res.status(400).json({ error: 'Cannot demote yourself' });
+    }
+
+    const userToUpdate = await User.findById(req.params.userId);
+    if (!userToUpdate) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    userToUpdate.role = role;
+    await userToUpdate.save();
+
+    res.json({
+      success: true,
+      message: `${userToUpdate.username}'s role updated to ${role}`,
+      user: {
+        _id: userToUpdate._id,
+        username: userToUpdate.username,
+        role: userToUpdate.role,
+      }
+    });
+  } catch (err) {
+    console.error('PATCH /api/team/:userId', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Remove team member (demote to user) - admin only
+app.delete('/api/team/:userId', auth, async (req, res) => {
+  try {
+    const requestingUser = await User.findById(req.userId).lean();
+    if (!requestingUser || requestingUser.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    // Prevent removing self
+    if (req.params.userId === req.userId) {
+      return res.status(400).json({ error: 'Cannot remove yourself from team' });
+    }
+
+    const userToRemove = await User.findById(req.params.userId);
+    if (!userToRemove) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    userToRemove.role = 'user';
+    await userToRemove.save();
+
+    res.json({
+      success: true,
+      message: `${userToRemove.username} removed from team`
+    });
+  } catch (err) {
+    console.error('DELETE /api/team/:userId', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Search users (for adding to team) - admin only
+app.get('/api/users/search', auth, async (req, res) => {
+  try {
+    const requestingUser = await User.findById(req.userId).lean();
+    if (!requestingUser || requestingUser.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { q } = req.query;
+    if (!q || q.length < 2) {
+      return res.json({ users: [] });
+    }
+
+    const users = await User.find({
+      username: { $regex: q, $options: 'i' },
+      role: 'user', // Only show regular users
+    })
+      .select('username profileImage level')
+      .limit(10)
+      .lean();
+
+    res.json({ users });
+  } catch (err) {
+    console.error('GET /api/users/search', err);
     res.status(500).json({ error: 'Server error' });
   }
 });

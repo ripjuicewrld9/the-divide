@@ -31,12 +31,59 @@ const saveCachedMessages = (messages) => {
   }
 };
 
+// Parse message and highlight @mentions
+const renderMessageWithMentions = (text, currentUsername) => {
+  if (!text) return text;
+
+  // Match @username patterns (alphanumeric + underscores)
+  const mentionRegex = /@(\w+)/g;
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = mentionRegex.exec(text)) !== null) {
+    // Add text before the mention
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+
+    const mentionedUser = match[1];
+    const isCurrentUser = currentUsername && mentionedUser.toLowerCase() === currentUsername.toLowerCase();
+
+    // Add the highlighted mention
+    parts.push(
+      <span
+        key={match.index}
+        style={{
+          color: isCurrentUser ? '#FFD700' : '#00D4FF',
+          fontWeight: 600,
+          background: isCurrentUser ? 'rgba(255, 215, 0, 0.15)' : 'rgba(0, 212, 255, 0.1)',
+          padding: '0 4px',
+          borderRadius: '4px',
+        }}
+      >
+        @{mentionedUser}
+      </span>
+    );
+
+    lastIndex = match.index + match[0].length;
+  }
+
+  // Add remaining text
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+
+  return parts.length > 0 ? parts : text;
+};
+
 export default function ChatSidebar({ isOpen, setIsOpen }) {
   const { user } = useAuth();
   const socket = useSocket('chat');
   const [messages, setMessages] = useState(() => loadCachedMessages());
   const [inputMessage, setInputMessage] = useState('');
   const messagesEndRef = useRef(null);
+  const inputRef = useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -86,6 +133,14 @@ export default function ChatSidebar({ isOpen, setIsOpen }) {
       socket.off('disconnect');
     };
   }, [socket]);
+
+  // Click username to add @mention
+  const handleMentionUser = (username) => {
+    if (!username) return;
+    const mention = `@${username} `;
+    setInputMessage(prev => prev + mention);
+    inputRef.current?.focus();
+  };
 
   const handleSendMessage = (e) => {
     e.preventDefault();
@@ -253,13 +308,19 @@ export default function ChatSidebar({ isOpen, setIsOpen }) {
                     user={{ username: msg.username, profileImage: msg.profileImage }}
                     size={24}
                   />
-                  {/* Username */}
+                  {/* Username - clickable to mention */}
                   <span
+                    onClick={() => handleMentionUser(msg.username)}
                     style={{
                       fontSize: '12px',
                       fontWeight: 700,
                       color: '#e53935',
+                      cursor: 'pointer',
+                      transition: 'color 0.15s ease',
                     }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = '#ff6659'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = '#e53935'}
+                    title={`Click to mention @${msg.username}`}
                   >
                     {msg.username || 'Anonymous'}
                   </span>
@@ -287,7 +348,7 @@ export default function ChatSidebar({ isOpen, setIsOpen }) {
                     paddingLeft: '32px',
                   }}
                 >
-                  {msg.message}
+                  {renderMessageWithMentions(msg.message, user?.username)}
                 </div>
                 {msg.timestamp && (
                   <div
@@ -319,10 +380,11 @@ export default function ChatSidebar({ isOpen, setIsOpen }) {
           {user ? (
             <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '8px' }}>
               <input
+                ref={inputRef}
                 type="text"
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
-                placeholder="Type a message..."
+                placeholder="Type @username to mention..."
                 style={{
                   flex: 1,
                   padding: '10px 12px',
