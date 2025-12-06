@@ -634,7 +634,7 @@ export default function DivideCard({
       )}
 
       {/* Vote History Chart - Only show for ended divides with history */}
-      {status !== 'active' && voteHistory && voteHistory.length > 1 && (
+      {status !== 'active' && voteHistory && voteHistory.length >= 1 && (
         <div style={{
           marginBottom: '12px',
           padding: '12px',

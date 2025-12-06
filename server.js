@@ -1414,8 +1414,11 @@ app.get('/Divides', async (req, res) => {
     if (Object.keys(matchStage).length > 0) {
       pipeline.push({ $match: matchStage });
     }
+    // Add controversy score field (dislikes - likes, higher = more controversial = sorted first)
     pipeline.push(
-      { $sort: { endTime: 1 } },
+      { $addFields: { controversyScore: { $subtract: [{ $ifNull: ['$dislikes', 0] }, { $ifNull: ['$likes', 0] }] } } },
+      // Sort: active divides by endTime (soonest first), ended by controversy (most controversial first)
+      { $sort: { status: -1, controversyScore: -1, endTime: 1 } },
       {
         $lookup: {
           from: 'users',
@@ -1587,7 +1590,18 @@ app.post('/Divides/create-user', auth, async (req, res) => {
       creatorBet: bet,
       creatorSide: side,
       isUserCreated: true,
-      createdAt: now
+      createdAt: now,
+      // Initialize vote history with creator's first bet
+      voteHistory: [{
+        timestamp: now,
+        username: user.username,
+        userId: req.userId,
+        side: side,
+        amount: bet,
+        shortsA: side === 'A' ? bet : 0,
+        shortsB: side === 'B' ? bet : 0,
+        pot: bet,
+      }]
     });
 
     await doc.save();
@@ -2260,13 +2274,15 @@ app.get('/api/divides/recent-eats', async (req, res) => {
   }
 });
 
-// GET comments for a divide
+// GET comments for a divide (sorted by controversy - most disliked first)
 app.get('/api/divides/:id/comments', async (req, res) => {
   try {
-    const comments = await DivideComment.find({ divideId: req.params.id })
-      .sort({ createdAt: -1 })
-      .limit(100)
-      .lean();
+    const comments = await DivideComment.aggregate([
+      { $match: { divideId: req.params.id } },
+      { $addFields: { controversyScore: { $subtract: [{ $ifNull: ['$dislikes', 0] }, { $ifNull: ['$likes', 0] }] } } },
+      { $sort: { controversyScore: -1, createdAt: -1 } },
+      { $limit: 100 }
+    ]);
     res.json(comments || []);
   } catch (err) {
     console.error('GET /api/divides/:id/comments', err);
@@ -2322,6 +2338,13 @@ app.post('/api/divides/:divideId/comments/:commentId/like', auth, async (req, re
     comment.likes = (comment.likes || 0) + 1;
 
     await comment.save();
+    
+    // Award XP for liking a comment
+    await awardXp(userId, 'likeGiven', 0, { commentId: comment._id });
+    if (comment.userId && comment.userId !== userId) {
+      await awardXp(comment.userId, 'likeReceived', 0, { commentId: comment._id });
+    }
+    
     res.json({ success: true, likes: comment.likes, dislikes: comment.dislikes });
   } catch (err) {
     console.error('POST /api/divides/:divideId/comments/:commentId/like', err);
@@ -2348,6 +2371,13 @@ app.post('/api/divides/:divideId/comments/:commentId/dislike', auth, async (req,
     comment.dislikes = (comment.dislikes || 0) + 1;
 
     await comment.save();
+    
+    // Award XP for disliking a comment (engagement is engagement!)
+    await awardXp(userId, 'likeGiven', 0, { commentId: comment._id, type: 'dislike' });
+    if (comment.userId && comment.userId !== userId) {
+      await awardXp(comment.userId, 'dislikeReceived', 0, { commentId: comment._id });
+    }
+    
     res.json({ success: true, likes: comment.likes, dislikes: comment.dislikes });
   } catch (err) {
     console.error('POST /api/divides/:divideId/comments/:commentId/dislike', err);
@@ -2787,21 +2817,40 @@ const socialAuth = async (req, res, next) => {
   }
 };
 
-// GET /api/social/posts - Get feed (paginated, newest first)
+// GET /api/social/posts - Get feed (paginated, sorted by controversy - most disliked first)
 app.get('/api/social/posts', async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
     const skip = (page - 1) * limit;
 
-    const posts = await SocialPost.find({ isDeleted: false })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .populate('author', 'username profileImage level currentBadge')
-      .populate('linkedDivide', 'title status')
-      .populate('comments.author', 'username profileImage level currentBadge')
-      .lean();
+    // Use aggregation for controversy sorting
+    const posts = await SocialPost.aggregate([
+      { $match: { isDeleted: false } },
+      { $addFields: { controversyScore: { $subtract: [{ $ifNull: ['$dislikes', 0] }, { $ifNull: ['$likes', 0] }] } } },
+      { $sort: { controversyScore: -1, createdAt: -1 } },
+      { $skip: skip },
+      { $limit: limit },
+      // Populate author
+      { $lookup: { from: 'users', localField: 'author', foreignField: '_id', as: 'author', pipeline: [{ $project: { username: 1, profileImage: 1, level: 1, currentBadge: 1 } }] } },
+      { $unwind: { path: '$author', preserveNullAndEmptyArrays: true } },
+      // Populate linkedDivide
+      { $lookup: { from: 'divides', localField: 'linkedDivide', foreignField: '_id', as: 'linkedDivide', pipeline: [{ $project: { title: 1, status: 1 } }] } },
+      { $unwind: { path: '$linkedDivide', preserveNullAndEmptyArrays: true } },
+      // Populate comment authors
+      { $lookup: { from: 'users', localField: 'comments.author', foreignField: '_id', as: 'commentAuthors', pipeline: [{ $project: { username: 1, profileImage: 1, level: 1, currentBadge: 1 } }] } },
+    ]).allowDiskUse(true);
+    
+    // Post-process to attach comment authors
+    for (const post of posts) {
+      if (post.comments && post.commentAuthors) {
+        for (const comment of post.comments) {
+          const authorId = comment.author?.toString();
+          comment.author = post.commentAuthors.find(a => a._id.toString() === authorId) || comment.author;
+        }
+        delete post.commentAuthors;
+      }
+    }
 
     const total = await SocialPost.countDocuments({ isDeleted: false });
 
@@ -2927,6 +2976,14 @@ app.post('/api/social/posts/:id/like', socialAuth, async (req, res) => {
     post.updatedAt = new Date();
     await post.save();
 
+    // Award XP for liking
+    await awardXp(req.user.id, 'likeGiven', 0, { postId: post._id });
+    
+    // Award XP to post author for receiving like
+    if (post.author && post.author.toString() !== req.user.id) {
+      await awardXp(post.author, 'likeReceived', 0, { postId: post._id });
+    }
+
     res.json({ likes: post.likes, dislikes: post.dislikes });
   } catch (err) {
     console.error('Error liking post:', err);
@@ -2985,6 +3042,14 @@ app.post('/api/social/posts/:id/dislike', socialAuth, async (req, res) => {
     post.dislikes += 1;
     post.updatedAt = new Date();
     await post.save();
+
+    // Award XP for disliking (same as liking - engagement is engagement)
+    await awardXp(req.user.id, 'likeGiven', 0, { postId: post._id, type: 'dislike' });
+    
+    // Award XP to post author for receiving dislike (controversy = engagement!)
+    if (post.author && post.author.toString() !== req.user.id) {
+      await awardXp(post.author, 'dislikeReceived', 0, { postId: post._id });
+    }
 
     res.json({ likes: post.likes, dislikes: post.dislikes });
   } catch (err) {
