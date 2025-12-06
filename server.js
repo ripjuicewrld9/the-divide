@@ -17,6 +17,7 @@ import UserEngagement from './models/UserEngagement.js';
 import SocialPost from './models/SocialPost.js';
 import DivideSentiment from './models/DivideSentiment.js';
 import { analyzeDivideSentiment } from './utils/geminiSentiment.js';
+import { getPrice, getSupportedAssets } from './utils/priceFeed.js';
 
 // Routes
 import paymentRoutes from './routes/payments.js';
@@ -1548,10 +1549,26 @@ app.post('/Divides', auth, adminOnly, async (req, res) => {
       soundB,
       category = 'Other',
       durationValue = 10,
-      durationUnit = 'minutes'
+      durationUnit = 'minutes',
+      mode = 'classic',
+      assetA,
+      assetB
     } = req.body || {};
 
     if (!title || !optionA || !optionB) return res.status(400).json({ error: 'Missing required fields' });
+
+    let startPriceA, startPriceB;
+    if (mode === 'versus') {
+      if (!assetA || !assetB) return res.status(400).json({ error: 'Assets required for versus mode' });
+
+      // Fetch current prices
+      startPriceA = await getPrice(assetA);
+      startPriceB = await getPrice(assetB);
+
+      if (!startPriceA || !startPriceB) {
+        return res.status(400).json({ error: 'Could not fetch prices for assets' });
+      }
+    }
 
     const now = new Date();
     let ms = Number(durationValue) || 0;
@@ -1577,6 +1594,11 @@ app.post('/Divides', auth, adminOnly, async (req, res) => {
       soundB: soundB || '',
       category,
       endTime,
+      mode,
+      assetA,
+      assetB,
+      startPriceA,
+      startPriceB,
       // Use correct model field names
       shortsA: 0,
       shortsB: 0,
@@ -1614,12 +1636,28 @@ app.post('/Divides/create-user', auth, async (req, res) => {
       side,
       category = 'Other',
       durationValue = 10,
-      durationUnit = 'minutes'
+      durationUnit = 'minutes',
+      mode = 'classic',
+      assetA,
+      assetB
     } = req.body || {};
 
     if (!title || !optionA || !optionB) return res.status(400).json({ error: 'Missing required fields' });
     if (!['A', 'B'].includes(side)) return res.status(400).json({ error: 'Invalid side' });
     if (typeof bet !== 'number' || bet <= 0) return res.status(400).json({ error: 'Invalid bet amount' });
+
+    let startPriceA, startPriceB;
+    if (mode === 'versus') {
+      if (!assetA || !assetB) return res.status(400).json({ error: 'Assets required for versus mode' });
+
+      // Fetch current prices
+      startPriceA = await getPrice(assetA);
+      startPriceB = await getPrice(assetB);
+
+      if (!startPriceA || !startPriceB) {
+        return res.status(400).json({ error: 'Could not fetch prices for assets' });
+      }
+    }
 
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -1657,6 +1695,11 @@ app.post('/Divides/create-user', auth, async (req, res) => {
       soundB: '',
       category,
       endTime,
+      mode,
+      assetA,
+      assetB,
+      startPriceA,
+      startPriceB,
       // Use correct model field names
       shortsA: side === 'A' ? bet : 0,
       shortsB: side === 'B' ? bet : 0,
@@ -1945,8 +1988,50 @@ async function endDivideById(divideId, userId) {
     const allParticipants = divide.shorts || [];
     const totalShorts = allParticipants.reduce((sum, s) => sum + (s.shortAmount || 0), 0);
 
-    // THE 50/50 CURSE CHECK - Perfect tie detection
-    const isTie = shortsA === shortsB && shortsA > 0;
+    // THE 50/50 CURSE CHECK - Perfect tie detection (Classic Mode Only)
+    let isTie = false;
+    let winnerSide = null;
+    let loserSide = null;
+
+    if (divide.mode === 'versus') {
+      // VERSUS MODE: Winner determined by price performance
+      const endPriceA = await getPrice(divide.assetA);
+      const endPriceB = await getPrice(divide.assetB);
+
+      if (endPriceA && endPriceB) {
+        divide.endPriceA = endPriceA;
+        divide.endPriceB = endPriceB;
+
+        const perfA = (endPriceA - divide.startPriceA) / divide.startPriceA;
+        const perfB = (endPriceB - divide.startPriceB) / divide.startPriceB;
+
+        if (perfA > perfB) {
+          winnerSide = 'A';
+          loserSide = 'B';
+        } else if (perfB > perfA) {
+          winnerSide = 'B';
+          loserSide = 'A';
+        } else {
+          // Extremely rare price tie
+          isTie = true;
+        }
+
+        console.log(`[Divide ${divide.id}] VERSUS END: ${divide.assetA} (${(perfA * 100).toFixed(2)}%) vs ${divide.assetB} (${(perfB * 100).toFixed(2)}%) -> Winner: ${winnerSide}`);
+      } else {
+        // Fallback if price fetch fails? For now, treat as tie or refund?
+        // Let's treat as tie to trigger refund logic (but maybe without curse?)
+        console.error(`[Divide ${divide.id}] FAILED TO FETCH END PRICES`);
+        isTie = true;
+      }
+    } else {
+      // CLASSIC MODE: Minority wins
+      isTie = shortsA === shortsB && shortsA > 0;
+      if (!isTie) {
+        const minority = shortsA < shortsB ? 'A' : 'B';
+        winnerSide = minority;
+        loserSide = winnerSide === 'A' ? 'B' : 'A';
+      }
+    }
 
     // Calculate creator's contribution for bonus calculation
     let creatorContribution = 0;
@@ -1961,11 +2046,11 @@ async function endDivideById(divideId, userId) {
     const creatorTierPercent = getCreatorBonusTier(creatorContribution);
 
     // ═══════════════════════════════════════════════════════════════════
-    // 💀 THE 50/50 CURSE 💀
+    // 💀 THE 50/50 CURSE 💀 (Classic Mode Only)
     // House eats half, everyone loses half. No exceptions.
     // PERFECT 50/50 = HOUSE TAX
     // ═══════════════════════════════════════════════════════════════════
-    if (isTie) {
+    if (isTie && divide.mode !== 'versus') {
       divide.winnerSide = 'TIE';
       divide.loserSide = 'BOTH';
       divide.isTie = true;
@@ -2041,16 +2126,37 @@ async function endDivideById(divideId, userId) {
 
       console.log(`💀 [Divide ${divide.id}] CURSE COMPLETE: ${allParticipants.length} players lost 50% of their bets`);
 
+    } else if (isTie && divide.mode === 'versus') {
+      // VERSUS TIE (Rare) - Full Refund (minus no rake?) or just full refund
+      // Let's do full refund for now to be fair
+      divide.winnerSide = 'TIE';
+      divide.loserSide = 'BOTH';
+      divide.isTie = true;
+
+      console.log(`[Divide ${divide.id}] VERSUS TIE - Full Refund`);
+
+      for (const participant of allParticipants) {
+        if (!participant.shortAmount || participant.shortAmount <= 0) continue;
+        const refundCents = toCents(participant.shortAmount);
+        await User.findByIdAndUpdate(participant.userId, { $inc: { balance: refundCents } });
+
+        await Ledger.create({
+          type: 'divides_refund',
+          amount: Number(participant.shortAmount),
+          userId: participant.userId,
+          divideId: divide.id || divide._id,
+          meta: { reason: 'Versus Tie' }
+        });
+      }
+
     } else {
       // ═══════════════════════════════════════════════════════════════════
-      // NORMAL CASE - Minority wins, majority loses (standard rules)
+      // NORMAL CASE - Winner Determined (Minority or Performance)
       // 2.5% House + 0.5% Creator Pool + 97% Winner Pool
       // ═══════════════════════════════════════════════════════════════════
 
-      const minority = shortsA < shortsB ? 'A' : 'B';
-      const winnerSide = minority;
       divide.winnerSide = winnerSide;
-      divide.loserSide = winnerSide === 'A' ? 'B' : 'A';
+      divide.loserSide = loserSide;
       divide.isTie = false;
 
       const winners = allParticipants.filter(s => s.side === winnerSide);

@@ -112,16 +112,16 @@ export default function RecentEats() {
                   transition: 'all 0.2s ease',
                   cursor: 'pointer'
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
-                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
-                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
+                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                  }}
                 >
                   {/* Question - truncated */}
                   <div style={{
@@ -135,7 +135,7 @@ export default function RecentEats() {
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap'
                   }}>
-                    {eat.question}
+                    {eat.title}
                   </div>
 
                   {/* Outcome */}
@@ -155,18 +155,18 @@ export default function RecentEats() {
                         width: '6px',
                         height: '6px',
                         borderRadius: '50%',
-                        background: eat.winner === 'sideA' ? '#dc2626' : '#2563eb',
-                        boxShadow: eat.winner === 'sideA' 
-                          ? '0 0 8px rgba(220,38,38,0.5)' 
+                        background: eat.winnerSide === 'A' ? '#dc2626' : '#2563eb',
+                        boxShadow: eat.winnerSide === 'A'
+                          ? '0 0 8px rgba(220,38,38,0.5)'
                           : '0 0 8px rgba(37,99,235,0.5)'
                       }} />
                       <span style={{
                         fontSize: '12px',
                         fontWeight: '600',
-                        color: eat.winner === 'sideA' ? '#f87171' : '#60a5fa',
+                        color: eat.winnerSide === 'A' ? '#f87171' : '#60a5fa',
                         letterSpacing: '-0.01em'
                       }}>
-                        {eat.winner === 'sideA' ? eat.sideALabel : eat.sideBLabel}
+                        {eat.winnerSide === 'A' ? eat.optionA : eat.optionB}
                       </span>
                     </div>
 
@@ -193,7 +193,7 @@ export default function RecentEats() {
                       color: 'rgba(255,255,255,0.25)',
                       letterSpacing: '0.02em'
                     }}>
-                      {formatTimeAgo(eat.endedAt)}
+                      {formatTimeAgo(eat.endTime)}
                     </span>
                   </div>
                 </div>
@@ -211,7 +211,7 @@ function formatTimeAgo(dateStr) {
   const date = new Date(dateStr);
   const now = new Date();
   const seconds = Math.floor((now - date) / 1000);
-  
+
   if (seconds < 60) return 'Just now';
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
   if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;

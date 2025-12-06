@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function HowItWorksModal({ isOpen, onClose }) {
-  const [activeTab, setActiveTab] = useState('how');
+  const [activeTab, setActiveTab] = useState('classic');
 
   if (!isOpen) return null;
 
@@ -36,13 +36,22 @@ export default function HowItWorksModal({ isOpen, onClose }) {
         {/* Tabs */}
         <div className="flex border-b border-white/10">
           <button
-            onClick={() => setActiveTab('how')}
-            className={`flex-1 py-4 text-sm font-bold transition-colors ${activeTab === 'how'
+            onClick={() => setActiveTab('classic')}
+            className={`flex-1 py-4 text-sm font-bold transition-colors ${activeTab === 'classic'
               ? 'text-white border-b-2 border-red-500'
               : 'text-gray-400 hover:text-white'
               }`}
           >
-            The Game
+            Classic Mode
+          </button>
+          <button
+            onClick={() => setActiveTab('hedge')}
+            className={`flex-1 py-4 text-sm font-bold transition-colors ${activeTab === 'hedge'
+              ? 'text-white border-b-2 border-yellow-500'
+              : 'text-gray-400 hover:text-white'
+              }`}
+          >
+            Hedge Mode
           </button>
           <button
             onClick={() => setActiveTab('rake')}
@@ -58,9 +67,9 @@ export default function HowItWorksModal({ isOpen, onClose }) {
         {/* Content */}
         <div className="p-6 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 140px)' }}>
           <AnimatePresence mode="wait">
-            {activeTab === 'how' ? (
+            {activeTab === 'classic' ? (
               <motion.div
-                key="how"
+                key="classic"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 20 }}
@@ -154,50 +163,85 @@ export default function HowItWorksModal({ isOpen, onClose }) {
                     </div>
                   </div>
                 </div>
-
-                {/* The Stakes */}
-                <div className="p-5 rounded-xl bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20">
-                  <h3 className="font-bold text-white mb-3">The sacrifice is ALWAYS there:</h3>
-                  <ul className="space-y-2 text-sm">
-                    <li className="flex items-center gap-2">
-                      <svg className="w-4 h-4 text-green-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
-                      </svg>
-                      <span className="text-gray-300">Win money? <span className="text-white">Your side lost the social war.</span></span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <svg className="w-4 h-4 text-red-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M12 22V12" /><path d="M20 7v10" /><path d="M4 7v10" />
-                      </svg>
-                      <span className="text-gray-300">Win the social war? <span className="text-white">You lost your money.</span></span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <svg className="w-4 h-4 text-purple-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="12" cy="12" r="10" /><path d="M8 14s1.5 2 4 2 4-2 4-2" /><line x1="9" y1="9" x2="9.01" y2="9" /><line x1="15" y1="9" x2="15.01" y2="9" />
-                      </svg>
-                      <span className="text-gray-300">Try to manipulate? <span className="text-white">You betray your own beliefs publicly.</span></span>
-                    </li>
-                  </ul>
+              </motion.div>
+            ) : activeTab === 'hedge' ? (
+              <motion.div
+                key="hedge"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-6"
+              >
+                {/* Hedge Mode Intro */}
+                <div className="p-5 rounded-xl bg-gradient-to-br from-yellow-500/10 via-orange-500/10 to-red-500/10 border border-yellow-500/30">
+                  <div className="flex items-center gap-2 mb-3">
+                    <svg className="w-5 h-5 text-yellow-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                    </svg>
+                    <h3 className="text-lg font-bold text-white">VERSUS MODE — PERFORMANCE WINS</h3>
+                  </div>
+                  <p className="text-white font-semibold">
+                    No minority rule. No popularity contest. <span className="text-yellow-400">Pure price performance.</span>
+                  </p>
                 </div>
 
-                {/* No House Edge */}
-                <div className="p-5 rounded-xl bg-black/50 border border-white/5">
-                  <p className="text-gray-400 text-sm leading-relaxed">
-                    We keep <span className="text-white font-semibold">2-3%</span> to run the arena depending on Creator Rake.<br />
-                    Everything else is pure player-vs-player betrayal.
-                  </p>
-                  <div className="mt-4 pt-4 border-t border-white/5">
-                    <p className="text-gray-500 text-xs">
-                      No house edge. No RNG.<br />
-                      Just you, the herd, and chaos.
-                    </p>
+                {/* How it Works */}
+                <div className="p-5 rounded-xl bg-white/5 border border-white/10">
+                  <h3 className="font-bold text-white mb-4">How It Works</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold shrink-0">1</div>
+                      <div>
+                        <h4 className="font-bold text-white">Pick Your Asset</h4>
+                        <p className="text-sm text-gray-400">Choose between two assets (e.g., BTC vs SOL). You are betting on which one will perform better.</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center font-bold shrink-0">2</div>
+                      <div>
+                        <h4 className="font-bold text-white">Winner Takes All</h4>
+                        <p className="text-sm text-gray-400">The asset with the higher percentage gain (or lower loss) wins the entire pot (minus fees).</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold shrink-0">3</div>
+                      <div>
+                        <h4 className="font-bold text-white">No Minority Rule</h4>
+                        <p className="text-sm text-gray-400">Unlike Classic Mode, popularity doesn't matter. Even if 99% of people bet on BTC, if BTC outperforms SOL, BTC backers win.</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                {/* Tagline */}
-                <div className="text-center py-4">
-                  <p className="text-lg font-bold bg-gradient-to-r from-red-400 via-purple-400 to-blue-400 bg-clip-text text-transparent">
-                    Welcome to the first real social blood sport with money on the line.
+                {/* Example */}
+                <div className="p-5 rounded-xl bg-black/50 border border-white/5">
+                  <h3 className="font-bold text-white mb-3">Example Scenario</h3>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between items-center p-2 bg-white/5 rounded">
+                      <span className="text-gray-300">BTC Performance</span>
+                      <span className="text-green-400 font-mono font-bold">+5.0%</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 bg-white/5 rounded">
+                      <span className="text-gray-300">SOL Performance</span>
+                      <span className="text-green-400 font-mono font-bold">+2.5%</span>
+                    </div>
+                    <div className="mt-2 pt-2 border-t border-white/10 text-center">
+                      <p className="text-white font-bold">BTC Wins!</p>
+                      <p className="text-gray-500 text-xs">BTC backers take the pot. SOL backers lose.</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Refund Rule */}
+                <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <svg className="w-4 h-4 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <h4 className="font-bold text-blue-400 text-sm">Tie Breaker</h4>
+                  </div>
+                  <p className="text-xs text-gray-300">
+                    If both assets have the exact same percentage performance, all bets are refunded (no rake taken).
                   </p>
                 </div>
               </motion.div>

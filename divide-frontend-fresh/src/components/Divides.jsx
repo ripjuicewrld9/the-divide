@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { isMobile } from '../utils/deviceDetect';
 import { formatCurrency } from '../utils/format';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { io } from "socket.io-client";
 import DivideCard from "./DivideCard";
 import CategoryNav from "./CategoryNav";
@@ -13,7 +13,7 @@ import { AuthContext } from "../context/AuthContext";
 import AuthModal from "./AuthModal.jsx";
 import MobileGameHeader from "./MobileGameHeader";
 import MobileFooter from "./MobileFooter.jsx";
-import { SEODivides } from "./SEO";
+import { SEODivides, SEOHome } from "./SEO";
 import "../styles/Divides.css";
 import { useAuth } from '../context/AuthContext';
 
@@ -30,6 +30,7 @@ const shortId = () => Date.now().toString(36) + Math.random().toString(36).slice
 
 export default function Divides({ onOpenChat }) {
   const { user, refreshUser, updateUser } = useAuth();
+  const location = useLocation();
   const [showModal, setShowModal] = useState(false);
   const [isRegister, setIsRegister] = useState(false);
   const [divides, setDivides] = useState([]);
@@ -308,7 +309,8 @@ export default function Divides({ onOpenChat }) {
   return (
     isMobile() ? (
       <div className="divides-mobile-container">
-        <SEODivides />
+        {location.pathname === '/' ? <SEOHome /> : <SEODivides />}
+        <h1 className="sr-only">The Divide App - Revolutionary Crypto Games & Social Betting</h1>
         {/* Mobile Header - only shows on mobile */}
         <MobileGameHeader title="Divides" onOpenChat={onOpenChat} className="md:hidden mb-4" />
 
@@ -424,6 +426,9 @@ export default function Divides({ onOpenChat }) {
               colorA={d.colors[0]}
               colorB={d.colors[1]}
               active={true}
+              mode={d.mode}
+              assetA={d.assetA}
+              assetB={d.assetB}
             />
           ))}
         </div>
@@ -463,6 +468,9 @@ export default function Divides({ onOpenChat }) {
                   colorA={d.colors[0]}
                   colorB={d.colors[1]}
                   active={false}
+                  mode={d.mode}
+                  assetA={d.assetA}
+                  assetB={d.assetB}
                 />
               ))}
             </div>
@@ -501,7 +509,8 @@ export default function Divides({ onOpenChat }) {
     ) : (
       // Desktop layout - Centered like Polymarket
       <div className="divides-desktop-container">
-        <SEODivides />
+        {location.pathname === '/' ? <SEOHome /> : <SEODivides />}
+        <h1 className="sr-only">The Divide App - Revolutionary Crypto Games & Social Betting</h1>
         {/* Premium Treasury Banner - Desktop */}
         {treasury && (
           <div style={{
@@ -607,20 +616,18 @@ export default function Divides({ onOpenChat }) {
               dislikedBy={d.dislikedBy}
               isUserCreated={d.isUserCreated}
               onVote={(side, boostAmount) => handleVote(d.id || d._id, side, boostAmount)}
-              allExpanded={allExpanded}
               onRequestExpand={() => {
                 setAllExpanded((s) => !s);
               }}
               colorA={d.colors[0]}
               colorB={d.colors[1]}
               active={true}
+              mode={d.mode}
+              assetA={d.assetA}
+              assetB={d.assetB}
             />
           ))}
         </div>
-
-        {/* Recent Eats - Last 10 completed divides */}
-        <RecentEats />
-
         {previousDivides.length > 0 && (
           <section className="previous-divides-desktop mt-10">
             <h3 className="text-xl font-bold text-gray-300 mb-4">Previous Divides</h3>
@@ -653,11 +660,15 @@ export default function Divides({ onOpenChat }) {
                   colorA={d.colors[0]}
                   colorB={d.colors[1]}
                   active={false}
+                  mode={d.mode}
+                  assetA={d.assetA}
+                  assetB={d.assetB}
                 />
               ))}
             </div>
           </section>
         )}
+
         {showModal && (
           <AuthModal
             onClose={() => setShowModal(false)}

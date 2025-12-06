@@ -5,6 +5,8 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { formatCurrency } from '../utils/format';
 import api from '../services/api';
+import { BarChart2 } from 'lucide-react';
+import CryptoChart from './CryptoChart';
 
 export default function DivideCard({
   divideId,
@@ -18,6 +20,8 @@ export default function DivideCard({
   rightVotes = 0,
   pot = 0,
   endTime = null,
+  assetA,
+  assetB,
   status = 'active',
   // eslint-disable-next-line no-unused-vars
   winner = null,
@@ -30,11 +34,12 @@ export default function DivideCard({
   // eslint-disable-next-line no-unused-vars
   onRequestExpand,
   active = true,
+  mode,
 }) {
   const [l, setL] = useState(Number(leftVotes) || 0);
   const [r, setR] = useState(Number(rightVotes) || 0);
   const [editingSide, setEditingSide] = useState(null);
-  const [positionMode, setPositionMode] = useState('short'); // 'long' or 'short' - default short
+  const [positionMode, setPositionMode] = useState('long');
   const [betAmount, setBetAmount] = useState('');
   const [localLikes, setLocalLikes] = useState(Number(likes) || 0);
   const [localDislikes, setLocalDislikes] = useState(Number(dislikes) || 0);
@@ -43,6 +48,7 @@ export default function DivideCard({
   const [isHovered, setIsHovered] = useState(false);
   const [copied, setCopied] = useState(false);
   const [sentiment, setSentiment] = useState(null);
+  const [showChart, setShowChart] = useState(false);
   const [seconds, setSeconds] = useState(() => {
     if (!endTime) return 0;
     const delta = Math.floor((new Date(endTime) - Date.now()) / 1000);
@@ -228,15 +234,49 @@ export default function DivideCard({
         alignItems: 'center',
         marginBottom: '14px'
       }}>
-        <span style={{
-          fontSize: '10px',
-          fontWeight: '600',
-          color: colors.text.muted,
-          textTransform: 'uppercase',
-          letterSpacing: '0.06em',
-        }}>
-          {category}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{
+            fontSize: '10px',
+            fontWeight: '600',
+            color: colors.text.muted,
+            textTransform: 'uppercase',
+            letterSpacing: '0.06em',
+          }}>
+            {category}
+          </span>
+          {mode === 'versus' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{
+                fontSize: '9px',
+                fontWeight: '800',
+                color: '#000',
+                background: '#fbbf24',
+                padding: '2px 6px',
+                borderRadius: '4px',
+                letterSpacing: '0.04em',
+              }}>
+                VERSUS
+              </span>
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowChart(!showChart); }}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: showChart ? '#fbbf24' : 'rgba(255,255,255,0.4)',
+                  cursor: 'pointer',
+                  padding: '2px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  transition: 'color 0.2s',
+                  marginLeft: '2px'
+                }}
+                title="Toggle Live Chart"
+              >
+                <BarChart2 size={14} />
+              </button>
+            </div>
+          )}
+        </div>
 
         {status === 'active' ? (
           <div style={{
@@ -304,6 +344,12 @@ export default function DivideCard({
         {title}
       </div>
 
+      {showChart && mode === 'versus' && (
+        <div style={{ marginBottom: '16px' }} onClick={e => e.stopPropagation()}>
+          <CryptoChart assetA={assetA} assetB={assetB} height={220} />
+        </div>
+      )}
+
       {/* FINAL COUNTDOWN OVERLAY */}
       {isLocked && (
         <div style={{
@@ -368,57 +414,76 @@ export default function DivideCard({
             gap: '6px',
             marginBottom: '4px',
           }}>
-            {/* Toggle Switch */}
-            <div
-              onClick={(e) => {
-                e.stopPropagation();
-                setPositionMode(positionMode === 'long' ? 'short' : 'long');
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0',
-                background: 'rgba(0,0,0,0.4)',
-                borderRadius: '20px',
-                padding: '3px',
-                cursor: 'pointer',
-                border: '1px solid rgba(255,255,255,0.1)',
-              }}
-            >
-              {/* Long side */}
+            {/* Toggle Switch - Only show for Classic Mode */}
+            {mode !== 'versus' ? (
+              <div
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPositionMode(positionMode === 'long' ? 'short' : 'long');
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0',
+                  background: 'rgba(0,0,0,0.4)',
+                  borderRadius: '20px',
+                  padding: '3px',
+                  cursor: 'pointer',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                }}
+              >
+                {/* Long side */}
+                <div style={{
+                  flex: 1,
+                  padding: '8px 12px',
+                  borderRadius: '17px',
+                  background: positionMode === 'long'
+                    ? 'linear-gradient(135deg, #4ade80 0%, #22c55e 100%)'
+                    : 'transparent',
+                  color: positionMode === 'long' ? '#000' : '#666',
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  textAlign: 'center',
+                  transition: 'all 200ms ease',
+                }}>
+                  📈 LONG
+                </div>
+                {/* Short side */}
+                <div style={{
+                  flex: 1,
+                  padding: '8px 12px',
+                  borderRadius: '17px',
+                  background: positionMode === 'short'
+                    ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
+                    : 'transparent',
+                  color: positionMode === 'short' ? '#fff' : '#666',
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  textAlign: 'center',
+                  transition: 'all 200ms ease',
+                }}>
+                  📉 SHORT
+                </div>
+              </div>
+            ) : (
+              // Versus Mode - Just a label or nothing?
+              // Let's show a "BET ON WINNER" label
               <div style={{
-                flex: 1,
-                padding: '8px 12px',
-                borderRadius: '17px',
-                background: positionMode === 'long'
-                  ? 'linear-gradient(135deg, #4ade80 0%, #22c55e 100%)'
-                  : 'transparent',
-                color: positionMode === 'long' ? '#000' : '#666',
+                textAlign: 'center',
                 fontSize: '11px',
                 fontWeight: '700',
-                textAlign: 'center',
-                transition: 'all 200ms ease',
+                color: '#fbbf24',
+                letterSpacing: '0.05em',
+                padding: '6px',
+                background: 'rgba(251, 191, 36, 0.1)',
+                borderRadius: '8px',
+                border: '1px solid rgba(251, 191, 36, 0.2)'
               }}>
-                📈 LONG
+                BET ON PERFORMANCE
               </div>
-              {/* Short side */}
-              <div style={{
-                flex: 1,
-                padding: '8px 12px',
-                borderRadius: '17px',
-                background: positionMode === 'short'
-                  ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
-                  : 'transparent',
-                color: positionMode === 'short' ? '#fff' : '#666',
-                fontSize: '11px',
-                fontWeight: '700',
-                textAlign: 'center',
-                transition: 'all 200ms ease',
-              }}>
-                📉 SHORT
-              </div>
-            </div>
+            )}
+
             {/* Helper text */}
             <div style={{
               fontSize: '9px',
@@ -426,11 +491,17 @@ export default function DivideCard({
               textAlign: 'center',
               lineHeight: 1.4,
             }}>
-              {positionMode === 'long'
-                ? 'Long = expect this side to be majority'
-                : 'Short = expect this side to be minority'
-              }
-              <span style={{ color: '#fbbf24', display: 'block' }}>Minority eats 97%</span>
+              {mode === 'versus' ? (
+                <span style={{ color: '#fbbf24' }}>Winner takes all (No minority rule)</span>
+              ) : (
+                <>
+                  {positionMode === 'long'
+                    ? 'Long = expect this side to be majority'
+                    : 'Short = expect this side to be minority'
+                  }
+                  <span style={{ color: '#fbbf24', display: 'block' }}>Minority eats 97%</span>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -440,8 +511,9 @@ export default function DivideCard({
           onClick={(e) => {
             if (status !== 'active' || isLocked) return;
             e.stopPropagation();
-            if (positionMode) {
-              setEditingSide(positionMode === 'long' ? 'longA' : 'shortA');
+            const effectivePositionMode = mode === 'versus' ? 'long' : positionMode;
+            if (effectivePositionMode) {
+              setEditingSide(effectivePositionMode === 'long' ? 'longA' : 'shortA');
               setBetAmount('');
             }
           }}
@@ -451,7 +523,7 @@ export default function DivideCard({
             justifyContent: 'space-between',
             padding: '12px 14px',
             borderRadius: '12px',
-            cursor: positionMode && status === 'active' && !isLocked ? 'pointer' : 'default',
+            cursor: (mode === 'versus' || positionMode) && status === 'active' && !isLocked ? 'pointer' : 'default',
             background: editingSide === 'longA' || editingSide === 'shortA'
               ? 'linear-gradient(135deg, rgba(255,23,68,0.25) 0%, rgba(255,23,68,0.15) 100%)'
               : 'linear-gradient(135deg, rgba(255,23,68,0.12) 0%, rgba(255,23,68,0.06) 100%)',
@@ -481,16 +553,16 @@ export default function DivideCard({
           </div>
 
           {/* Show selected action */}
-          {positionMode && status === 'active' && !isLocked && !editingSide && (
+          {(mode === 'versus' || positionMode) && status === 'active' && !isLocked && !editingSide && (
             <span style={{
               fontSize: '10px',
               fontWeight: '600',
-              color: positionMode === 'long' ? '#4ade80' : '#ef4444',
-              background: positionMode === 'long' ? 'rgba(74,222,128,0.15)' : 'rgba(239,68,68,0.15)',
+              color: (mode === 'versus' || positionMode === 'long') ? '#4ade80' : '#ef4444',
+              background: (mode === 'versus' || positionMode === 'long') ? 'rgba(74,222,128,0.15)' : 'rgba(239,68,68,0.15)',
               padding: '4px 8px',
               borderRadius: '4px',
             }}>
-              {positionMode === 'long' ? 'LONG' : 'SHORT'}
+              {mode === 'versus' ? 'BET' : (positionMode === 'long' ? 'LONG' : 'SHORT')}
             </span>
           )}
         </div>
@@ -500,8 +572,9 @@ export default function DivideCard({
           onClick={(e) => {
             if (status !== 'active' || isLocked) return;
             e.stopPropagation();
-            if (positionMode) {
-              setEditingSide(positionMode === 'long' ? 'longB' : 'shortB');
+            const effectivePositionMode = mode === 'versus' ? 'long' : positionMode;
+            if (effectivePositionMode) {
+              setEditingSide(effectivePositionMode === 'long' ? 'longB' : 'shortB');
               setBetAmount('');
             }
           }}
@@ -511,7 +584,7 @@ export default function DivideCard({
             justifyContent: 'space-between',
             padding: '12px 14px',
             borderRadius: '12px',
-            cursor: positionMode && status === 'active' && !isLocked ? 'pointer' : 'default',
+            cursor: (mode === 'versus' || positionMode) && status === 'active' && !isLocked ? 'pointer' : 'default',
             background: editingSide === 'longB' || editingSide === 'shortB'
               ? 'linear-gradient(135deg, rgba(41,121,255,0.25) 0%, rgba(41,121,255,0.15) 100%)'
               : 'linear-gradient(135deg, rgba(41,121,255,0.12) 0%, rgba(41,121,255,0.06) 100%)',
@@ -541,16 +614,16 @@ export default function DivideCard({
           </div>
 
           {/* Show selected action */}
-          {positionMode && status === 'active' && !isLocked && !editingSide && (
+          {(mode === 'versus' || positionMode) && status === 'active' && !isLocked && !editingSide && (
             <span style={{
               fontSize: '10px',
               fontWeight: '600',
-              color: positionMode === 'long' ? '#4ade80' : '#ef4444',
-              background: positionMode === 'long' ? 'rgba(74,222,128,0.15)' : 'rgba(239,68,68,0.15)',
+              color: (mode === 'versus' || positionMode === 'long') ? '#4ade80' : '#ef4444',
+              background: (mode === 'versus' || positionMode === 'long') ? 'rgba(74,222,128,0.15)' : 'rgba(239,68,68,0.15)',
               padding: '4px 8px',
               borderRadius: '4px',
             }}>
-              {positionMode === 'long' ? 'LONG' : 'SHORT'}
+              {mode === 'versus' ? 'BET' : (positionMode === 'long' ? 'LONG' : 'SHORT')}
             </span>
           )}
         </div>
@@ -573,10 +646,19 @@ export default function DivideCard({
           >
             {/* Explanation of what this bet does */}
             <div style={{ fontSize: '11px', color: '#888', textAlign: 'center' }}>
-              {editingSide === 'longA' && `Long ${left} = betting ${right} will be minority`}
-              {editingSide === 'shortA' && `Short ${left} = betting ${left} will be minority`}
-              {editingSide === 'longB' && `Long ${right} = betting ${left} will be minority`}
-              {editingSide === 'shortB' && `Short ${right} = betting ${right} will be minority`}
+              {mode === 'versus' ? (
+                <>
+                  {editingSide === 'longA' && `Bet on ${left} to outperform ${right}`}
+                  {editingSide === 'longB' && `Bet on ${right} to outperform ${left}`}
+                </>
+              ) : (
+                <>
+                  {editingSide === 'longA' && `Long ${left} = betting ${right} will be minority`}
+                  {editingSide === 'shortA' && `Short ${left} = betting ${left} will be minority`}
+                  {editingSide === 'longB' && `Long ${right} = betting ${left} will be minority`}
+                  {editingSide === 'shortB' && `Short ${right} = betting ${right} will be minority`}
+                </>
+              )}
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -631,8 +713,38 @@ export default function DivideCard({
                   // Determine which side money goes to
                   // Long A = money to B, Short A = money to A
                   // Long B = money to A, Short B = money to B
-                  const moneyGoesTo =
-                    editingSide === 'longA' || editingSide === 'shortB' ? 'right' : 'left';
+
+                  // For Versus: Long A = Bet on A = Short B (money to B pool? No wait)
+                  // In Classic: Long A = Money to B pool (betting A is majority).
+                  // In Versus: Bet on A = Money to A pool?
+                  // Wait, "The $37,000 that bet on BTC takes the entire $100,000"
+                  // So if I bet on BTC, my money is in the BTC pool.
+                  // If BTC wins, I take the SOL pool.
+                  // So Bet on A -> Money to A pool.
+
+                  // In Classic: Short A = Money to A pool (betting A is minority).
+                  // So Bet on A (Versus) is mechanically like Short A (Classic) -> Money to A pool.
+
+                  // Let's check `handleSubmitBet` logic in `DivideCard`:
+                  // `const moneyGoesTo = editingSide === 'longA' || editingSide === 'shortB' ? 'right' : 'left';`
+                  // 'right' is B, 'left' is A.
+
+                  // Classic Long A -> Money to B (right). Correct.
+                  // Classic Short A -> Money to A (left). Correct.
+
+                  // Versus Bet on A (Long A) -> Should go to A (left).
+                  // So for Versus, Long A should go to 'left'.
+
+                  let moneyGoesTo;
+                  if (mode === 'versus') {
+                    // Versus: Bet on A (Long A) -> Money to A (left)
+                    // Versus: Bet on B (Long B) -> Money to B (right)
+                    moneyGoesTo = editingSide === 'longA' ? 'left' : 'right';
+                  } else {
+                    // Classic logic
+                    moneyGoesTo = editingSide === 'longA' || editingSide === 'shortB' ? 'right' : 'left';
+                  }
+
                   handleSubmitBet(moneyGoesTo, e);
                   setEditingSide(null);
                   setPositionMode(null);
@@ -653,7 +765,7 @@ export default function DivideCard({
                   opacity: betAmount && Number(betAmount) > 0 ? 1 : 0.5,
                 }}
               >
-                {editingSide.includes('long') ? '📈 Confirm Long' : '📉 Confirm Short'}
+                {mode === 'versus' ? 'Confirm Bet' : (editingSide.includes('long') ? '📈 Confirm Long' : '📉 Confirm Short')}
               </button>
             </div>
           </div>

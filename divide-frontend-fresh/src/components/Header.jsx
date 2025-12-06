@@ -125,9 +125,7 @@ export default function Header() {
                 e.currentTarget.style.transform = 'translateY(0)';
               }}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-              </svg>
+              <img src="/hedge-icon.svg" width="18" height="18" alt="Hedge" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }} />
               Divides
             </Link>
             <Link

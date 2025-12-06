@@ -40,6 +40,17 @@ const divideSchema = new mongoose.Schema({
     default: 'Other',
     index: true
   },
+  // Game Mode: 'classic' (minority wins) or 'versus' (price performance wins)
+  mode: { type: String, enum: ['classic', 'versus'], default: 'classic' },
+
+  // Versus Mode Fields
+  assetA: { type: String }, // e.g. 'BTC', 'SOL'
+  assetB: { type: String }, // e.g. 'ETH', 'DOGE'
+  startPriceA: { type: Number },
+  startPriceB: { type: Number },
+  endPriceA: { type: Number },
+  endPriceB: { type: Number },
+
   shortsA: { type: Number, default: 0 }, // total $ shorting side A (betting A will lose)
   shortsB: { type: Number, default: 0 }, // total $ shorting side B (betting B will lose)
   totalShorts: { type: Number, default: 0 },

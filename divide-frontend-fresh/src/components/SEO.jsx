@@ -16,15 +16,15 @@ export default function SEO({
     children
 }) {
     const siteName = 'The Divide';
-    const defaultDescription = 'The first social betting game where minority wins 97% of the pot. Go Long or Short on tribal debates like iPhone vs Android, Trump vs Biden. Beat the crowd and win big.';
+    const defaultDescription = 'The Divide - Revolutionary Crypto Games. The first social betting game where minority wins 97% of the pot. Go Long or Short on tribal debates. Pure player vs player.';
     const defaultImage = 'https://thedivide.app/og-image.png';
     const defaultUrl = 'https://thedivide.app';
 
-    const fullTitle = title ? `${title} | ${siteName}` : `${siteName} | Social Betting Game Where Minority Wins`;
+    const fullTitle = title ? `${title} | ${siteName}` : `${siteName} | Revolutionary Crypto Games`;
     const metaDescription = description || defaultDescription;
     const metaImage = image || defaultImage;
     const metaUrl = url || defaultUrl;
-    const metaKeywords = keywords || 'social betting, prediction market, minority wins, crowd prediction, betting game, long short, pvp betting';
+    const metaKeywords = keywords || 'social betting, prediction market, minority wins, crowd prediction, betting game, long short, pvp betting, crypto games';
 
     return (
         <Helmet>
@@ -67,9 +67,9 @@ export default function SEO({
 // Pre-configured SEO for common pages
 export const SEOHome = () => (
     <SEO
-        title="Social Betting Game Where Minority Wins"
-        description="The Divide is the first social betting game where minority wins 97% of the pot. Go Long or Short on tribal debates. No house edge. Pure PvP."
-        keywords="social betting, prediction market, minority wins, betting game, crowd prediction, long short trading, pvp betting, social casino"
+        title="Revolutionary Crypto Games"
+        description="The Divide - Revolutionary Crypto Games. The first social betting game where minority wins 97% of the pot. Go Long or Short on tribal debates. No house edge. Pure PvP."
+        keywords="social betting, prediction market, minority wins, betting game, crowd prediction, long short trading, pvp betting, social casino, crypto games"
         url="https://thedivide.app/"
     />
 );
