@@ -244,8 +244,8 @@ function PostCard({ post, onUpdate }) {
             color: '#fff',
             overflow: 'hidden',
           }}>
-            {localPost.author?.avatar ? (
-              <img src={localPost.author.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            {localPost.author?.profileImage ? (
+              <img src={localPost.author.profileImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : (
               localPost.author?.username?.charAt(0).toUpperCase() || '?'
             )}
@@ -255,8 +255,32 @@ function PostCard({ post, onUpdate }) {
               fontSize: '15px',
               fontWeight: '600',
               color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
             }}>
               {localPost.author?.username || 'Unknown'}
+              {localPost.author?.level && (
+                <span style={{
+                  fontSize: '11px',
+                  padding: '2px 6px',
+                  borderRadius: '4px',
+                  background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)',
+                  color: '#000',
+                  fontWeight: '700',
+                }}>
+                  Lv.{localPost.author.level}
+                </span>
+              )}
+              {localPost.author?.currentBadge && (
+                <span style={{
+                  fontSize: '11px',
+                  color: '#a855f7',
+                  fontWeight: '600',
+                }}>
+                  {localPost.author.currentBadge}
+                </span>
+              )}
             </div>
             <div style={{
               fontSize: '12px',

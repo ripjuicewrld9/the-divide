@@ -209,8 +209,8 @@ export default function PostDetail() {
               color: '#fff',
               overflow: 'hidden',
             }}>
-              {post.author?.avatar ? (
-                <img src={post.author.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              {post.author?.profileImage ? (
+                <img src={post.author.profileImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : (
                 post.author?.username?.charAt(0).toUpperCase() || '?'
               )}
@@ -220,8 +220,32 @@ export default function PostDetail() {
                 fontSize: '16px',
                 fontWeight: '600',
                 color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
               }}>
                 {post.author?.username || 'Unknown'}
+                {post.author?.level && (
+                  <span style={{
+                    fontSize: '11px',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)',
+                    color: '#000',
+                    fontWeight: '700',
+                  }}>
+                    Lv.{post.author.level}
+                  </span>
+                )}
+                {post.author?.currentBadge && (
+                  <span style={{
+                    fontSize: '11px',
+                    color: '#a855f7',
+                    fontWeight: '600',
+                  }}>
+                    {post.author.currentBadge}
+                  </span>
+                )}
               </div>
               <div style={{
                 fontSize: '13px',

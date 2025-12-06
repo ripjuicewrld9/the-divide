@@ -45,17 +45,33 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Helper: Create NOWPayments custody customer for a user
 async function createNowPaymentsCustomer(user) {
   try {
+    // Skip if no API key configured
+    if (!process.env.NOWPAYMENTS_API_KEY) {
+      console.log(`[NOWPayments] Skipping customer creation - no API key configured`);
+      return null;
+    }
+    
     const customer = await nowPayments.createCustomer({
       email: user.email || '',
       name: user.username,
       externalId: user._id.toString()
     });
-    user.nowPaymentsCustomerId = customer.id;
-    await user.save();
-    console.log(`[NOWPayments] Created customer ${customer.id} for user ${user.username}`);
-    return customer.id;
+    
+    if (customer && customer.id) {
+      user.nowPaymentsCustomerId = customer.id;
+      await user.save();
+      console.log(`[NOWPayments] Created customer ${customer.id} for user ${user.username}`);
+      return customer.id;
+    } else {
+      console.error(`[NOWPayments] Customer creation returned no ID for ${user.username}:`, customer);
+      return null;
+    }
   } catch (err) {
-    console.error(`[NOWPayments] Failed to create customer for ${user.username}:`, err.message);
+    // Log full error details for debugging
+    console.error(`[NOWPayments] Failed to create customer for ${user.username}:`);
+    console.error(`  - Error: ${err.message}`);
+    if (err.statusCode) console.error(`  - Status: ${err.statusCode}`);
+    if (err.response) console.error(`  - Response:`, JSON.stringify(err.response));
     return null;
   }
 }
@@ -2706,29 +2722,7 @@ app.get('/api/users/:id', async (req, res) => {
   }
 });
 
-app.patch('/api/users/:id/avatar', auth, upload.single('avatar'), async (req, res) => {
-  try {
-    if (req.params.id !== req.userId) {
-      return res.status(403).json({ error: 'Can only update own avatar' });
-    }
-
-    const avatarUrl = req.file ? `/uploads/${req.file.filename}` : null;
-    if (!avatarUrl) {
-      return res.status(400).json({ error: 'No file uploaded' });
-    }
-
-    const user = await User.findByIdAndUpdate(
-      req.userId,
-      { avatar: avatarUrl },
-      { new: true }
-    ).select('-password -twoFactorSecret');
-
-    res.json(user);
-  } catch (err) {
-    console.error('PATCH /api/users/:id/avatar', err);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
+// Avatar upload removed - avatars now sync from Discord
 
 // Change username (allowed once every 30 days)
 app.post('/api/change-username', auth, async (req, res) => {
@@ -2813,9 +2807,9 @@ app.get('/api/social/posts', async (req, res) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .populate('author', 'username avatar')
+      .populate('author', 'username profileImage level currentBadge')
       .populate('linkedDivide', 'title status')
-      .populate('comments.author', 'username avatar')
+      .populate('comments.author', 'username profileImage level currentBadge')
       .lean();
 
     const total = await SocialPost.countDocuments({ isDeleted: false });
@@ -2840,9 +2834,9 @@ app.get('/api/social/posts', async (req, res) => {
 app.get('/api/social/posts/:id', async (req, res) => {
   try {
     const post = await SocialPost.findById(req.params.id)
-      .populate('author', 'username avatar')
+      .populate('author', 'username profileImage level currentBadge')
       .populate('linkedDivide', 'title status left right')
-      .populate('comments.author', 'username avatar')
+      .populate('comments.author', 'username profileImage level currentBadge')
       .lean();
 
     if (!post || post.isDeleted) {
@@ -2880,7 +2874,7 @@ app.post('/api/social/posts', socialAuth, async (req, res) => {
 
     // Populate author for response
     const populatedPost = await SocialPost.findById(post._id)
-      .populate('author', 'username avatar')
+      .populate('author', 'username profileImage level currentBadge')
       .populate('linkedDivide', 'title status')
       .lean();
 
