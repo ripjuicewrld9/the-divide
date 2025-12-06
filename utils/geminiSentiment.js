@@ -42,9 +42,9 @@ export async function analyzeDivideSentiment({ divideTitle, optionA, optionB, co
     .map((c, i) => `[${c.type} ${i + 1}]: ${c.text}`)
     .join('\n');
 
-  const prompt = `Analyze the sentiment of user comments and posts about a prediction market.
+  const prompt = `Analyze the sentiment of user comments and posts about a social strategy game.
 
-PREDICTION MARKET:
+DIVIDE:
 Question: "${divideTitle}"
 Option A: "${optionA}"
 Option B: "${optionB}"

@@ -60,7 +60,7 @@ export default function Footer() {
               lineHeight: '1.6',
               maxWidth: '280px',
             }}>
-              A contrarian prediction market where the minority wins. 
+              A skill-based social strategy game where the minority wins. 
               Short the crowd, take bold positions, and profit from being different.
             </p>
           </div>
@@ -160,8 +160,8 @@ export default function Footer() {
                 </svg>
                 X (Twitter)
               </a>
-              <a 
-                href="mailto:support@thedivide.io"
+              <Link 
+                to="/support"
                 style={{
                   color: 'rgba(255, 255, 255, 0.6)',
                   textDecoration: 'none',
@@ -175,11 +175,10 @@ export default function Footer() {
                 onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.6)'}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M1.5 8.67v8.58a3 3 0 003 3h15a3 3 0 003-3V8.67l-8.928 5.493a3 3 0 01-3.144 0L1.5 8.67z"/>
-                  <path d="M22.5 6.908V6.75a3 3 0 00-3-3h-15a3 3 0 00-3 3v.158l9.714 5.978a1.5 1.5 0 001.572 0L22.5 6.908z"/>
+                  <path d="M11.25 4.533A9.707 9.707 0 006 3a9.735 9.735 0 00-3.25.555.75.75 0 00-.5.707v14.25a.75.75 0 001 .707A8.237 8.237 0 016 18.75c1.995 0 3.823.707 5.25 1.886V4.533zM12.75 20.636A8.214 8.214 0 0118 18.75c.966 0 1.89.166 2.75.47a.75.75 0 001-.708V4.262a.75.75 0 00-.5-.707A9.735 9.735 0 0018 3a9.707 9.707 0 00-5.25 1.533v16.103z"/>
                 </svg>
-                support@thedivide.io
-              </a>
+                Support
+              </Link>
             </div>
           </div>
         </div>
@@ -218,12 +217,12 @@ export default function Footer() {
             flex: 1,
             minWidth: '200px',
           }}>
-            This platform is for adults only. Gambling can be addictive. Please play responsibly.
-            If you have a gambling problem, visit{' '}
+            This platform is for adults only. Please play responsibly and within your means.
+            If you need support, visit{' '}
             <Link to="/responsible-gaming" style={{ color: '#e53935', textDecoration: 'underline' }}>
-              our responsible gaming page
+              our responsible play page
             </Link>
-            {' '}for help.
+            {' '}for resources.
           </p>
         </div>
 

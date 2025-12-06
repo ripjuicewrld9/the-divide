@@ -56,7 +56,7 @@ export default function Home() {
     {
       id: 'divides',
       title: 'Divides',
-      description: 'The Psychology Game. Blind betting where the minority wins. Trust no one.',
+      description: 'The Psychology Game. Blind play where the minority wins. Trust no one.',
       icon: '/blind-short-divide.svg',
       color: '#ff6b6b',
       gradient: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)',

@@ -771,7 +771,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
             <p>This link will expire in 1 hour.</p>
             <p>If you didn't request this, please ignore this email.</p>
             <hr style="margin: 24px 0; border: none; border-top: 1px solid #ddd;">
-            <p style="color: #666; font-size: 12px;">The Divide - Prediction Market Platform</p>
+            <p style="color: #666; font-size: 12px;">The Divide - Skill-Based Social Strategy Game</p>
           </div>
         `
       });
@@ -1176,6 +1176,16 @@ app.post("/add-funds", auth, async (req, res) => {
     // Add to wager requirement: user must wager this amount 1x before withdrawal
     user.wagerRequirement = (user.wagerRequirement || 0) + amountCents;
     await user.save();
+
+    // Create notification for the user
+    await Notification.create({
+      userId: user._id,
+      type: 'deposit',
+      title: 'Deposit Received! 💰',
+      message: `$${amount.toFixed(2)} has been added to your balance. Your new balance is $${toDollars(user.balance)}.`,
+      icon: '💰',
+      link: '/wallet'
+    });
 
     console.log(`[ADD FUNDS] User ${user.username} added $${amount}, new balance: $${toDollars(user.balance)}, wagerReq: $${toDollars(user.wagerRequirement)}`);
 
@@ -2576,10 +2586,39 @@ app.patch('/admin/users/:id', auth, adminOnly, async (req, res) => {
   try {
     const { balance, role } = req.body;
     const updates = {};
+    
+    // Get current user to check balance change
+    const currentUser = await User.findById(req.params.id);
+    if (!currentUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    const oldBalance = currentUser.balance;
+    
     if (typeof balance !== 'undefined') updates.balance = toCents(balance);
     if (role) updates.role = role;
 
     const user = await User.findByIdAndUpdate(req.params.id, updates, { new: true }).select('-password -twoFactorSecret');
+    
+    // If balance was increased, send notification
+    if (typeof balance !== 'undefined') {
+      const newBalanceCents = toCents(balance);
+      const balanceDiff = newBalanceCents - oldBalance;
+      
+      if (balanceDiff > 0) {
+        // Balance was increased - send deposit notification
+        await Notification.create({
+          userId: user._id,
+          type: 'deposit',
+          title: 'Balance Credit! 💰',
+          message: `$${toDollars(balanceDiff)} has been credited to your account. Your new balance is $${toDollars(user.balance)}.`,
+          icon: '💰',
+          link: '/wallet'
+        });
+        console.log(`[ADMIN CREDIT] User ${user.username} credited $${toDollars(balanceDiff)} by admin`);
+      }
+    }
+    
     res.json(user);
   } catch (err) {
     console.error('PATCH /admin/users/:id', err);

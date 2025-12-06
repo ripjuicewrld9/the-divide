@@ -116,7 +116,7 @@ export default function DivideDetailPage() {
       setBetAmount('');
       setSelectedSide(null);
     } catch (err) {
-      alert(err.message || 'Failed to place bet');
+      alert(err.message || 'Failed to place short');
     } finally {
       setSubmitting(false);
     }
@@ -331,7 +331,7 @@ export default function DivideDetailPage() {
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style={{ width: '18px', height: '18px', color: '#888' }}><path fillRule="evenodd" d="M10.5 3.75a6.75 6.75 0 100 13.5 6.75 6.75 0 000-13.5zM2.25 10.5a8.25 8.25 0 1114.59 5.28l4.69 4.69a.75.75 0 11-1.06 1.06l-4.69-4.69A8.25 8.25 0 012.25 10.5z" clipRule="evenodd" /></svg>
                   <div>
                     <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#fff', margin: 0 }}>FULL TRANSPARENCY REPORT</h3>
-                    <p style={{ fontSize: '10px', color: '#888', margin: '4px 0 0 0' }}>Every bet, every payout, fully auditable</p>
+                    <p style={{ fontSize: '10px', color: '#888', margin: '4px 0 0 0' }}>Every short, every payout, fully auditable</p>
                   </div>
                 </div>
               </div>
@@ -432,7 +432,7 @@ export default function DivideDetailPage() {
                   </div>
                 </div>
 
-                {/* All Bets - Timestamped Transaction Log */}
+                {/* All Shorts - Timestamped Transaction Log */}
                 {divide.voteHistory && divide.voteHistory.length > 0 && (
                   <div style={{ 
                     background: '#0d0d0f', 
@@ -442,7 +442,7 @@ export default function DivideDetailPage() {
                   }}>
                     <h4 style={{ fontSize: '12px', fontWeight: '700', color: '#888', marginBottom: '12px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style={{ width: '14px', height: '14px' }}><path fillRule="evenodd" d="M10.5 3A1.501 1.501 0 009 4.5h6A1.5 1.5 0 0013.5 3h-3zm-2.693.178A3 3 0 0110.5 1.5h3a3 3 0 012.694 1.678c.497.042.992.092 1.486.15 1.497.173 2.57 1.46 2.57 2.929V19.5a3 3 0 01-3 3H6.75a3 3 0 01-3-3V6.257c0-1.47 1.073-2.756 2.57-2.93.493-.057.989-.107 1.487-.15z" clipRule="evenodd" /></svg>
-                      All Bets ({divide.voteHistory.length} total)
+                      All Shorts ({divide.voteHistory.length} total)
                     </h4>
                     <div style={{ maxHeight: '300px', overflowY: 'auto', paddingRight: '8px' }}>
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
@@ -612,10 +612,10 @@ export default function DivideDetailPage() {
           </div>
         </div>
 
-        {/* Sidebar - Betting Area */}
+        {/* Sidebar - Short Area */}
         <div style={{ position: 'sticky', top: '24px', alignSelf: 'start' }}>
           <div style={{ background: '#16161a', borderRadius: '12px', padding: '20px', border: '1px solid #2a2a30' }}>
-            <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#888', marginBottom: '16px' }}>Place Your Bet</h3>
+            <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#888', marginBottom: '16px' }}>Place Your Short</h3>
 
             {divide.status !== 'active' ? (
               <p style={{ color: '#666', textAlign: 'center', padding: '20px' }}>This divide has ended</p>
@@ -703,12 +703,12 @@ export default function DivideDetailPage() {
                     opacity: user && selectedSide && betAmount && !submitting ? 1 : 0.5,
                   }}
                 >
-                  {submitting ? 'Placing Bet...' : 'Place Bet'}
+                  {submitting ? 'Placing Short...' : 'Place Short'}
                 </button>
 
                 {!user && (
                   <p style={{ fontSize: '12px', color: '#666', textAlign: 'center', marginTop: '12px' }}>
-                    Log in to place a bet
+                    Log in to place a short
                   </p>
                 )}
               </>

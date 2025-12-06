@@ -1,5 +1,5 @@
 // src/components/DivideCard.jsx
-// Premium minimalist prediction market card - Billion dollar aesthetic
+// Premium minimalist game card - Billion dollar aesthetic
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";

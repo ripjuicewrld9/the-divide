@@ -9,6 +9,7 @@ import * as nowPayments from '../utils/nowPayments.js';
 import Transaction from '../models/Transaction.js';
 import User from '../models/User.js';
 import House from '../models/House.js';
+import Notification from '../models/Notification.js';
 import { applyVipWithdrawalDiscount } from '../utils/vipSystem.js';
 
 const router = express.Router();
@@ -650,7 +651,18 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
             transaction.creditedAmountCents = creditCents;
             transaction.completedAt = new Date();
 
-            console.log(`[Payments] Deposit ${newStatus}: ${transaction._id}, credited $${(creditCents / 100).toFixed(2)} to ${user.username}${newStatus === 'partially_paid' ? ` (partial: ${(ratio * 100).toFixed(1)}%)` : ''}`);
+            // Create notification for the user
+            const creditDollars = (creditCents / 100).toFixed(2);
+            await Notification.create({
+              userId: user._id,
+              type: 'deposit',
+              title: 'Deposit Received! 💰',
+              message: `$${creditDollars} has been added to your balance${newStatus === 'partially_paid' ? ' (partial payment received)' : ''}. Your new balance is $${(user.balance / 100).toFixed(2)}.`,
+              icon: '💰',
+              link: '/wallet'
+            });
+
+            console.log(`[Payments] Deposit ${newStatus}: ${transaction._id}, credited $${creditDollars} to ${user.username}${newStatus === 'partially_paid' ? ` (partial: ${(ratio * 100).toFixed(1)}%)` : ''}`);
           }
         }
       }
@@ -870,7 +882,18 @@ router.post('/admin/credit-deposit/:id', async (req, res) => {
     transaction.adminCreditedAt = new Date();
     await transaction.save();
 
-    console.log(`[Payments] Deposit ${transaction._id} manually credited by admin: $${(creditCents / 100).toFixed(2)} to ${user.username}${isPartial ? ' (partial)' : ''}`);
+    // Create notification for the user
+    const creditDollars = (creditCents / 100).toFixed(2);
+    await Notification.create({
+      userId: user._id,
+      type: 'deposit',
+      title: 'Deposit Received! 💰',
+      message: `$${creditDollars} has been added to your balance${isPartial ? ' (partial payment)' : ''}. Your new balance is $${(user.balance / 100).toFixed(2)}.`,
+      icon: '💰',
+      link: '/wallet'
+    });
+
+    console.log(`[Payments] Deposit ${transaction._id} manually credited by admin: $${creditDollars} to ${user.username}${isPartial ? ' (partial)' : ''}`);
 
     res.json({
       success: true,

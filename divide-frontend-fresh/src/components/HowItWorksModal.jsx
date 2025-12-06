@@ -75,10 +75,10 @@ export default function HowItWorksModal({ isOpen, onClose }) {
                       <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
                       <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
                     </svg>
-                    <h3 className="text-lg font-bold text-white">BLIND BETS — MINORITY WINS</h3>
+                    <h3 className="text-lg font-bold text-white">BLIND PLAY — MINORITY WINS</h3>
                   </div>
                   <p className="text-white font-semibold">
-                    Every bet is a sacrifice. Win the money, lose the war. Win the war, lose the bet. <span className="text-gray-400">Pick your poison.</span>
+                    Every play is a sacrifice. Win the money, lose the war. Win the war, lose your stake. <span className="text-gray-400">Pick your poison.</span>
                   </p>
                 </div>
 
@@ -89,7 +89,7 @@ export default function HowItWorksModal({ isOpen, onClose }) {
                     iPhone vs Android · Trump vs Biden · Cats vs Dogs · <span className="text-gray-500">anything tribal</span>
                   </p>
                   <p className="text-white font-semibold mt-3">
-                    The side with <span className="text-green-400">fewer bets</span> wins <span className="text-green-400">97%</span> of the pot. All bets are blind.
+                    The side with <span className="text-green-400">fewer shorts</span> wins <span className="text-green-400">97%</span> of the pot. All plays are blind.
                   </p>
                 </div>
 
@@ -107,7 +107,7 @@ export default function HowItWorksModal({ isOpen, onClose }) {
                         <h4 className="font-bold text-white">The True Believer</h4>
                       </div>
                       <p className="text-gray-300 text-sm leading-relaxed">
-                        You LOVE iPhones → you bet iPhone, hoping to be the minority<br/>
+                        You LOVE iPhones → you short iPhone, hoping to be the minority<br/>
                         <span className="text-gray-500">But if you WIN the money... it means most people DIDN'T pick iPhone</span><br/>
                         <span className="text-yellow-400 font-semibold">You won cash but your tribe lost the popularity war</span> — ego wounded
                       </p>
@@ -120,7 +120,7 @@ export default function HowItWorksModal({ isOpen, onClose }) {
                         <h4 className="font-bold text-white">The Mercenary</h4>
                       </div>
                       <p className="text-gray-300 text-sm leading-relaxed">
-                        You think Android will be minority → you bet Android even though you're an iPhone person<br/>
+                        You think Android will be minority → you short Android even though you're an iPhone person<br/>
                         <span className="text-gray-500">If Android wins (minority), you get paid</span><br/>
                         <span className="text-yellow-400 font-semibold">But you just funded the enemy and betrayed your tribe</span> — ego sacrificed for profit
                       </p>
@@ -133,7 +133,7 @@ export default function HowItWorksModal({ isOpen, onClose }) {
                         <h4 className="font-bold text-white">The Manipulator</h4>
                       </div>
                       <p className="text-gray-300 text-sm leading-relaxed">
-                        You bet your true side, then try to flip people to the other side<br/>
+                        You short your true side, then try to flip people to the other side<br/>
                         <span className="text-gray-500">You're literally convincing people your thing sucks so you can profit</span><br/>
                         <span className="text-yellow-400 font-semibold">You have to trash-talk your own belief to win</span> — ultimate ego death
                       </p>
@@ -286,7 +286,7 @@ export default function HowItWorksModal({ isOpen, onClose }) {
                     </div>
                     <div className="border-t border-white/10 pt-2 mt-2">
                       <p className="text-gray-500 text-xs">
-                        If creator bet $15k (High Roller tier), they get 60% of $500 = <span className="text-white">$300</span>
+                        If creator shorted $15k (High Roller tier), they get 60% of $500 = <span className="text-white">$300</span>
                       </p>
                     </div>
                   </div>

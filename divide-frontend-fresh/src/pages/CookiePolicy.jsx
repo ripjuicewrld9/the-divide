@@ -205,9 +205,11 @@ export default function CookiePolicy() {
           </Section>
 
           <Section title="8. Contact Us">
-            <p>For questions about our use of cookies, please contact us at:</p>
+            <p>For questions about our use of cookies:</p>
             <div style={{ marginTop: '12px' }}>
-              <p style={{ color: '#1e88e5' }}>Email: privacy@thedivide.io</p>
+              <Link to="/support" style={{ color: '#1e88e5', textDecoration: 'underline' }}>
+                Submit a Support Ticket
+              </Link>
             </div>
           </Section>
         </div>

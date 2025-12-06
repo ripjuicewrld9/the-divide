@@ -189,7 +189,7 @@ export default function ProfilePage({ onOpenChat }) {
                         </h2>
                         <div className="space-y-4">
                             <div className="flex justify-between items-center border-b border-white/5 pb-2">
-                                <span className="text-gray-400">Total Bets</span>
+                                <span className="text-gray-400">Total Shorts</span>
                                 <span className="font-mono">{user.totalBets || 0}</span>
                             </div>
                             <div className="flex justify-between items-center border-b border-white/5 pb-2">

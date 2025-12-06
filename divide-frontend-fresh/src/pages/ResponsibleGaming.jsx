@@ -42,38 +42,38 @@ export default function ResponsibleGaming() {
           WebkitTextFillColor: 'transparent',
           marginBottom: '8px',
         }}>
-          Responsible Gaming
+          Responsible Play
         </h1>
         
         <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px', marginBottom: '32px' }}>
           Last Updated: {lastUpdated}
         </p>
 
-        {/* Warning Banner */}
+        {/* Notice Banner */}
         <div style={{
-          background: 'linear-gradient(135deg, rgba(229, 57, 53, 0.2) 0%, rgba(229, 57, 53, 0.1) 100%)',
-          border: '1px solid rgba(229, 57, 53, 0.4)',
+          background: 'linear-gradient(135deg, rgba(30, 136, 229, 0.2) 0%, rgba(30, 136, 229, 0.1) 100%)',
+          border: '1px solid rgba(30, 136, 229, 0.4)',
           borderRadius: '12px',
           padding: '20px',
           marginBottom: '32px',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#e53935" style={{ width: '24px', height: '24px' }}>
-              <path fillRule="evenodd" d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003zM12 8.25a.75.75 0 01.75.75v3.75a.75.75 0 01-1.5 0V9a.75.75 0 01.75-.75zm0 8.25a.75.75 0 100-1.5.75.75 0 000 1.5z" clipRule="evenodd" />
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#1e88e5" style={{ width: '24px', height: '24px' }}>
+              <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm8.706-1.442c1.146-.573 2.437.463 2.126 1.706l-.709 2.836.042-.02a.75.75 0 01.67 1.34l-.04.022c-1.147.573-2.438-.463-2.127-1.706l.71-2.836-.042.02a.75.75 0 11-.671-1.34l.041-.022zM12 9a.75.75 0 100-1.5.75.75 0 000 1.5z" clipRule="evenodd" />
             </svg>
-            <h3 style={{ margin: 0, color: '#e53935', fontWeight: '600' }}>Important Notice</h3>
+            <h3 style={{ margin: 0, color: '#1e88e5', fontWeight: '600' }}>Skill-Based Social Strategy Game</h3>
           </div>
           <p style={{ margin: 0, color: 'rgba(255,255,255,0.9)', lineHeight: '1.7' }}>
-            Prediction markets and gambling can be addictive. Only risk money you can afford to lose. 
-            If you or someone you know has a gambling problem, please seek help immediately.
+            The Divide is a skill-based social strategy game. Success requires research, psychological insight, and strategic decision-making. 
+            However, we encourage all users to play responsibly and within their means.
           </p>
         </div>
 
         <div style={{ lineHeight: '1.8', color: 'rgba(255,255,255,0.85)' }}>
           <Section title="Our Commitment">
             <p>
-              At The Divide, we are committed to promoting responsible gaming practices. While we offer an exciting 
-              prediction market platform, we recognize that gambling activities can lead to harm if not approached responsibly.
+              At The Divide, we are committed to promoting responsible play practices. Our platform rewards users who 
+              apply skill, research, and strategic thinking to make informed predictions about real-world outcomes.
             </p>
             <p style={{ marginTop: '12px' }}>
               We believe entertainment should never come at the cost of your financial stability, relationships, 
@@ -81,28 +81,40 @@ export default function ResponsibleGaming() {
             </p>
           </Section>
 
-          <Section title="Know the Signs">
-            <p style={{ fontWeight: '600', color: '#e53935' }}>
-              Gambling may be becoming a problem if you:
-            </p>
+          <Section title="Why The Divide is Skill-Based">
+            <p>Unlike games of pure chance, The Divide rewards:</p>
             <ul style={{ marginLeft: '20px', marginTop: '12px' }}>
-              <li>Spend more time or money than you intended</li>
-              <li>Feel the need to gamble with increasing amounts to get the same excitement</li>
-              <li>Have tried to cut back or stop gambling but couldn't</li>
-              <li>Feel restless or irritable when trying to reduce gambling</li>
-              <li>Gamble to escape problems or relieve negative feelings</li>
-              <li>Chase losses by continuing to gamble to try to win back money</li>
-              <li>Lie to family members or others about your gambling</li>
-              <li>Risk or lose important relationships, jobs, or opportunities due to gambling</li>
-              <li>Rely on others to provide money for gambling debts</li>
-              <li>Feel anxious, depressed, or suicidal because of gambling</li>
+              <li><strong>Research & Analysis:</strong> Understanding the topics, trends, and public sentiment</li>
+              <li><strong>Strategic Positioning:</strong> Identifying contrarian opportunities in the minority-wins mechanic</li>
+              <li><strong>Market Timing:</strong> Knowing when to enter positions based on market dynamics</li>
+              <li><strong>Risk Management:</strong> Allocating capital wisely across multiple predictions</li>
+              <li><strong>Information Gathering:</strong> Staying informed about relevant news and developments</li>
             </ul>
             <p style={{ marginTop: '16px', color: '#22c55e', fontWeight: '500' }}>
-              If you answered "yes" to any of these, please consider seeking help.
+              Skilled players consistently outperform by making better-informed predictions.
             </p>
           </Section>
 
-          <Section title="Self-Help Tools">
+          <Section title="Know Your Limits">
+            <p style={{ fontWeight: '600', color: '#1e88e5' }}>
+              Your experience may need attention if you:
+            </p>
+            <ul style={{ marginLeft: '20px', marginTop: '12px' }}>
+              <li>Spend more time or money on the platform than you intended</li>
+              <li>Feel the need to increase position sizes to maintain excitement</li>
+              <li>Have difficulty stepping away from the platform</li>
+              <li>Use the platform to escape problems or relieve negative feelings</li>
+              <li>Chase losses by making hasty, unresearched predictions</li>
+              <li>Hide your platform activity from family or friends</li>
+              <li>Risk important relationships or responsibilities due to platform use</li>
+              <li>Feel anxious or stressed about your platform activity</li>
+            </ul>
+            <p style={{ marginTop: '16px', color: '#22c55e', fontWeight: '500' }}>
+              If any of these apply, consider using our self-management tools below.
+            </p>
+          </Section>
+
+          <Section title="Self-Management Tools">
             <p>We provide several features to help you stay in control:</p>
             
             <div style={{ 
@@ -114,7 +126,7 @@ export default function ResponsibleGaming() {
             }}>
               <h4 style={{ color: '#1e88e5', margin: '0 0 8px 0' }}>💰 Deposit Limits</h4>
               <p style={{ margin: 0, fontSize: '14px' }}>
-                Set daily, weekly, or monthly deposit limits to control your spending. Contact support to enable limits on your account.
+                Set daily, weekly, or monthly deposit limits to manage your spending. Contact support to enable limits on your account.
               </p>
             </div>
 
@@ -127,7 +139,7 @@ export default function ResponsibleGaming() {
             }}>
               <h4 style={{ color: '#1e88e5', margin: '0 0 8px 0' }}>⏸️ Cool-Off Period</h4>
               <p style={{ margin: 0, fontSize: '14px' }}>
-                Take a break from gambling by requesting a cool-off period of 24 hours, 7 days, or 30 days.
+                Take a break from the platform by requesting a cool-off period of 24 hours, 7 days, or 30 days.
               </p>
             </div>
 
@@ -140,7 +152,7 @@ export default function ResponsibleGaming() {
             }}>
               <h4 style={{ color: '#1e88e5', margin: '0 0 8px 0' }}>🚫 Self-Exclusion</h4>
               <p style={{ margin: 0, fontSize: '14px' }}>
-                Permanently or temporarily exclude yourself from the platform. Self-exclusion requests are processed within 24 hours and cannot be reversed during the exclusion period.
+                Temporarily or permanently exclude yourself from the platform. Self-exclusion requests are processed within 24 hours.
               </p>
             </div>
 
@@ -153,107 +165,96 @@ export default function ResponsibleGaming() {
             }}>
               <h4 style={{ color: '#1e88e5', margin: '0 0 8px 0' }}>📊 Activity History</h4>
               <p style={{ margin: 0, fontSize: '14px' }}>
-                Review your complete betting history, including wins, losses, and time spent on the platform in your profile settings.
+                Review your complete prediction history, including wins, losses, and time spent on the platform in your profile settings.
               </p>
             </div>
           </Section>
 
-          <Section title="Tips for Responsible Gaming">
+          <Section title="Tips for Responsible Play">
             <ul style={{ marginLeft: '20px' }}>
-              <li><strong>Set a budget:</strong> Decide how much you can afford to lose before you start, and stick to it.</li>
-              <li><strong>Set time limits:</strong> Decide in advance how long you will play and stick to it.</li>
-              <li><strong>Don't chase losses:</strong> Accept losses as part of the game. Never try to win back lost money.</li>
-              <li><strong>Don't gamble when upset:</strong> Avoid gambling when you're angry, depressed, or stressed.</li>
-              <li><strong>Take regular breaks:</strong> Step away frequently to maintain perspective.</li>
-              <li><strong>Balance gambling with other activities:</strong> Don't let gambling be your only recreational activity.</li>
-              <li><strong>Never borrow money to gamble:</strong> Only gamble with money you can afford to lose.</li>
-              <li><strong>Don't gamble under the influence:</strong> Alcohol and drugs impair judgment.</li>
+              <li><strong>Set a budget:</strong> Decide how much you can afford to allocate before you start, and stick to it.</li>
+              <li><strong>Set time limits:</strong> Decide in advance how long you will participate and stick to it.</li>
+              <li><strong>Don't chase losses:</strong> Accept losses as part of the learning process. Never make hasty decisions to recover.</li>
+              <li><strong>Stay rational:</strong> Avoid making predictions when you're emotional, tired, or stressed.</li>
+              <li><strong>Take regular breaks:</strong> Step away frequently to maintain perspective and clarity.</li>
+              <li><strong>Diversify your activities:</strong> Don't let The Divide be your only recreational activity.</li>
+              <li><strong>Never use borrowed money:</strong> Only participate with funds you can afford to lose.</li>
+              <li><strong>Stay sober:</strong> Alcohol and substances impair judgment and decision-making.</li>
             </ul>
           </Section>
 
-          <Section title="Understanding the Odds">
+          <Section title="Understanding the Platform">
             <p>
-              The Divide operates as a prediction market where the minority position wins. This means:
+              The Divide operates as a skill-based game where strategic thinking is rewarded:
             </p>
             <ul style={{ marginLeft: '20px', marginTop: '12px' }}>
-              <li>All positions carry risk of total loss</li>
-              <li>Past results do not predict future outcomes</li>
-              <li>The house takes a 2.5% fee from all pots</li>
-              <li>There is no guaranteed winning strategy</li>
+              <li>Success correlates with research quality and market understanding</li>
+              <li>The minority-wins mechanic rewards contrarian thinking and early identification of trends</li>
+              <li>The platform takes a 2.5% service fee from completed markets</li>
+              <li>Historical performance can indicate skill level over time</li>
             </ul>
-            <p style={{ marginTop: '16px', color: '#e53935', fontWeight: '500' }}>
-              Remember: Gambling is not a way to make money. The odds are designed such that the house maintains an edge.
+            <p style={{ marginTop: '16px', color: '#1e88e5', fontWeight: '500' }}>
+              Remember: Even skilled participants experience losses. Proper bankroll management is essential.
             </p>
           </Section>
 
-          <Section title="Resources for Help">
+          <Section title="Support Resources">
             <p style={{ marginBottom: '16px' }}>
-              If you or someone you know is struggling with gambling addiction, please reach out to these resources:
+              If you need support with managing your platform activity, these resources may help:
             </p>
             
             <div style={{ display: 'grid', gap: '12px' }}>
               <ResourceCard
-                name="National Council on Problem Gambling"
-                phone="1-800-522-4700"
-                website="www.ncpgambling.org"
-                description="24/7 confidential helpline"
-              />
-              <ResourceCard
-                name="Gamblers Anonymous"
-                phone="N/A"
-                website="www.gamblersanonymous.org"
-                description="12-step recovery program"
-              />
-              <ResourceCard
-                name="National Problem Gambling Helpline"
-                phone="1-800-522-4700"
-                website="www.1800gambler.net"
-                description="Free, confidential, 24/7"
-              />
-              <ResourceCard
                 name="SAMHSA National Helpline"
                 phone="1-800-662-4357"
                 website="www.samhsa.gov"
-                description="Mental health and substance abuse"
+                description="Mental health and substance abuse support"
+              />
+              <ResourceCard
+                name="Crisis Text Line"
+                phone="Text HOME to 741741"
+                website="www.crisistextline.org"
+                description="Free 24/7 crisis support via text"
               />
             </div>
 
             <div style={{ marginTop: '24px' }}>
-              <h4 style={{ color: '#fff', marginBottom: '12px' }}>International Resources:</h4>
+              <h4 style={{ color: '#fff', marginBottom: '12px' }}>International Mental Health Resources:</h4>
               <ul style={{ marginLeft: '20px' }}>
-                <li><strong>UK:</strong> GamCare - 0808 8020 133 | www.gamcare.org.uk</li>
-                <li><strong>Canada:</strong> ConnexOntario - 1-866-531-2600</li>
-                <li><strong>Australia:</strong> Gambling Help Online - 1800 858 858</li>
-                <li><strong>New Zealand:</strong> Gambling Helpline - 0800 654 655</li>
+                <li><strong>UK:</strong> Mind - 0300 123 3393 | www.mind.org.uk</li>
+                <li><strong>Canada:</strong> Crisis Services Canada - 1-833-456-4566</li>
+                <li><strong>Australia:</strong> Beyond Blue - 1300 22 4636</li>
+                <li><strong>New Zealand:</strong> Lifeline - 0800 543 354</li>
               </ul>
             </div>
           </Section>
 
-          <Section title="Underage Gambling Prevention">
+          <Section title="Age Restriction">
             <p>
-              The Divide strictly prohibits anyone under 18 years of age (or the legal gambling age in your jurisdiction) 
+              The Divide strictly prohibits anyone under 18 years of age (or the legal age in your jurisdiction) 
               from using our platform. We take the following measures:
             </p>
             <ul style={{ marginLeft: '20px', marginTop: '12px' }}>
               <li>Age verification during registration</li>
               <li>Account reviews and identity verification</li>
               <li>Immediate account termination upon discovery of underage users</li>
-              <li>Cooperation with regulatory authorities</li>
             </ul>
             <p style={{ marginTop: '16px' }}>
-              If you discover someone underage is using our platform, please report it immediately to support@thedivide.io
+              If you discover someone underage is using our platform, please <Link to="/support" style={{ color: '#1e88e5' }}>submit a support ticket</Link> immediately.
             </p>
           </Section>
 
           <Section title="Contact Support">
             <p>
-              Our support team is trained to assist with responsible gaming concerns. If you need help or want to 
-              implement any self-exclusion measures, contact us:
+              Our support team is available to assist with responsible play concerns. If you need help or want to 
+              implement any self-management measures:
             </p>
             <div style={{ marginTop: '16px' }}>
-              <p style={{ color: '#1e88e5', fontWeight: '500' }}>Email: support@thedivide.io</p>
-              <p style={{ color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>
-                Subject line: "Responsible Gaming Assistance"
+              <Link to="/support" style={{ color: '#1e88e5', textDecoration: 'underline', fontWeight: '500' }}>
+                Submit a Support Ticket
+              </Link>
+              <p style={{ color: 'rgba(255,255,255,0.6)', marginTop: '8px' }}>
+                Select "Responsible Play Assistance" as the ticket category
               </p>
             </div>
           </Section>

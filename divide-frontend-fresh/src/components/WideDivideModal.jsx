@@ -224,7 +224,7 @@ export default function WideDivideModal({ divide, onClose, onVote }) {
                 {editingSide === 'left' ? (
                   <div style={{ display: 'flex', gap: 8 }}>
                     <input type="number" min="0" value={betAmount} onChange={(e) => setBetAmount(e.target.value)} style={{ flex: 1, padding: 8 }} />
-                    <button className="btn btn-large" onClick={(e) => { e.stopPropagation(); const amt = Number(betAmount)||0; if (amt<=0) return alert('Enter positive bet'); onVote(divide._id || divide.id, 'A', amt); try { localStorage.setItem(`divideVote:${divide._id || divide.id}`, 'A'); setUserVotedSide('A'); } catch(e){console.debug(e);} setEditingSide(null); }}>✔</button>
+                    <button className="btn btn-large" onClick={(e) => { e.stopPropagation(); const amt = Number(betAmount)||0; if (amt<=0) return alert('Enter positive amount'); onVote(divide._id || divide.id, 'A', amt); try { localStorage.setItem(`divideVote:${divide._id || divide.id}`, 'A'); setUserVotedSide('A'); } catch(e){console.debug(e);} setEditingSide(null); }}>✔</button>
                   </div>
                 ) : (
                   <button
@@ -233,7 +233,7 @@ export default function WideDivideModal({ divide, onClose, onVote }) {
                     style={{ width: '100%' }}
                     onMouseEnter={() => setHoverSide('left')}
                     onMouseLeave={() => setHoverSide(null)}
-                    onClick={(e) => { e.stopPropagation(); if (userVotedSide && userVotedSide === 'B') { alert('You have already bet on the other side and cannot bet here.'); return; } setEditingSide('left'); }}
+                    onClick={(e) => { e.stopPropagation(); if (userVotedSide && userVotedSide === 'B') { alert('You have already shorted the other side.'); return; } setEditingSide('left'); }}
                   >{(hoverSide === 'left' && divide.status !== 'active') ? `${leftPct}%` : divide.optionA}</button>
                 )}
               </div>
@@ -250,7 +250,7 @@ export default function WideDivideModal({ divide, onClose, onVote }) {
               {editingSide === 'right' ? (
                 <div style={{ display: 'flex', gap: 8 }}>
                   <input type="number" min="0" value={betAmount} onChange={(e) => setBetAmount(e.target.value)} style={{ flex: 1, padding: 8 }} />
-                  <button className="btn btn-large" onClick={(e) => { e.stopPropagation(); const amt = Number(betAmount)||0; if (amt<=0) return alert('Enter positive bet'); onVote(divide._id || divide.id, 'B', amt); try { localStorage.setItem(`divideVote:${divide._id || divide.id}`, 'B'); setUserVotedSide('B'); } catch(e){console.debug(e);} setEditingSide(null); }}>✔</button>
+                  <button className="btn btn-large" onClick={(e) => { e.stopPropagation(); const amt = Number(betAmount)||0; if (amt<=0) return alert('Enter positive amount'); onVote(divide._id || divide.id, 'B', amt); try { localStorage.setItem(`divideVote:${divide._id || divide.id}`, 'B'); setUserVotedSide('B'); } catch(e){console.debug(e);} setEditingSide(null); }}>✔</button>
                 </div>
               ) : (
                 <button
@@ -258,7 +258,7 @@ export default function WideDivideModal({ divide, onClose, onVote }) {
                   style={{ width: '100%' }}
                   onMouseEnter={() => setHoverSide('right')}
                   onMouseLeave={() => setHoverSide(null)}
-                  onClick={(e) => { e.stopPropagation(); if (userVotedSide && userVotedSide === 'A') { alert('You have already bet on the other side and cannot bet here.'); return; } setEditingSide('right'); }}
+                  onClick={(e) => { e.stopPropagation(); if (userVotedSide && userVotedSide === 'A') { alert('You have already shorted the other side.'); return; } setEditingSide('right'); }}
                 >{(hoverSide === 'right' && divide.status !== 'active') ? `${rightPct}%` : divide.optionB}</button>
               )}
             </div>

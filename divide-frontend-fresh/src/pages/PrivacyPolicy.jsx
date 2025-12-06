@@ -53,7 +53,7 @@ export default function PrivacyPolicy() {
           <Section title="1. Introduction">
             <p>
               The Divide ("we," "us," or "our") is committed to protecting your privacy. This Privacy Policy explains how 
-              we collect, use, disclose, and safeguard your information when you use our prediction market platform (the "Service").
+              we collect, use, disclose, and safeguard your information when you use our skill-based social strategy game (the "Service").
             </p>
             <p style={{ marginTop: '12px' }}>
               By using the Service, you consent to the data practices described in this policy. If you do not agree with 
@@ -177,7 +177,7 @@ export default function PrivacyPolicy() {
               <li><strong>Restrict Processing:</strong> Request limitation on how we use your data</li>
             </ul>
             <p style={{ marginTop: '12px' }}>
-              To exercise these rights, contact us at privacy@thedivide.io
+              To exercise these rights, <Link to="/support" style={{ color: '#1e88e5' }}>submit a support ticket</Link> with the subject "Privacy Request".
             </p>
           </Section>
 
@@ -240,11 +240,13 @@ export default function PrivacyPolicy() {
           </Section>
 
           <Section title="14. Contact Us">
-            <p>For questions, concerns, or requests regarding this Privacy Policy, contact us at:</p>
+            <p>For questions, concerns, or requests regarding this Privacy Policy:</p>
             <div style={{ marginTop: '12px' }}>
-              <p style={{ color: '#1e88e5' }}>Email: privacy@thedivide.io</p>
+              <Link to="/support" style={{ color: '#1e88e5', textDecoration: 'underline' }}>
+                Submit a Support Ticket
+              </Link>
               <p style={{ color: 'rgba(255,255,255,0.6)', marginTop: '8px' }}>
-                Data Protection Officer: dpo@thedivide.io
+                Select "Privacy Request" as the ticket category
               </p>
             </div>
           </Section>

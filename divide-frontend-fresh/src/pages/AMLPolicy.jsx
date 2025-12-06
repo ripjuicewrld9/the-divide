@@ -224,7 +224,12 @@ export default function AMLPolicy() {
           <Section title="14. Contact">
             <p>To report suspicious activity or for compliance inquiries:</p>
             <div style={{ marginTop: '12px' }}>
-              <p style={{ color: '#1e88e5' }}>Email: compliance@thedivide.io</p>
+              <Link to="/support" style={{ color: '#1e88e5', textDecoration: 'underline' }}>
+                Submit a Support Ticket
+              </Link>
+              <p style={{ color: 'rgba(255,255,255,0.6)', marginTop: '8px' }}>
+                Select "Compliance" as the ticket category
+              </p>
             </div>
           </Section>
         </div>

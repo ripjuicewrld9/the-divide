@@ -58,7 +58,7 @@ export default function Disclaimer() {
           marginBottom: '32px',
         }}>
           <p style={{ margin: 0, color: '#fff', fontWeight: '600', textTransform: 'uppercase' }}>
-            ⚠️ Risk Warning: Prediction markets involve significant risk. You may lose all funds you deposit.
+            ⚠️ Risk Warning: This game involves real money. You may lose all funds you deposit.
           </p>
         </div>
 
@@ -96,7 +96,7 @@ export default function Disclaimer() {
               IMPORTANT: You can lose all the money you deposit on this platform.
             </p>
             <p style={{ marginTop: '12px' }}>
-              Prediction markets carry inherent risks including but not limited to:
+              Participating in skill-based games carries inherent risks including but not limited to:
             </p>
             <ul style={{ marginLeft: '20px', marginTop: '12px' }}>
               <li><strong>Total Loss:</strong> You may lose 100% of your position in any market</li>
@@ -144,13 +144,13 @@ export default function Disclaimer() {
               in your jurisdiction.
             </p>
             <p style={{ marginTop: '12px' }}>
-              Online gambling, prediction markets, and similar activities may be:
+              Online skill-based games may be:
             </p>
             <ul style={{ marginLeft: '20px', marginTop: '12px' }}>
-              <li>Illegal in your jurisdiction</li>
+              <li>Regulated in your jurisdiction</li>
               <li>Restricted to certain ages</li>
               <li>Subject to licensing requirements</li>
-              <li>Taxable as gambling winnings</li>
+              <li>Subject to tax reporting requirements on winnings</li>
             </ul>
             <p style={{ marginTop: '16px' }}>
               The Divide does not provide legal advice and cannot determine whether your use of the platform 
@@ -197,7 +197,9 @@ export default function Disclaimer() {
           <Section title="Contact">
             <p>For questions about this disclaimer:</p>
             <div style={{ marginTop: '12px' }}>
-              <p style={{ color: '#1e88e5' }}>Email: legal@thedivide.io</p>
+              <Link to="/support" style={{ color: '#1e88e5', textDecoration: 'underline' }}>
+                Submit a Support Ticket
+              </Link>
             </div>
           </Section>
         </div>

@@ -19,7 +19,7 @@ export default function VoteWithBetModal({ isOpen, onClose, divide, onVoted }) {
     try {
       const betAmount = parseFloat(bet);
       if (isNaN(betAmount) || betAmount <= 0) {
-        setError('Bet amount must be greater than 0');
+        setError('Short amount must be greater than 0');
         setLoading(false);
         return;
       }
@@ -52,7 +52,7 @@ export default function VoteWithBetModal({ isOpen, onClose, divide, onVoted }) {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || 'Failed to place vote');
+        setError(data.error || 'Failed to place short');
         setLoading(false);
         return;
       }
@@ -82,7 +82,7 @@ export default function VoteWithBetModal({ isOpen, onClose, divide, onVoted }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content vote-bet-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Place Your Vote</h2>
+          <h2>Place Your Short</h2>
           <button className="close-btn" onClick={onClose}>✕</button>
         </div>
 
@@ -95,7 +95,7 @@ export default function VoteWithBetModal({ isOpen, onClose, divide, onVoted }) {
           {error && <div className="error-message">{error}</div>}
 
           <div className="bet-input-group">
-            <label>Your Bet ($)</label>
+            <label>Your Short ($)</label>
             <input
               type="number"
               value={bet}

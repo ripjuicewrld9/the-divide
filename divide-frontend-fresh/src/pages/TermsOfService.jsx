@@ -66,12 +66,12 @@ export default function TermsOfService() {
             <ul style={{ marginLeft: '20px', marginTop: '12px' }}>
               <li>Be at least 18 years of age (or the legal age of majority in your jurisdiction, whichever is higher)</li>
               <li>Have the legal capacity to enter into binding contracts</li>
-              <li>Not be a resident of any jurisdiction where online prediction markets or similar activities are prohibited</li>
+              <li>Not be a resident of any jurisdiction where online skill-based games are prohibited</li>
               <li>Not be on any sanctions lists or prohibited from engaging in financial transactions</li>
               <li>Provide accurate and complete registration information</li>
             </ul>
             <p style={{ marginTop: '16px', color: '#e53935', fontWeight: '500' }}>
-              IMPORTANT: Gambling and prediction markets may be illegal in your jurisdiction. It is YOUR responsibility to verify that your use of this Service complies with all applicable local, state, national, and international laws.
+              IMPORTANT: Skill-based games may be subject to regulation in certain jurisdictions. It is YOUR responsibility to verify that your use of this Service complies with all applicable local, state, national, and international laws.
             </p>
           </Section>
 
@@ -90,17 +90,25 @@ export default function TermsOfService() {
           </Section>
 
           <Section title="4. Platform Description & Mechanics">
-            <p>The Divide is a prediction market platform where users can:</p>
+            <p>The Divide is a skill-based social strategy game where users can:</p>
             <ul style={{ marginLeft: '20px', marginTop: '12px' }}>
-              <li>Create and participate in prediction markets ("Divides")</li>
-              <li>Place "short" positions betting against one side of a binary outcome</li>
+              <li>Create and participate in strategic challenges ("Divides")</li>
+              <li>Place "short" positions on one side of a binary choice</li>
               <li>Win or lose based on the minority-wins mechanic</li>
               <li>Engage with social features including likes, dislikes, and comments</li>
+              <li>Employ psychological tactics and social manipulation to influence other players</li>
             </ul>
             <p style={{ marginTop: '16px' }}>
-              <strong>Minority-Wins Mechanic:</strong> Unlike traditional betting, The Divide operates on a contrarian model. 
+              <strong>Minority-Wins Mechanic:</strong> The Divide operates on a contrarian model where strategic thinking is rewarded. 
               The side with FEWER total shorts wins. This means being in the minority position results in higher payouts. 
               In the event of a tie, a provably fair random coin flip determines the outcome.
+            </p>
+            <p style={{ marginTop: '16px', background: 'rgba(30, 136, 229, 0.1)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(30, 136, 229, 0.3)' }}>
+              <strong style={{ color: '#1e88e5' }}>Winning Strategy:</strong> Success in The Divide requires skill in reading crowd psychology, 
+              strategic timing, and the ability to influence other players' decisions through legitimate social engagement. 
+              Players who can effectively analyze trends and manipulate perception gain a competitive advantage. 
+              By using this platform, you acknowledge and agree that social manipulation and psychological tactics are 
+              core gameplay elements.
             </p>
           </Section>
 
@@ -211,9 +219,11 @@ export default function TermsOfService() {
           </Section>
 
           <Section title="13. Contact Information">
-            <p>For questions about these Terms, please contact us at:</p>
-            <p style={{ marginTop: '12px', color: '#1e88e5' }}>
-              support@thedivide.io
+            <p>For questions about these Terms, please use our on-site support system:</p>
+            <p style={{ marginTop: '12px' }}>
+              <Link to="/support" style={{ color: '#1e88e5', textDecoration: 'underline' }}>
+                Submit a Support Ticket
+              </Link>
             </p>
           </Section>
 

@@ -284,7 +284,7 @@ export default function UserProfileModal({ userId, username, isOpen, onClose }) 
                         {/* Stats Grid */}
                         <div className="grid grid-cols-2 gap-4 mb-6">
                             <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-                                <div className="text-sm text-gray-400 mb-1">Total Bets</div>
+                                <div className="text-sm text-gray-400 mb-1">Total Shorts</div>
                                 <div className="text-2xl font-bold text-cyan-400">{profileData.totalBets || 0}</div>
                             </div>
                             <div className="bg-white/5 border border-white/10 rounded-lg p-4">

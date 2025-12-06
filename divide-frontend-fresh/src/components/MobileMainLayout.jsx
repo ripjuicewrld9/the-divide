@@ -24,7 +24,7 @@ export default function MobileMainLayout({ onOpenChat }) {
     {
       id: 'divides',
       title: 'Divides',
-      description: 'The Psychology Game. Blind betting where the minority wins. Trust no one.',
+      description: 'The Psychology Game. Blind play where the minority wins. Trust no one.',
       icon: '/elections-poll-svgrepo-com.svg',
       color: '#e53935',
       gradient: 'linear-gradient(135deg, #e53935 0%, #1e88e5 100%)',
