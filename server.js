@@ -466,22 +466,23 @@ app.get('/api/treasury', async (req, res) => {
     const totalWithdrawn = userStats.length > 0 ? (userStats[0].totalWithdrawn || 0) : 0;
     const totalUserBalances = userStats.length > 0 ? (userStats[0].totalBalance || 0) : 0;
 
-    // Calculate money in active Divide pots
+    // Calculate money in active Divide pots (pot is stored in dollars, convert to cents)
     const activeDivides = await Divide.aggregate([
       { $match: { status: 'active' } },
       { $group: { _id: null, totalPot: { $sum: '$pot' } } }
     ]);
-    const activePots = activeDivides.length > 0 ? (activeDivides[0].totalPot || 0) : 0;
+    const activePotsInDollars = activeDivides.length > 0 ? (activeDivides[0].totalPot || 0) : 0;
+    const activePotsInCents = Math.round(activePotsInDollars * 100);
 
-    // Treasury = User Balances + Money in Active Pots (excludes house revenue)
-    const treasury = totalUserBalances + activePots;
+    // Treasury = User Balances + Money in Active Pots (both in cents, excludes house revenue)
+    const treasury = totalUserBalances + activePotsInCents;
 
     res.json({
       treasury: toDollars(treasury),
       totalDeposited: toDollars(totalDeposited),
       totalWithdrawn: toDollars(totalWithdrawn),
       totalUserBalances: toDollars(totalUserBalances),
-      activePots: toDollars(activePots)
+      activePots: activePotsInDollars  // Already in dollars
     });
   } catch (err) {
     console.error('/api/treasury error', err);
