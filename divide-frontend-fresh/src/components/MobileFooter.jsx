@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import VipModal from './VipModal';
 import HowItWorksModal from './HowItWorksModal';
 
 export default function MobileFooter() {
+    const { user } = useAuth();
     const [showVipModal, setShowVipModal] = useState(false);
     const [showHowItWorks, setShowHowItWorks] = useState(false);
     const currentYear = new Date().getFullYear();
@@ -236,7 +238,12 @@ export default function MobileFooter() {
             </footer>
 
             {/* Modals */}
-            <VipModal isOpen={showVipModal} onClose={() => setShowVipModal(false)} />
+            <VipModal
+                isOpen={showVipModal}
+                onClose={() => setShowVipModal(false)}
+                currentTier={user?.vipTier || 'none'}
+                wagerLast30Days={user?.wagerLast30Days || 0}
+            />
             <HowItWorksModal isOpen={showHowItWorks} onClose={() => setShowHowItWorks(false)} />
         </>
     );

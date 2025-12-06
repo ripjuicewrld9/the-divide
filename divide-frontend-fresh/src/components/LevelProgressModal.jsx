@@ -1,41 +1,66 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 
-// Level/Rank progression system
-const RANKS = [
-    { level: 1, name: 'Sheep', minXP: 0, color: '#9CA3AF', emoji: '🐑' },
-    { level: 5, name: 'Wolf', minXP: 500, color: '#6B7280', emoji: '🐺' },
-    { level: 10, name: 'Shark', minXP: 2000, color: '#3B82F6', emoji: '🦈' },
-    { level: 20, name: 'Eagle', minXP: 10000, color: '#8B5CF6', emoji: '🦅' },
-    { level: 35, name: 'Lion', minXP: 35000, color: '#F59E0B', emoji: '🦁' },
-    { level: 50, name: 'Dragon', minXP: 100000, color: '#EF4444', emoji: '🐉' },
-    { level: 75, name: 'Phoenix', minXP: 300000, color: '#F97316', emoji: '🔥' },
-    { level: 100, name: 'Legend', minXP: 1000000, color: '#FFD700', emoji: '👑' },
+// Level progression thresholds matching utils/xpSystem.js
+const LEVEL_THRESHOLDS = [
+    { level: 1, xpRequired: 0, title: 'Sheep', color: '#94A3B8', emoji: '🐑' },
+    { level: 2, xpRequired: 500, title: 'Normie', color: '#94A3B8', emoji: '😐' },
+    { level: 3, xpRequired: 1200, title: 'Sleeper', color: '#94A3B8', emoji: '😴' },
+    { level: 4, xpRequired: 2000, title: 'Unaware', color: '#94A3B8', emoji: '🙈' },
+    { level: 5, xpRequired: 2500, title: 'Awakening', color: '#CD7F32', emoji: '🌅' },
+    { level: 6, xpRequired: 3500, title: 'Questioner', color: '#CD7F32', emoji: '❓' },
+    { level: 7, xpRequired: 4800, title: 'Doubter', color: '#CD7F32', emoji: '🤨' },
+    { level: 8, xpRequired: 6500, title: 'Skeptic', color: '#CD7F32', emoji: '🧐' },
+    { level: 9, xpRequired: 8500, title: 'Searcher', color: '#CD7F32', emoji: '🔍' },
+    { level: 10, xpRequired: 10000, title: 'Truthseeker', color: '#C0C0C0', emoji: '👁️' },
+    { level: 11, xpRequired: 13000, title: 'Whistleblower', color: '#C0C0C0', emoji: '📢' },
+    { level: 12, xpRequired: 16500, title: 'Exposer', color: '#C0C0C0', emoji: '📸' },
+    { level: 13, xpRequired: 20500, title: 'Revealer', color: '#C0C0C0', emoji: '🕯️' },
+    { level: 14, xpRequired: 25000, title: 'Leaker', color: '#C0C0C0', emoji: '💧' },
+    { level: 15, xpRequired: 30000, title: 'Infiltrator', color: '#C0C0C0', emoji: '🕵️' },
+    { level: 16, xpRequired: 35500, title: 'Mole', color: '#C0C0C0', emoji: '🐀' },
+    { level: 17, xpRequired: 41500, title: 'Insider', color: '#C0C0C0', emoji: '🔑' },
+    { level: 18, xpRequired: 45000, title: 'Informant', color: '#C0C0C0', emoji: '🗣️' },
+    { level: 19, xpRequired: 47500, title: 'Defector', color: '#C0C0C0', emoji: '🏃' },
+    { level: 20, xpRequired: 50000, title: 'Conspirator', color: '#FFD700', emoji: '🤝' },
+    { level: 21, xpRequired: 60000, title: 'Schemer', color: '#FFD700', emoji: '📝' },
+    { level: 22, xpRequired: 70000, title: 'Plotter', color: '#FFD700', emoji: '🗺️' },
+    { level: 23, xpRequired: 82000, title: 'Subversive', color: '#FFD700', emoji: '💣' },
+    { level: 24, xpRequired: 95000, title: 'Dissident', color: '#FFD700', emoji: '✊' },
+    { level: 25, xpRequired: 110000, title: 'Saboteur', color: '#FFD700', emoji: '🧨' },
+    { level: 26, xpRequired: 125000, title: 'Anarchist', color: '#FFD700', emoji: '🏴' },
+    { level: 27, xpRequired: 135000, title: 'Revolutionary', color: '#FFD700', emoji: '🚩' },
+    { level: 28, xpRequired: 142000, title: 'Insurgent', color: '#FFD700', emoji: '⚔️' },
+    { level: 29, xpRequired: 146000, title: 'Renegade', color: '#FFD700', emoji: '🏍️' },
+    { level: 30, xpRequired: 150000, title: 'Propagandist', color: '#E5E4E2', emoji: '📰' },
+    { level: 31, xpRequired: 180000, title: 'Psyop', color: '#E5E4E2', emoji: '🧠' },
+    { level: 32, xpRequired: 215000, title: 'Honeypot', color: '#E5E4E2', emoji: '🍯' },
+    { level: 33, xpRequired: 255000, title: 'Divider', color: '#E5E4E2', emoji: '➗' },
+    { level: 34, xpRequired: 300000, title: 'Fed', color: '#E5E4E2', emoji: '🕶️' },
+    { level: 35, xpRequired: 350000, title: 'Agent', color: '#E5E4E2', emoji: '🕴️' },
+    { level: 36, xpRequired: 405000, title: 'Operator', color: '#E5E4E2', emoji: '🎧' },
+    { level: 37, xpRequired: 440000, title: 'Handler', color: '#E5E4E2', emoji: '💼' },
+    { level: 38, xpRequired: 465000, title: 'Puppetmaster', color: '#E5E4E2', emoji: '🎭' },
+    { level: 39, xpRequired: 485000, title: 'Overlord', color: '#E5E4E2', emoji: '👹' },
+    { level: 40, xpRequired: 500000, title: 'Illuminated', color: '#B9F2FF', emoji: '💡' },
+    { level: 41, xpRequired: 650000, title: 'Awakened', color: '#B9F2FF', emoji: '👁️‍🗨️' },
+    { level: 42, xpRequired: 820000, title: 'Enlightened', color: '#B9F2FF', emoji: '🧘' },
+    { level: 43, xpRequired: 1010000, title: 'Initiated', color: '#B9F2FF', emoji: '📜' },
+    { level: 44, xpRequired: 1220000, title: 'Ascended', color: '#B9F2FF', emoji: '☁️' },
+    { level: 45, xpRequired: 1450000, title: 'Transcendent', color: '#B9F2FF', emoji: '✨' },
+    { level: 46, xpRequired: 1600000, title: 'Omniscient', color: '#B9F2FF', emoji: '🔮' },
+    { level: 47, xpRequired: 1730000, title: 'Untouchable', color: '#B9F2FF', emoji: '🛡️' },
+    { level: 48, xpRequired: 1840000, title: 'Unstoppable', color: '#B9F2FF', emoji: '🚀' },
+    { level: 49, xpRequired: 1930000, title: 'Unkillable', color: '#B9F2FF', emoji: '🧟' },
+    { level: 50, xpRequired: 2000000, title: 'THEY', color: '#FF2D95', emoji: '👽' }
 ];
 
-// XP required for each level (simplified formula)
-const getXPForLevel = (level) => {
-    if (level <= 1) return 0;
-    return Math.floor(100 * Math.pow(level, 1.5));
-};
-
 const getCurrentRank = (level) => {
-    let currentRank = RANKS[0];
-    for (const rank of RANKS) {
-        if (level >= rank.level) {
-            currentRank = rank;
-        }
-    }
-    return currentRank;
+    return LEVEL_THRESHOLDS.find(r => r.level === level) || LEVEL_THRESHOLDS[0];
 };
 
 const getNextRank = (level) => {
-    for (const rank of RANKS) {
-        if (level < rank.level) {
-            return rank;
-        }
-    }
-    return null; // Already max rank
+    return LEVEL_THRESHOLDS.find(r => r.level === level + 1);
 };
 
 export default function LevelProgressModal({ isOpen, onClose, currentLevel = 1, currentXP = 0 }) {
@@ -43,11 +68,11 @@ export default function LevelProgressModal({ isOpen, onClose, currentLevel = 1, 
 
     const currentRank = getCurrentRank(currentLevel);
     const nextRank = getNextRank(currentLevel);
-    const xpForCurrentLevel = getXPForLevel(currentLevel);
-    const xpForNextLevel = getXPForLevel(currentLevel + 1);
+    const xpForCurrentLevel = currentRank.xpRequired;
+    const xpForNextLevel = nextRank ? nextRank.xpRequired : currentRank.xpRequired;
     const xpProgress = currentXP - xpForCurrentLevel;
-    const xpNeeded = xpForNextLevel - xpForCurrentLevel;
-    const progressPercent = Math.min(100, Math.max(0, (xpProgress / xpNeeded) * 100));
+    const xpNeeded = nextRank ? xpForNextLevel - xpForCurrentLevel : 0;
+    const progressPercent = nextRank ? Math.min(100, Math.max(0, (xpProgress / xpNeeded) * 100)) : 100;
 
     const modalContent = (
         <div
@@ -139,7 +164,7 @@ export default function LevelProgressModal({ isOpen, onClose, currentLevel = 1, 
                                 Level {currentLevel}
                             </div>
                             <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.6)' }}>
-                                {currentRank.name} Rank
+                                {currentRank.title} Rank
                             </div>
                         </div>
                     </div>
@@ -148,10 +173,10 @@ export default function LevelProgressModal({ isOpen, onClose, currentLevel = 1, 
                     <div style={{ marginBottom: '8px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                             <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>
-                                Progress to Level {currentLevel + 1}
+                                {nextRank ? `Progress to Level ${currentLevel + 1}` : 'Max Level Reached'}
                             </span>
                             <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)', fontFamily: 'SF Mono, monospace' }}>
-                                {xpProgress.toLocaleString()} / {xpNeeded.toLocaleString()} XP
+                                {xpProgress.toLocaleString()} / {nextRank ? xpNeeded.toLocaleString() : '-'} XP
                             </span>
                         </div>
                         <div style={{
@@ -193,10 +218,10 @@ export default function LevelProgressModal({ isOpen, onClose, currentLevel = 1, 
                         color: 'rgba(255,255,255,0.7)',
                         lineHeight: '1.8',
                     }}>
-                        <li><strong style={{ color: '#fff' }}>Wagering:</strong> Earn 1 XP per $1 wagered</li>
-                        <li><strong style={{ color: '#fff' }}>Creating Divides:</strong> +50 XP per Divide you create</li>
-                        <li><strong style={{ color: '#fff' }}>Winning:</strong> Bonus XP for winning positions</li>
+                        <li><strong style={{ color: '#fff' }}>Wagering:</strong> Earn 2 XP per $1 wagered</li>
+                        <li><strong style={{ color: '#fff' }}>Creating Divides:</strong> +250 XP per Divide you create</li>
                         <li><strong style={{ color: '#fff' }}>Social:</strong> Likes & comments earn XP</li>
+                        <li><strong style={{ color: '#fff' }}>Milestones:</strong> Bonus XP for pot milestones</li>
                     </ul>
                 </div>
 
@@ -213,14 +238,14 @@ export default function LevelProgressModal({ isOpen, onClose, currentLevel = 1, 
                         All Ranks
                     </h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {RANKS.map((rank, index) => {
-                            const isCurrentRank = currentRank.name === rank.name;
+                        {LEVEL_THRESHOLDS.map((rank, index) => {
+                            const isCurrentRank = currentRank.title === rank.title;
                             const isUnlocked = currentLevel >= rank.level;
-                            const isNextTarget = nextRank?.name === rank.name;
+                            const isNextTarget = nextRank?.title === rank.title;
 
                             return (
                                 <div
-                                    key={rank.name}
+                                    key={rank.title}
                                     style={{
                                         display: 'flex',
                                         alignItems: 'center',
@@ -257,10 +282,10 @@ export default function LevelProgressModal({ isOpen, onClose, currentLevel = 1, 
                                             fontWeight: '600',
                                             color: isUnlocked ? rank.color : 'rgba(255,255,255,0.4)',
                                         }}>
-                                            {rank.name}
+                                            {rank.title}
                                         </div>
                                         <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)' }}>
-                                            Level {rank.level}+ • {rank.minXP.toLocaleString()} XP
+                                            Level {rank.level} • {rank.xpRequired.toLocaleString()} XP
                                         </div>
                                     </div>
                                     {isCurrentRank && (
@@ -287,11 +312,6 @@ export default function LevelProgressModal({ isOpen, onClose, currentLevel = 1, 
                                         }}>
                                             Next
                                         </span>
-                                    )}
-                                    {isUnlocked && !isCurrentRank && (
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill={rank.color}>
-                                            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-                                        </svg>
                                     )}
                                 </div>
                             );

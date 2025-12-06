@@ -42,7 +42,7 @@ export default function HowItWorksModal({ isOpen, onClose }) {
               : 'text-gray-400 hover:text-white'
               }`}
           >
-            Classic Mode
+            Divides
           </button>
           <button
             onClick={() => setActiveTab('hedge')}
@@ -92,17 +92,6 @@ export default function HowItWorksModal({ isOpen, onClose }) {
                 {/* The Bulletproof Rule */}
                 <div className="p-5 rounded-xl bg-gradient-to-r from-green-500/10 via-yellow-500/10 to-red-500/10 border border-yellow-500/30">
                   <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">The One-Line Rule</h3>
-                  <div className="space-y-2">
-                    <p className="text-sm">
-                      <span className="text-green-400 font-bold">📈 LONG</span> <span className="text-white">=</span> <span className="text-gray-300">you expect this side to be the <span className="font-semibold text-white">majority</span></span>
-                    </p>
-                    <p className="text-sm">
-                      <span className="text-red-400 font-bold">📉 SHORT</span> <span className="text-white">=</span> <span className="text-gray-300">you expect this side to be the <span className="font-semibold text-white">minority</span></span>
-                    </p>
-                    <p className="text-sm mt-3">
-                      <span className="text-yellow-400 font-bold">Minority eats 97% of the pot.</span>
-                    </p>
-                  </div>
                 </div>
 
                 {/* The Setup */}
@@ -178,10 +167,10 @@ export default function HowItWorksModal({ isOpen, onClose }) {
                     <svg className="w-5 h-5 text-yellow-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                     </svg>
-                    <h3 className="text-lg font-bold text-white">VERSUS MODE — PERFORMANCE WINS</h3>
+                    <h3 className="text-lg font-bold text-white">HEDGE MODE — UNDERPERFORMANCE WINS</h3>
                   </div>
                   <p className="text-white font-semibold">
-                    No minority rule. No popularity contest. <span className="text-yellow-400">Pure price performance.</span>
+                    No minority rule. No popularity contest. <span className="text-yellow-400">Bet on the loser.</span>
                   </p>
                 </div>
 
@@ -193,21 +182,21 @@ export default function HowItWorksModal({ isOpen, onClose }) {
                       <div className="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold shrink-0">1</div>
                       <div>
                         <h4 className="font-bold text-white">Pick Your Asset</h4>
-                        <p className="text-sm text-gray-400">Choose between two assets (e.g., BTC vs SOL). You are betting on which one will perform better.</p>
+                        <p className="text-sm text-gray-400">Choose between two assets (e.g., BTC vs SOL). You are betting on which one will perform WORSE.</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
                       <div className="w-8 h-8 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center font-bold shrink-0">2</div>
                       <div>
-                        <h4 className="font-bold text-white">Winner Takes All</h4>
-                        <p className="text-sm text-gray-400">The asset with the higher percentage gain (or lower loss) wins the entire pot (minus fees).</p>
+                        <h4 className="font-bold text-white">The Hedge</h4>
+                        <p className="text-sm text-gray-400">The asset with the LOWER percentage gain (or higher loss) wins the entire pot. You are hedging against underperformance.</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
                       <div className="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold shrink-0">3</div>
                       <div>
                         <h4 className="font-bold text-white">No Minority Rule</h4>
-                        <p className="text-sm text-gray-400">Unlike Classic Mode, popularity doesn't matter. Even if 99% of people bet on BTC, if BTC outperforms SOL, BTC backers win.</p>
+                        <p className="text-sm text-gray-400">Unlike Divides, popularity doesn't matter. Even if 99% of people bet on BTC, if BTC underperforms SOL, BTC backers win.</p>
                       </div>
                     </div>
                   </div>
@@ -226,8 +215,8 @@ export default function HowItWorksModal({ isOpen, onClose }) {
                       <span className="text-green-400 font-mono font-bold">+2.5%</span>
                     </div>
                     <div className="mt-2 pt-2 border-t border-white/10 text-center">
-                      <p className="text-white font-bold">BTC Wins!</p>
-                      <p className="text-gray-500 text-xs">BTC backers take the pot. SOL backers lose.</p>
+                      <p className="text-white font-bold">SOL Wins!</p>
+                      <p className="text-gray-500 text-xs">SOL performed worse (+2.5% &lt; +5.0%), so SOL backers take the pot.</p>
                     </div>
                   </div>
                 </div>

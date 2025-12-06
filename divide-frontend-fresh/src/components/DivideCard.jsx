@@ -480,7 +480,7 @@ export default function DivideCard({
                 borderRadius: '8px',
                 border: '1px solid rgba(251, 191, 36, 0.2)'
               }}>
-                BET ON PERFORMANCE
+                BET ON UNDERPERFORMANCE
               </div>
             )}
 
@@ -648,8 +648,8 @@ export default function DivideCard({
             <div style={{ fontSize: '11px', color: '#888', textAlign: 'center' }}>
               {mode === 'versus' ? (
                 <>
-                  {editingSide === 'longA' && `Bet on ${left} to outperform ${right}`}
-                  {editingSide === 'longB' && `Bet on ${right} to outperform ${left}`}
+                  {editingSide === 'longA' && `Bet on ${left} to UNDERPERFORM ${right}`}
+                  {editingSide === 'longB' && `Bet on ${right} to UNDERPERFORM ${left}`}
                 </>
               ) : (
                 <>
