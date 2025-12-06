@@ -112,7 +112,7 @@ export default function MobileFooter() {
                     marginBottom: '20px',
                 }}>
                     <a
-                        href="https://discord.gg/thedivide"
+                        href="https://discord.gg/thedividegg"
                         target="_blank"
                         rel="noopener noreferrer"
                         style={{
@@ -136,7 +136,7 @@ export default function MobileFooter() {
                         Discord
                     </a>
                     <a
-                        href="https://twitter.com/thedivide"
+                        href="https://x.com/thedivideGG"
                         target="_blank"
                         rel="noopener noreferrer"
                         style={{
