@@ -5,6 +5,7 @@ import crypto from 'crypto';
  * Documentation: https://documenter.getpostman.com/view/7907941/2s93JusNJt
  * 
  * This utility handles all interactions with NOWPayments for crypto deposits and withdrawals.
+ * Uses Sub-Partner API for customer/custody management.
  */
 
 const API_BASE_URL = 'https://api.nowpayments.io/v1';
@@ -16,7 +17,7 @@ const getBaseUrl = () => {
 };
 
 /**
- * Make an authenticated request to NOWPayments API
+ * Make an authenticated request to NOWPayments API (standard endpoints)
  */
 async function apiRequest(endpoint, options = {}) {
   const apiKey = process.env.NOWPAYMENTS_API_KEY;
@@ -40,6 +41,49 @@ async function apiRequest(endpoint, options = {}) {
 
   if (!response.ok) {
     const error = new Error(data.message || `NOWPayments API error: ${response.status}`);
+    error.statusCode = response.status;
+    error.response = data;
+    throw error;
+  }
+
+  return data;
+}
+
+/**
+ * Make an authenticated request to NOWPayments Sub-Partner API
+ * Requires both Bearer token and API key
+ */
+async function subPartnerRequest(endpoint, options = {}) {
+  const apiKey = process.env.NOWPAYMENTS_API_KEY;
+  const jwtToken = process.env.NOWPAYMENTS_JWT_TOKEN;
+  
+  if (!apiKey) {
+    throw new Error('NOWPAYMENTS_API_KEY environment variable not set');
+  }
+  if (!jwtToken) {
+    throw new Error('NOWPAYMENTS_JWT_TOKEN environment variable not set - required for sub-partner/custody API');
+  }
+
+  const url = `${getBaseUrl()}${endpoint}`;
+  const headers = {
+    'Authorization': `Bearer ${jwtToken}`,
+    'x-api-key': apiKey,
+    'Content-Type': 'application/json',
+    ...options.headers
+  };
+
+  console.log(`[NOWPayments] Sub-partner request: ${options.method || 'GET'} ${endpoint}`);
+
+  const response = await fetch(url, {
+    ...options,
+    headers
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    console.error(`[NOWPayments] Sub-partner API error:`, data);
+    const error = new Error(data.message || data.statusCode || `NOWPayments API error: ${response.status}`);
     error.statusCode = response.status;
     error.response = data;
     throw error;
@@ -312,202 +356,194 @@ export async function getConversionEstimate(from, to, amount) {
 }
 
 // ============================================
-// CUSTOMER MANAGEMENT Functions
-// Links payments to specific users for tracking
+// SUB-PARTNER / CUSTOMER MANAGEMENT Functions
+// Uses NOWPayments Sub-Partner API for custody
+// Requires NOWPAYMENTS_JWT_TOKEN env variable
 // ============================================
 
 /**
- * Create a customer (links to your internal user)
+ * Create a sub-partner (customer account)
+ * This creates a custody sub-account for a user
  * 
  * @param {Object} params
- * @param {string} params.email - Customer email
  * @param {string} params.name - Customer name/username
- * @param {string} params.externalId - Your internal user ID
+ * @param {string} params.externalId - Your internal user ID (optional, for your tracking)
+ * @returns {Object} { id: "sub_partner_id", ... }
  */
 export async function createCustomer(params) {
   const payload = {
-    email: params.email || '',
-    name: params.name,
-    external_id: params.externalId
+    name: params.name || params.externalId || 'user'
   };
 
-  return apiRequest('/customers', {
+  const result = await subPartnerRequest('/sub-partner', {
     method: 'POST',
     body: JSON.stringify(payload)
   });
+  
+  // The API returns { result: { id: "...", ... } }
+  return result.result || result;
 }
 
 /**
- * Get customer by external ID (your user ID)
+ * Get sub-partner by ID
  */
-export async function getCustomerByExternalId(externalId) {
-  return apiRequest(`/customers?external_id=${externalId}`);
+export async function getCustomer(subPartnerId) {
+  const result = await subPartnerRequest(`/sub-partner/${subPartnerId}`);
+  return result.result || result;
 }
 
 /**
- * Get customer by NOWPayments customer ID
- */
-export async function getCustomer(customerId) {
-  return apiRequest(`/customers/${customerId}`);
-}
-
-/**
- * Update customer
- */
-export async function updateCustomer(customerId, params) {
-  const payload = {
-    email: params.email,
-    name: params.name
-  };
-
-  return apiRequest(`/customers/${customerId}`, {
-    method: 'PUT',
-    body: JSON.stringify(payload)
-  });
-}
-
-/**
- * Delete customer
- */
-export async function deleteCustomer(customerId) {
-  return apiRequest(`/customers/${customerId}`, {
-    method: 'DELETE'
-  });
-}
-
-/**
- * Get customer's payment history
- */
-export async function getCustomerPayments(customerId) {
-  return apiRequest(`/customers/${customerId}/payments`);
-}
-
-/**
- * Get customer's custody balance
+ * Get sub-partner's balance
  * Returns balances held in NOWPayments for this customer
  */
-export async function getCustomerBalance(customerId) {
-  return apiRequest(`/customers/${customerId}/balance`);
+export async function getCustomerBalance(subPartnerId) {
+  const result = await subPartnerRequest(`/sub-partner/${subPartnerId}/balance`);
+  return result.result || result;
 }
 
 /**
- * Create a deposit address for a specific customer
- * Funds deposited here go to the customer's sub-account
+ * Get sub-partner's payment history
+ */
+export async function getCustomerPayments(subPartnerId) {
+  const result = await subPartnerRequest(`/sub-partner/payments?sub_partner_id=${subPartnerId}`);
+  return result.result || result;
+}
+
+/**
+ * Create a deposit payment for a sub-partner
+ * This generates a payment address that credits the customer's sub-account
  * 
  * @param {Object} params
- * @param {string} params.customerId - NOWPayments customer ID
- * @param {string} params.currency - Crypto currency (btc, eth, etc.)
+ * @param {string} params.customerId - Sub-partner ID
+ * @param {string} params.currency - Crypto currency (btc, eth, trx, etc.)
+ * @param {number} params.priceAmount - Amount in crypto (or USD if using price conversion)
  * @param {string} params.orderId - Your internal order/reference ID
- * @param {number} params.priceAmount - Expected USD amount
+ * @param {string} params.ipnCallbackUrl - Optional IPN callback URL
  */
 export async function createCustomerDeposit(params) {
   const payload = {
-    price_amount: params.priceAmount,
-    price_currency: 'usd',
-    pay_currency: params.currency,
-    order_id: params.orderId,
-    order_description: params.description || 'Deposit',
-    customer_id: params.customerId,
-    ipn_callback_url: process.env.NOWPAYMENTS_IPN_CALLBACK_URL
+    currency: params.currency.toLowerCase(),
+    amount: params.priceAmount,
+    sub_partner_id: params.customerId,
+    is_fixed_rate: false,
+    is_fee_paid_by_user: false
   };
 
-  return apiRequest('/payment', {
+  if (params.ipnCallbackUrl || process.env.NOWPAYMENTS_IPN_CALLBACK_URL) {
+    payload.ipn_callback_url = params.ipnCallbackUrl || process.env.NOWPAYMENTS_IPN_CALLBACK_URL;
+  }
+
+  const result = await subPartnerRequest('/sub-partner/payment', {
     method: 'POST',
     body: JSON.stringify(payload)
   });
+
+  return result.result || result;
 }
 
 /**
- * Internal transfer between customers (FREE - no blockchain fees)
- * Move funds from one customer to another within your custody
+ * Deposit from master account to sub-partner
+ * Transfer funds from your main custody balance to a customer
  * 
  * @param {Object} params
- * @param {string} params.fromCustomerId - Source customer ID
- * @param {string} params.toCustomerId - Destination customer ID
- * @param {string} params.currency - Currency to transfer (e.g., 'usdcsol', 'btc')
- * @param {number} params.amount - Amount to transfer
- */
-export async function internalTransfer(params) {
-  const payload = {
-    from_customer_id: params.fromCustomerId,
-    to_customer_id: params.toCustomerId,
-    currency: params.currency,
-    amount: params.amount
-  };
-
-  return apiRequest('/customers/transfer', {
-    method: 'POST',
-    body: JSON.stringify(payload)
-  });
-}
-
-/**
- * Transfer from master custody to customer (e.g., for bonuses/rewards)
- * 
- * @param {Object} params
- * @param {string} params.customerId - Destination customer ID
+ * @param {string} params.customerId - Sub-partner ID
  * @param {string} params.currency - Currency to transfer
  * @param {number} params.amount - Amount to transfer
  */
 export async function transferToCustomer(params) {
   const payload = {
-    customer_id: params.customerId,
-    currency: params.currency,
-    amount: params.amount
+    currency: params.currency.toLowerCase(),
+    amount: params.amount,
+    sub_partner_id: params.customerId
   };
 
-  return apiRequest('/customers/deposit', {
+  const result = await subPartnerRequest('/sub-partner/deposit', {
     method: 'POST',
     body: JSON.stringify(payload)
   });
+
+  return result.result || result;
 }
 
 /**
- * Transfer from customer to master custody (e.g., for fees/withdrawals to external)
+ * Write-off from sub-partner to master account
+ * Transfer funds from a customer's sub-account to your main custody
  * 
  * @param {Object} params
- * @param {string} params.customerId - Source customer ID
+ * @param {string} params.customerId - Sub-partner ID
  * @param {string} params.currency - Currency to transfer
  * @param {number} params.amount - Amount to transfer
  */
 export async function transferFromCustomer(params) {
   const payload = {
-    customer_id: params.customerId,
-    currency: params.currency,
-    amount: params.amount
+    currency: params.currency.toLowerCase(),
+    amount: params.amount,
+    sub_partner_id: params.customerId
   };
 
-  return apiRequest('/customers/withdraw', {
+  const result = await subPartnerRequest('/sub-partner/write-off', {
     method: 'POST',
     body: JSON.stringify(payload)
   });
+
+  return result.result || result;
+}
+
+/**
+ * Get transfer status
+ */
+export async function getTransferStatus(transferId) {
+  const result = await subPartnerRequest(`/sub-partner/transfer/${transferId}`);
+  return result.result || result;
 }
 
 /**
  * Create payout from customer's balance to external wallet
+ * First writes off from customer to master, then creates external payout
  * 
  * @param {Object} params
- * @param {string} params.customerId - Customer ID
+ * @param {string} params.customerId - Sub-partner ID
  * @param {string} params.address - Destination wallet address
  * @param {string} params.currency - Currency to withdraw
  * @param {number} params.amount - Amount to withdraw
  */
 export async function createCustomerPayout(params) {
-  // First withdraw from customer to master
+  // First write-off from customer to master account
   await transferFromCustomer({
     customerId: params.customerId,
     currency: params.currency,
     amount: params.amount
   });
 
-  // Then create external payout
+  // Then create external payout from master account
   return createPayout({
     address: params.address,
     currency: params.currency,
     amount: params.amount,
-    ipnCallbackUrl: process.env.NOWPAYMENTS_IPN_CALLBACK_URL
+    ipnCallbackUrl: params.ipnCallbackUrl
   });
 }
+
+// Legacy aliases for compatibility
+export const getCustomerByExternalId = async (externalId) => {
+  console.warn('[NOWPayments] getCustomerByExternalId is deprecated - sub-partner API does not support external ID lookup');
+  return null;
+};
+
+export const updateCustomer = async (customerId, params) => {
+  console.warn('[NOWPayments] updateCustomer is deprecated - use sub-partner API');
+  return null;
+};
+
+export const deleteCustomer = async (customerId) => {
+  console.warn('[NOWPayments] deleteCustomer is deprecated - use sub-partner API');
+  return null;
+};
+
+export const internalTransfer = async (params) => {
+  console.warn('[NOWPayments] internalTransfer between customers not supported in sub-partner API');
+  return null;
+};
 
 // ============================================
 // IPN (Instant Payment Notification) Verification
@@ -672,19 +708,22 @@ export default {
   createConversion,
   getConversionEstimate,
   
-  // Customer Management
+  // Sub-Partner / Customer Management
   createCustomer,
   getCustomer,
-  getCustomerByExternalId,
-  updateCustomer,
-  deleteCustomer,
   getCustomerPayments,
   getCustomerBalance,
   createCustomerDeposit,
-  internalTransfer,
   transferToCustomer,
   transferFromCustomer,
+  getTransferStatus,
   createCustomerPayout,
+  
+  // Legacy (deprecated)
+  getCustomerByExternalId,
+  updateCustomer,
+  deleteCustomer,
+  internalTransfer,
   
   // IPN
   verifyIPNSignature,

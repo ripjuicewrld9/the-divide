@@ -408,7 +408,15 @@ router.post('/deposit/direct', async (req, res) => {
         console.log(`[Payments] Created custody customer ${customer.id} for ${user.username}`);
       } catch (custErr) {
         console.error('[Payments] Failed to create custody customer:', custErr.message);
-        return res.status(500).json({ error: 'Failed to setup payment account' });
+        if (custErr.statusCode) console.error('[Payments] Status code:', custErr.statusCode);
+        if (custErr.response) console.error('[Payments] Response:', JSON.stringify(custErr.response));
+        return res.status(500).json({ 
+          error: 'Failed to setup payment account',
+          details: custErr.message,
+          hint: custErr.statusCode === 401 || custErr.statusCode === 403 
+            ? 'NOWPayments Custody API may require a special subscription' 
+            : undefined
+        });
       }
     }
 
@@ -503,8 +511,16 @@ router.post('/withdraw', async (req, res) => {
         user.nowPaymentsCustomerId = customer.id;
         await user.save();
       } catch (custErr) {
-        console.error('[Payments] Failed to create custody customer:', custErr.message);
-        return res.status(500).json({ error: 'Failed to setup payment account' });
+        console.error('[Payments] Failed to create custody customer for withdrawal:', custErr.message);
+        if (custErr.statusCode) console.error('[Payments] Status code:', custErr.statusCode);
+        if (custErr.response) console.error('[Payments] Response:', JSON.stringify(custErr.response));
+        return res.status(500).json({ 
+          error: 'Failed to setup payment account',
+          details: custErr.message,
+          hint: custErr.statusCode === 401 || custErr.statusCode === 403 
+            ? 'NOWPayments Custody API may require a special subscription' 
+            : undefined
+        });
       }
     }
 
