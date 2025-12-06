@@ -137,18 +137,74 @@ export default function CreateDivideModal({ isOpen, onClose, onDivideCreated }) 
           }}>✕</button>
         </div>
 
-        {/* Explanation Banner */}
+        {/* How It Works Explainer */}
         <div style={{
-          background: 'rgba(229, 57, 53, 0.12)',
-          color: '#ff5252',
-          padding: '12px 14px',
-          borderRadius: '8px',
+          background: 'linear-gradient(135deg, rgba(229, 57, 53, 0.1) 0%, rgba(156, 39, 176, 0.1) 50%, rgba(30, 136, 229, 0.1) 100%)',
+          padding: '16px',
+          borderRadius: '12px',
           margin: '16px 20px',
-          border: '1px solid rgba(229, 57, 53, 0.25)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
           fontSize: '12px',
-          lineHeight: '1.5'
+          lineHeight: '1.6'
         }}>
-          <strong><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style={{ width: '14px', height: '14px', display: 'inline', verticalAlign: 'middle', marginRight: '4px' }}><path fillRule="evenodd" d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003zM12 8.25a.75.75 0 01.75.75v3.75a.75.75 0 01-1.5 0V9a.75.75 0 01.75-.75zm0 8.25a.75.75 0 100-1.5.75.75 0 000 1.5z" clipRule="evenodd" /></svg> BLIND VOTING</strong> — Pick the side you think will LOSE. If everyone agrees with you, you all lose.
+          {/* Core Rule */}
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '8px', 
+            marginBottom: '10px',
+            paddingBottom: '10px',
+            borderBottom: '1px solid rgba(255,255,255,0.1)'
+          }}>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#fbbf24" style={{ width: '18px', height: '18px', flexShrink: 0 }}>
+              <path fillRule="evenodd" d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003zM12 8.25a.75.75 0 01.75.75v3.75a.75.75 0 01-1.5 0V9a.75.75 0 01.75-.75zm0 8.25a.75.75 0 100-1.5.75.75 0 000 1.5z" clipRule="evenodd" />
+            </svg>
+            <span style={{ color: '#fff', fontWeight: '700', fontSize: '13px' }}>BLIND BETS — MINORITY WINS</span>
+          </div>
+          
+          {/* The Hook */}
+          <p style={{ color: '#e0e0e0', marginBottom: '12px', fontWeight: '500' }}>
+            Every bet is a sacrifice. <span style={{ color: '#4ade80' }}>Win the money, lose the war.</span> <span style={{ color: '#f87171' }}>Win the war, lose the bet.</span>
+          </p>
+          
+          {/* The Rules */}
+          <div style={{ 
+            background: 'rgba(0,0,0,0.3)', 
+            borderRadius: '8px', 
+            padding: '10px 12px',
+            marginBottom: '12px'
+          }}>
+            <p style={{ color: '#a0a0a0', margin: 0 }}>
+              The side with <span style={{ color: '#4ade80', fontWeight: '600' }}>fewer bets</span> wins <span style={{ color: '#4ade80', fontWeight: '600' }}>97%</span> of the pot. All bets are blind — you can't see how others voted.
+            </p>
+          </div>
+          
+          {/* The Sacrifice */}
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: '1fr 1fr', 
+            gap: '8px',
+            fontSize: '11px'
+          }}>
+            <div style={{ 
+              background: 'rgba(239, 68, 68, 0.15)', 
+              borderRadius: '6px', 
+              padding: '8px',
+              border: '1px solid rgba(239, 68, 68, 0.2)'
+            }}>
+              <span style={{ color: '#f87171', fontWeight: '600' }}>🏆 If you WIN:</span>
+              <p style={{ color: '#a0a0a0', margin: '4px 0 0 0' }}>Your tribe lost the popularity war — ego wounded</p>
+            </div>
+            <div style={{ 
+              background: 'rgba(59, 130, 246, 0.15)', 
+              borderRadius: '6px', 
+              padding: '8px',
+              border: '1px solid rgba(59, 130, 246, 0.2)'
+            }}>
+              <span style={{ color: '#60a5fa', fontWeight: '600' }}>💸 If you LOSE:</span>
+              <p style={{ color: '#a0a0a0', margin: '4px 0 0 0' }}>Your tribe won but you funded the enemy's payout</p>
+            </div>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="create-divide-form">
@@ -259,7 +315,7 @@ export default function CreateDivideModal({ isOpen, onClose, onDivideCreated }) 
               </button>
             </div>
             <small style={{ color: '#888' }}>
-              Pick the side you think will lose
+              Remember: minority side wins — bet on what you think others WON'T pick
             </small>
           </div>
 
