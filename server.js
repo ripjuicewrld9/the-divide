@@ -3615,19 +3615,28 @@ app.use((req, res) => {
 // SOCKET.IO
 // ==========================================
 
-// Store recent chat messages in memory (last 50)
-let chatHistory = [];
-const MAX_CHAT_HISTORY = 50;
+// Chat history is now stored in database (ChatMessage model)
+const MAX_CHAT_HISTORY = 100;
 
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
 
-  // Chat: request history
-  socket.on('chat:requestHistory', () => {
-    socket.emit('chat:history', chatHistory);
+  // Chat: request history from database
+  socket.on('chat:requestHistory', async () => {
+    try {
+      const history = await ChatMessage.find()
+        .sort({ timestamp: -1 })
+        .limit(MAX_CHAT_HISTORY)
+        .lean();
+      // Reverse to show oldest first
+      socket.emit('chat:history', history.reverse());
+    } catch (err) {
+      console.error('Failed to fetch chat history:', err);
+      socket.emit('chat:history', []);
+    }
   });
 
-  // Chat: send message
+  // Chat: send message and save to database
   socket.on('chat:sendMessage', async (data) => {
     try {
       const { username, message, userId } = data;
@@ -3646,23 +3655,29 @@ io.on('connection', (socket) => {
         }
       }
 
-      const chatMessage = {
-        id: Date.now().toString(),
+      // Create and save message to database
+      const chatMessage = new ChatMessage({
         username: userInfo.username,
-        message: message.trim().substring(0, 500), // Limit message length
+        message: message.trim().substring(0, 500),
+        userId: userId || undefined,
         level: userInfo.level,
         profileImage: userInfo.profileImage,
-        timestamp: new Date().toISOString(),
+      });
+
+      await chatMessage.save();
+
+      // Prepare message for broadcast
+      const broadcastMessage = {
+        id: chatMessage._id.toString(),
+        username: chatMessage.username,
+        message: chatMessage.message,
+        level: chatMessage.level,
+        profileImage: chatMessage.profileImage,
+        timestamp: chatMessage.timestamp.toISOString(),
       };
 
-      // Add to history
-      chatHistory.push(chatMessage);
-      if (chatHistory.length > MAX_CHAT_HISTORY) {
-        chatHistory = chatHistory.slice(-MAX_CHAT_HISTORY);
-      }
-
       // Broadcast to all clients
-      io.emit('chat:message', chatMessage);
+      io.emit('chat:message', broadcastMessage);
     } catch (err) {
       console.error('Chat message error:', err);
     }

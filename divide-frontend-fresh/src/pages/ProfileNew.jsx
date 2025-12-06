@@ -4,6 +4,7 @@ import UserAvatar from '../components/UserAvatar';
 import { formatCurrency } from '../utils/format';
 import MobileGameHeader from '../components/MobileGameHeader';
 import MobileFooter from '../components/MobileFooter.jsx';
+import LevelProgressModal from '../components/LevelProgressModal.jsx';
 import DiscordOAuthButton from '../components/DiscordOAuthButton';
 import DiscordLinkHandler from '../components/DiscordLinkHandler';
 import SecuritySettings from '../components/SecuritySettings';
@@ -16,6 +17,7 @@ export default function ProfilePage({ onOpenChat }) {
     const [newUsername, setNewUsername] = useState('');
     const [usernameError, setUsernameError] = useState('');
     const [isChangingUsername, setIsChangingUsername] = useState(false);
+    const [showLevelModal, setShowLevelModal] = useState(false);
 
     const handleUsernameChange = async () => {
         setUsernameError('');
@@ -115,12 +117,21 @@ export default function ProfilePage({ onOpenChat }) {
                                 </button>
                             </div>
                             <div className="flex items-center justify-center md:justify-start gap-2 mb-2">
-                                <span className="px-3 py-1 rounded-full text-sm font-bold" style={{ backgroundColor: '#1a1a2e', border: '2px solid #FFD700', color: '#FFD700' }}>
+                                <button
+                                    onClick={() => setShowLevelModal(true)}
+                                    className="px-3 py-1 rounded-full text-sm font-bold cursor-pointer hover:scale-105 transition-transform"
+                                    style={{ backgroundColor: '#1a1a2e', border: '2px solid #FFD700', color: '#FFD700' }}
+                                    title="Click to view level progression"
+                                >
                                     Level {user.level || 1}
-                                </span>
-                                <span className="text-purple-400 text-sm font-semibold">
+                                </button>
+                                <button
+                                    onClick={() => setShowLevelModal(true)}
+                                    className="text-purple-400 text-sm font-semibold cursor-pointer hover:text-purple-300 transition-colors"
+                                    title="Click to view ranks"
+                                >
                                     {user.currentBadge || 'Sheep'}
-                                </span>
+                                </button>
                                 <span className="text-gray-500 text-sm">
                                     {(user.xp || 0).toLocaleString()} XP
                                 </span>
@@ -281,6 +292,14 @@ export default function ProfilePage({ onOpenChat }) {
                     </div>
                 </div>
             )}
+
+            {/* Level Progress Modal */}
+            <LevelProgressModal
+                isOpen={showLevelModal}
+                onClose={() => setShowLevelModal(false)}
+                currentLevel={user?.level || 1}
+                currentXP={user?.xp || 0}
+            />
 
             {/* Mobile Footer with Legal Links, How it Works, VIP */}
             <MobileFooter />

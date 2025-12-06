@@ -243,13 +243,6 @@ export default function Footer() {
           }}>
             © {currentYear} The Divide. All rights reserved.
           </p>
-          <p style={{
-            margin: 0,
-            fontSize: '12px',
-            color: 'rgba(255, 255, 255, 0.3)',
-          }}>
-            Built with 🎯 for contrarians everywhere
-          </p>
         </div>
       </div>
     </footer>

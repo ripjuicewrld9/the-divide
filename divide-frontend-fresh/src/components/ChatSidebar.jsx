@@ -3,10 +3,38 @@ import { useAuth } from '../context/AuthContext';
 import useSocket from '../hooks/useSocket';
 import UserAvatar from './UserAvatar';
 
+const CHAT_STORAGE_KEY = 'divide_chat_messages';
+const MAX_CACHED_MESSAGES = 100;
+
+// Load cached messages from localStorage
+const loadCachedMessages = () => {
+  try {
+    const cached = localStorage.getItem(CHAT_STORAGE_KEY);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      return Array.isArray(parsed) ? parsed : [];
+    }
+  } catch (e) {
+    console.warn('Failed to load cached chat messages:', e);
+  }
+  return [];
+};
+
+// Save messages to localStorage
+const saveCachedMessages = (messages) => {
+  try {
+    // Keep only last N messages to avoid localStorage bloat
+    const toCache = messages.slice(-MAX_CACHED_MESSAGES);
+    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(toCache));
+  } catch (e) {
+    console.warn('Failed to cache chat messages:', e);
+  }
+};
+
 export default function ChatSidebar({ isOpen, setIsOpen }) {
   const { user } = useAuth();
   const socket = useSocket('chat');
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState(() => loadCachedMessages());
   const [inputMessage, setInputMessage] = useState('');
   const messagesEndRef = useRef(null);
 
@@ -18,17 +46,29 @@ export default function ChatSidebar({ isOpen, setIsOpen }) {
     scrollToBottom();
   }, [messages]);
 
+  // Cache messages whenever they change
+  useEffect(() => {
+    if (messages.length > 0) {
+      saveCachedMessages(messages);
+    }
+  }, [messages]);
+
   useEffect(() => {
     if (!socket) {
       return;
     }
 
     socket.on('chat:message', (message) => {
-      setMessages((prev) => [...prev, message]);
+      setMessages((prev) => {
+        const newMessages = [...prev, message];
+        return newMessages.slice(-MAX_CACHED_MESSAGES); // Keep only last N
+      });
     });
 
     socket.on('chat:history', (history) => {
-      setMessages(history || []);
+      if (history && history.length > 0) {
+        setMessages(history);
+      }
     });
 
     socket.on('connect', () => {
@@ -209,9 +249,9 @@ export default function ChatSidebar({ isOpen, setIsOpen }) {
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                   {/* Profile Image */}
-                  <UserAvatar 
-                    user={{ username: msg.username, profileImage: msg.profileImage }} 
-                    size={24} 
+                  <UserAvatar
+                    user={{ username: msg.username, profileImage: msg.profileImage }}
+                    size={24}
                   />
                   {/* Username */}
                   <span
