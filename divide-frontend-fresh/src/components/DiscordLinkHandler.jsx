@@ -12,11 +12,7 @@ export default function DiscordLinkHandler() {
   useEffect(() => {
     const linkToken = searchParams.get('discord_link');
     
-    console.log('[Discord Link] Component mounted, linkToken:', linkToken ? 'present' : 'none');
-    console.log('[Discord Link] Current status:', status);
-    
     if (!linkToken || hasLinked) {
-      console.log('[Discord Link] No token or already linked, forcing idle state');
       setStatus('idle');
       return;
     }
@@ -27,8 +23,6 @@ export default function DiscordLinkHandler() {
     const linkDiscordAccount = async () => {
       try {
         const token = localStorage.getItem('token');
-        
-        console.log('[Discord Link] Attempting to link with token:', linkToken.substring(0, 20) + '...');
         
         // Add timeout
         const timeoutPromise = new Promise((_, reject) => 
@@ -45,12 +39,9 @@ export default function DiscordLinkHandler() {
         });
 
         const response = await Promise.race([fetchPromise, timeoutPromise]);
-
-        console.log('[Discord Link] Response status:', response.status);
         
         if (response.ok) {
           const data = await response.json();
-          console.log('[Discord Link] Success:', data);
           
           // Refresh user data from server to get Discord info
           await refreshUser();
@@ -62,12 +53,9 @@ export default function DiscordLinkHandler() {
             navigate('/profile', { replace: true });
           }, 2000);
         } else {
-          const errorText = await response.text();
-          console.error('[Discord Link] Failed:', response.status, errorText);
           setStatus('error');
         }
       } catch (error) {
-        console.error('[Discord Link] Error:', error);
         setStatus('error');
       }
     };
@@ -114,7 +102,6 @@ export default function DiscordLinkHandler() {
           <p className="text-gray-400 mb-4">Please wait while we connect your Discord account.</p>
           <button
             onClick={() => {
-              console.log('[Discord Link] User cancelled');
               window.location.href = '/profile';
             }}
             className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"

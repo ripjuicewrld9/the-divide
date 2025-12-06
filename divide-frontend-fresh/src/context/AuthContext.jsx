@@ -64,7 +64,6 @@ export const AuthProvider = ({ children }) => {
                         setUser((prevUser) => {
                             // Only update if balance changed on server (prevents fighting with local updates)
                             if (prevUser && Math.abs((prevUser.balance || 0) - data.balance) > 0.01) {
-                                console.log('[Auth] Balance synced from server:', data.balance);
                                 return {
                                     ...prevUser,
                                     balance: data.balance,
@@ -253,7 +252,6 @@ export const AuthProvider = ({ children }) => {
                 discordId: data.discordId || null,
                 discordUsername: data.discordUsername || null
             });
-            console.log('[Auth] refreshUser completed - user:', data.username);
             return data;
         } catch (err) {
             console.error('refreshUser error', err);

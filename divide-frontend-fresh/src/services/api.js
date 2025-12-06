@@ -31,7 +31,6 @@ export default {
     }
   },
   async post(path, body) {
-    console.log('[API] POST', API + path, body);
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     const headers = Object.assign({ "Content-Type": "application/json" }, token ? { Authorization: `Bearer ${token}` } : {});
     const controller = new AbortController();
@@ -45,7 +44,6 @@ export default {
         signal: controller.signal
       });
       clearTimeout(timeoutId);
-      console.log('[API] POST response', res.status, res.statusText);
       return parseResponse(res);
     } catch (err) {
       clearTimeout(timeoutId);

@@ -90,12 +90,18 @@ function sanitizeDivide(divide, forceHideVotes = false) {
   // Only hide votes if divide is still active
   if (d.status === 'active' || forceHideVotes) {
     // Hide all vote-related data that could reveal which side is winning
+    // CRITICAL: These fields would expose who is winning the minority game
     d.votesA = null;
     d.votesB = null;
+    d.shortsA = null;  // CRITICAL: Hide short amounts per side
+    d.shortsB = null;  // CRITICAL: Hide short amounts per side
     d.totalVotes = null;
+    d.totalShorts = null;  // Hide total shorts count
     d.votes = []; // Hide individual vote records
-    d.voteHistory = []; // Hide vote history chart data
-    d.shorts = []; // Hide shorts data if present
+    d.shorts = []; // Hide individual shorts records - CRITICAL
+    d.voteHistory = []; // Hide vote history chart data - contains shortsA/shortsB snapshots
+    // Do NOT hide pot - total volume is safe and expected for UX
+    // Do NOT hide likes/dislikes - those are social engagement, not vote data
   }
   
   // Never expose sensitive internal fields
@@ -1501,12 +1507,13 @@ app.post('/Divides', auth, adminOnly, async (req, res) => {
       soundB: soundB || '',
       category,
       endTime,
-      votesA: 0,
-      votesB: 0,
-      totalVotes: 0,
+      // Use correct model field names
+      shortsA: 0,
+      shortsB: 0,
+      totalShorts: 0,
       pot: 0,
       status: 'active',
-      votes: [],
+      shorts: [],
       creatorId: req.userId,
       createdAt: now
     });
@@ -1580,12 +1587,13 @@ app.post('/Divides/create-user', auth, async (req, res) => {
       soundB: '',
       category,
       endTime,
-      votesA: side === 'A' ? bet : 0,
-      votesB: side === 'B' ? bet : 0,
-      totalVotes: bet,
+      // Use correct model field names
+      shortsA: side === 'A' ? bet : 0,
+      shortsB: side === 'B' ? bet : 0,
+      totalShorts: bet,
       pot: bet,
       status: 'active',
-      votes: [{ userId: req.userId, side, voteCount: bet, isFree: false, bet }],
+      shorts: [{ userId: req.userId, side, shortAmount: bet, isFree: false, bet }],
       creatorId: req.userId,
       creatorBet: bet,
       creatorSide: side,
@@ -1637,8 +1645,10 @@ app.post('/divides/create-user', auth, async (req, res) => {
 // VOTE on divide
 app.post('/divides/vote', auth, async (req, res) => {
   try {
-    const { divideId: rawDivideId, side, boostAmount = 0, id: altId, _id: alt_id } = req.body;
+    const { divideId: rawDivideId, side, boostAmount = 0, bet = 0, id: altId, _id: alt_id } = req.body;
     const divideId = rawDivideId || altId || alt_id;
+    // Accept both 'bet' (from VoteWithBetModal) and 'boostAmount' (legacy)
+    const actualBetAmount = bet || boostAmount;
     if (!['A', 'B'].includes(side)) return res.status(400).json({ error: 'Invalid side' });
 
     let divide = await Divide.findOne({ id: divideId });
@@ -1657,12 +1667,12 @@ app.post('/divides/vote', auth, async (req, res) => {
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    if (!boostAmount || boostAmount <= 0) {
+    if (!actualBetAmount || actualBetAmount <= 0) {
       return res.status(400).json({ error: 'Bet amount required (minimum $0.01)' });
     }
 
-    let shortAmount = boostAmount;
-    let boostCents = toCents(boostAmount);
+    let shortAmount = actualBetAmount;
+    let boostCents = toCents(actualBetAmount);
     
     if (user.balance < boostCents) return res.status(400).json({ error: 'Insufficient balance' });
     user.balance = Math.max(0, user.balance - boostCents);
@@ -1671,22 +1681,24 @@ app.post('/divides/vote', auth, async (req, res) => {
       user.wagerRequirement = Math.max(0, user.wagerRequirement - boostCents);
     }
 
-    const existing = divide.votes.find(v => v.userId === req.userId);
+    // Use 'shorts' array (model field name) - find existing short position
+    const existing = divide.shorts.find(s => s.userId === req.userId);
     if (existing) {
       if (divide.isUserCreated && divide.creatorId === req.userId && divide.creatorSide && side !== divide.creatorSide) {
         return res.status(400).json({ error: 'Creator is locked to their chosen side' });
       } else {
-        existing.voteCount += shortAmount;
+        existing.shortAmount = (existing.shortAmount || 0) + shortAmount;
         existing.side = side;
       }
     } else {
-      divide.votes.push({ userId: req.userId, side, voteCount: shortAmount });
+      divide.shorts.push({ userId: req.userId, side, shortAmount: shortAmount });
     }
 
-    divide.totalVotes += shortAmount;
-    if (side === 'A') divide.votesA += shortAmount;
-    else divide.votesB += shortAmount;
-    divide.pot = Number((divide.pot + boostAmount).toFixed(2));
+    // Use model field names: shortsA, shortsB, totalShorts
+    divide.totalShorts = (divide.totalShorts || 0) + shortAmount;
+    if (side === 'A') divide.shortsA = (divide.shortsA || 0) + shortAmount;
+    else divide.shortsB = (divide.shortsB || 0) + shortAmount;
+    divide.pot = Number((divide.pot + actualBetAmount).toFixed(2));
 
     // Track vote history for chart + transparency (revealed after divide ends)
     if (!divide.voteHistory) divide.voteHistory = [];
@@ -1695,16 +1707,16 @@ app.post('/divides/vote', auth, async (req, res) => {
       username: user.username,
       userId: req.userId,
       side: side,
-      amount: boostAmount,
-      shortsA: divide.votesA,
-      shortsB: divide.votesB,
+      amount: actualBetAmount,
+      shortsA: divide.shortsA,
+      shortsB: divide.shortsB,
       pot: divide.pot,
     });
 
     user.totalBets = (user.totalBets || 0) + 1;
     user.wagered = (user.wagered || 0) + boostCents;
     
-    await awardXp(req.userId, 'usdWager', boostCents, { divideId: divide.id || divide._id, side, amount: boostAmount });
+    await awardXp(req.userId, 'usdWager', boostCents, { divideId: divide.id || divide._id, side, amount: actualBetAmount });
 
     await divide.save();
     await user.save();
@@ -1714,15 +1726,15 @@ app.post('/divides/vote', auth, async (req, res) => {
 
     await Ledger.create({
       type: 'divides_bet',
-      amount: Number(boostAmount),
+      amount: Number(actualBetAmount),
       userId: req.userId,
       divideId: divide.id || divide._id,
       meta: { side }
     });
 
-    // SECURITY: Emit sanitized divide data (hides vote counts for active divides)
+    // SECURITY: Emit sanitized divide data (hides short counts for active divides)
     io.emit('voteUpdate', sanitizeDivide(divide));
-    // SECURITY: Only return pot (total volume), not individual vote counts
+    // SECURITY: Only return pot (total volume), not individual short counts
     res.json({ balance: toDollars(user.balance), pot: divide.pot });
   } catch (err) {
     console.error('POST /divides/vote ERROR:', err);
@@ -1734,8 +1746,10 @@ app.post('/divides/vote', auth, async (req, res) => {
 // Alias for capital D route
 app.post('/Divides/vote', auth, async (req, res) => {
   try {
-    const { divideId: rawDivideId, side, boostAmount = 0, id: altId, _id: alt_id } = req.body;
+    const { divideId: rawDivideId, side, boostAmount = 0, bet = 0, id: altId, _id: alt_id } = req.body;
     const divideId = rawDivideId || altId || alt_id;
+    // Accept both 'bet' (from VoteWithBetModal) and 'boostAmount' (legacy)
+    const actualBetAmount = bet || boostAmount;
     if (!['A', 'B'].includes(side)) return res.status(400).json({ error: 'Invalid side' });
 
     let divide = await Divide.findOne({ id: divideId });
@@ -1754,12 +1768,12 @@ app.post('/Divides/vote', auth, async (req, res) => {
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    if (!boostAmount || boostAmount <= 0) {
+    if (!actualBetAmount || actualBetAmount <= 0) {
       return res.status(400).json({ error: 'Bet amount required (minimum $0.01)' });
     }
 
-    let shortAmount = boostAmount;
-    let boostCents = toCents(boostAmount);
+    let shortAmount = actualBetAmount;
+    let boostCents = toCents(actualBetAmount);
     
     if (user.balance < boostCents) return res.status(400).json({ error: 'Insufficient balance' });
     user.balance = Math.max(0, user.balance - boostCents);
@@ -1768,22 +1782,24 @@ app.post('/Divides/vote', auth, async (req, res) => {
       user.wagerRequirement = Math.max(0, user.wagerRequirement - boostCents);
     }
 
-    const existing = divide.votes.find(v => v.userId === req.userId);
+    // Use 'shorts' array (model field name) - find existing short position
+    const existing = divide.shorts.find(s => s.userId === req.userId);
     if (existing) {
       if (divide.isUserCreated && divide.creatorId === req.userId && divide.creatorSide && side !== divide.creatorSide) {
         return res.status(400).json({ error: 'Creator is locked to their chosen side' });
       } else {
-        existing.voteCount += shortAmount;
+        existing.shortAmount = (existing.shortAmount || 0) + shortAmount;
         existing.side = side;
       }
     } else {
-      divide.votes.push({ userId: req.userId, side, voteCount: shortAmount });
+      divide.shorts.push({ userId: req.userId, side, shortAmount: shortAmount });
     }
 
-    divide.totalVotes += shortAmount;
-    if (side === 'A') divide.votesA += shortAmount;
-    else divide.votesB += shortAmount;
-    divide.pot = Number((divide.pot + boostAmount).toFixed(2));
+    // Use model field names: shortsA, shortsB, totalShorts
+    divide.totalShorts = (divide.totalShorts || 0) + shortAmount;
+    if (side === 'A') divide.shortsA = (divide.shortsA || 0) + shortAmount;
+    else divide.shortsB = (divide.shortsB || 0) + shortAmount;
+    divide.pot = Number((divide.pot + actualBetAmount).toFixed(2));
 
     // Track vote history for chart + transparency (revealed after divide ends)
     if (!divide.voteHistory) divide.voteHistory = [];
@@ -1792,16 +1808,16 @@ app.post('/Divides/vote', auth, async (req, res) => {
       username: user.username,
       userId: req.userId,
       side: side,
-      amount: boostAmount,
-      shortsA: divide.votesA,
-      shortsB: divide.votesB,
+      amount: actualBetAmount,
+      shortsA: divide.shortsA,
+      shortsB: divide.shortsB,
       pot: divide.pot,
     });
 
     user.totalBets = (user.totalBets || 0) + 1;
     user.wagered = (user.wagered || 0) + boostCents;
     
-    await awardXp(req.userId, 'usdWager', boostCents, { divideId: divide.id || divide._id, side, amount: boostAmount });
+    await awardXp(req.userId, 'usdWager', boostCents, { divideId: divide.id || divide._id, side, amount: actualBetAmount });
 
     await divide.save();
     await user.save();
@@ -1811,15 +1827,15 @@ app.post('/Divides/vote', auth, async (req, res) => {
 
     await Ledger.create({
       type: 'divides_bet',
-      amount: Number(boostAmount),
+      amount: Number(actualBetAmount),
       userId: req.userId,
       divideId: divide.id || divide._id,
       meta: { side }
     });
 
-    // SECURITY: Emit sanitized divide data (hides vote counts for active divides)
+    // SECURITY: Emit sanitized divide data (hides short counts for active divides)
     io.emit('voteUpdate', sanitizeDivide(divide));
-    // SECURITY: Only return pot (total volume), not individual vote counts
+    // SECURITY: Only return pot (total volume), not individual short counts
     res.json({ balance: toDollars(user.balance), pot: divide.pot });
   } catch (err) {
     console.error('POST /Divides/vote ERROR:', err);
@@ -1846,12 +1862,15 @@ async function endDivideById(divideId, userId) {
     if (!divide || divide.status !== 'active') return null;
 
     divide.status = 'ended';
-    const minority = divide.votesA < divide.votesB ? 'A' : 'B';
+    // Use model field names: shortsA, shortsB
+    const minority = (divide.shortsA || 0) < (divide.shortsB || 0) ? 'A' : 'B';
     const winnerSide = minority;
     divide.winnerSide = winnerSide;
+    divide.loserSide = winnerSide === 'A' ? 'B' : 'A'; // The side with more shorts loses
 
-    const winners = divide.votes.filter(v => v.side === winnerSide);
-    const totalWinnerVotes = winners.reduce((sum, w) => sum + w.voteCount, 0);
+    // Use 'shorts' array and 'shortAmount' field (model field names)
+    const winners = (divide.shorts || []).filter(s => s.side === winnerSide);
+    const totalWinnerShorts = winners.reduce((sum, w) => sum + (w.shortAmount || 0), 0);
 
     const pot = Number(divide.pot);
     
@@ -1864,12 +1883,12 @@ async function endDivideById(divideId, userId) {
     const creatorBonusPool = pot * 0.005;    // 0.5% creator bonus pool
     const winnerPool = pot * 0.97;           // 97% winner pool (sacred, never changes)
     
-    // Calculate creator's contribution to the pot
+    // Calculate creator's contribution to the pot (use 'shorts' array)
     let creatorContribution = 0;
     if (divide.creatorId) {
-      const creatorVote = divide.votes.find(v => v.userId === divide.creatorId);
-      if (creatorVote) {
-        creatorContribution = creatorVote.voteCount || 0;
+      const creatorShort = (divide.shorts || []).find(s => s.userId === divide.creatorId);
+      if (creatorShort) {
+        creatorContribution = creatorShort.shortAmount || 0;
       }
     }
     
@@ -1921,8 +1940,8 @@ async function endDivideById(divideId, userId) {
 
     // Distribute 97% winner pool to minority side
     // EDGE CASE: If minority is 0% (all bets on one side), house takes 100% of the pot
-    if (totalWinnerVotes === 0) {
-      // No minority voters = everyone bet on the same side = house takes all
+    if (totalWinnerShorts === 0) {
+      // No minority = everyone shorted the same side = house takes all
       const fullPotToHouse = winnerPool; // The 97% that would have gone to winners
       
       await House.findOneAndUpdate(
@@ -1946,16 +1965,16 @@ async function endDivideById(divideId, userId) {
         divideId: divide.id || divide._id,
         meta: { 
           pot, 
-          reason: 'All bets on one side (0% minority)',
+          reason: 'All shorts on one side (0% minority)',
           winnerSide,
-          votesA: divide.votesA,
-          votesB: divide.votesB
+          shortsA: divide.shortsA,
+          shortsB: divide.shortsB
         }
       });
     } else {
-      // Normal case: distribute to minority winners
+      // Normal case: distribute to minority winners (use shortAmount field)
       for (const w of winners) {
-        const share = (w.voteCount / totalWinnerVotes) * winnerPool;
+        const share = ((w.shortAmount || 0) / totalWinnerShorts) * winnerPool;
         const shareCents = toCents(share);
 
         await User.findByIdAndUpdate(w.userId, { $inc: { balance: shareCents } });
@@ -2062,12 +2081,13 @@ app.post('/divides/:id/recreate', auth, adminOnly, async (req, res) => {
       soundA: orig.soundA || '',
       soundB: orig.soundB || '',
       endTime: newEnd,
-      votesA: 0,
-      votesB: 0,
-      totalVotes: 0,
+      // Use correct model field names
+      shortsA: 0,
+      shortsB: 0,
+      totalShorts: 0,
       pot: 0,
       status: 'active',
-      votes: [],
+      shorts: [],
       creatorId: req.userId,
       createdAt: now
     });
@@ -2177,6 +2197,86 @@ app.post('/divides/:id/dislike', auth, async (req, res) => {
   }
 });
 
+// API-prefixed aliases for like/dislike (frontend uses /api/divides/:id/like)
+app.post('/api/divides/:id/like', auth, async (req, res) => {
+  try {
+    const divideId = req.params.id;
+    let divide = await Divide.findOne({ id: divideId });
+    if (!divide) divide = await Divide.findById(divideId);
+    if (!divide) return res.status(404).json({ error: 'Divide not found' });
+
+    const userId = req.userId;
+    
+    const alreadyLiked = (divide.likedBy || []).includes(userId);
+    const alreadyDisliked = (divide.dislikedBy || []).includes(userId);
+    
+    if (alreadyLiked) {
+      return res.status(400).json({ error: 'Already liked this divide' });
+    }
+    if (alreadyDisliked) {
+      return res.status(400).json({ error: 'You already disliked this divide - reactions are locked' });
+    }
+
+    divide.likedBy = divide.likedBy || [];
+    divide.likedBy.push(userId);
+    divide.likes = (divide.likes || 0) + 1;
+    await divide.save();
+
+    await awardXp(req.userId, 'likeGiven', 0, { divideId: divide.id || divide._id });
+    if (divide.creatorId) {
+      await awardXp(divide.creatorId, 'likeReceived', 0, { divideId: divide.id || divide._id });
+    }
+
+    res.json({ success: true, likes: divide.likes, likedBy: divide.likedBy, dislikedBy: divide.dislikedBy });
+  } catch (err) {
+    console.error('POST /api/divides/:id/like', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.post('/api/divides/:id/dislike', auth, async (req, res) => {
+  try {
+    const divideId = req.params.id;
+    let divide = await Divide.findOne({ id: divideId });
+    if (!divide) divide = await Divide.findById(divideId);
+    if (!divide) return res.status(404).json({ error: 'Divide not found' });
+
+    const userId = req.userId;
+    
+    const alreadyLiked = (divide.likedBy || []).includes(userId);
+    const alreadyDisliked = (divide.dislikedBy || []).includes(userId);
+    
+    if (alreadyDisliked) {
+      return res.status(400).json({ error: 'Already disliked this divide' });
+    }
+    if (alreadyLiked) {
+      return res.status(400).json({ error: 'You already liked this divide - reactions are locked' });
+    }
+
+    divide.dislikedBy = divide.dislikedBy || [];
+    divide.dislikedBy.push(userId);
+    divide.dislikes = (divide.dislikes || 0) + 1;
+    await divide.save();
+
+    await UserEngagement.create({
+      userId: req.userId,
+      type: 'dislikeGiven',
+      xpAwarded: 0,
+      metadata: { divideId: divide.id || divide._id },
+      timestamp: new Date()
+    });
+
+    if (divide.creatorId) {
+      await awardXp(divide.creatorId, 'dislikeReceived', 0, { divideId: divide.id || divide._id });
+    }
+
+    res.json({ success: true, dislikes: divide.dislikes, likedBy: divide.likedBy, dislikedBy: divide.dislikedBy });
+  } catch (err) {
+    console.error('POST /api/divides/:id/dislike', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // ==========================================
 // DIVIDE DETAIL & COMMENTS
 // ==========================================
@@ -2200,9 +2300,14 @@ app.get('/api/divides/:id', async (req, res) => {
       imageA: divide.imageA,
       imageB: divide.imageB,
       category: divide.category,
-      // SECURITY: Only reveal vote counts after divide has ended
-      votesA: isActive ? null : divide.votesA,
-      votesB: isActive ? null : divide.votesB,
+      // SECURITY: Only reveal short counts after divide has ended
+      // These fields reveal which side is winning - MUST be hidden for active
+      shortsA: isActive ? null : divide.shortsA,
+      shortsB: isActive ? null : divide.shortsB,
+      totalShorts: isActive ? null : divide.totalShorts,
+      // Legacy fields (map from shorts to votes for frontend compatibility)
+      votesA: isActive ? null : divide.shortsA,
+      votesB: isActive ? null : divide.shortsB,
       pot: divide.pot, // Pot (total volume) is safe to show
       endTime: divide.endTime,
       status: divide.status,
@@ -2214,8 +2319,10 @@ app.get('/api/divides/:id', async (req, res) => {
       dislikedBy: divide.dislikedBy,
       createdAt: divide.createdAt,
       isUserCreated: divide.isUserCreated,
-      // SECURITY: Only reveal vote history after ending
+      // SECURITY: Only reveal vote history after ending - contains shortsA/shortsB per entry
       voteHistory: isActive ? [] : (divide.voteHistory || []),
+      // SECURITY: Only reveal individual shorts after ending
+      shorts: isActive ? [] : (divide.shorts || []),
     };
 
     res.json(response);
@@ -2236,18 +2343,23 @@ app.get('/api/divides/recent-eats', async (req, res) => {
     // Calculate stats for each divide (with error handling for malformed data)
     const results = recentDivides.map(d => {
       try {
-        const totalA = d.totalA || 0;
-        const totalB = d.totalB || 0;
-        const pot = totalA + totalB;
-        const winnerSide = d.winnerSide || 'A';
+        // Use shortsA/shortsB (the actual model fields)
+        const shortsA = d.shortsA || 0;
+        const shortsB = d.shortsB || 0;
+        const pot = d.pot || (shortsA + shortsB) || 0;
         
-        // Count winners safely
-        const winnerVotes = Array.isArray(d.voteHistory) 
-          ? d.voteHistory.filter(v => v && v.side === winnerSide)
+        // loserSide is the side that lost (had more shorts)
+        // winnerSide is the minority (fewer shorts) - they win
+        const loserSide = d.loserSide || 'A';
+        const winnerSide = loserSide === 'A' ? 'B' : 'A';
+        
+        // Count winners safely from shorts array
+        const winnerVotes = Array.isArray(d.shorts) 
+          ? d.shorts.filter(v => v && v.side === winnerSide)
           : [];
         
         // Calculate minority percentage (what % of pot was on minority/winning side)
-        const minorityAmount = winnerSide === 'A' ? totalA : totalB;
+        const minorityAmount = winnerSide === 'A' ? shortsA : shortsB;
         const minorityPct = pot > 0 ? Math.round((minorityAmount / pot) * 100) : 0;
 
         return {
@@ -2579,7 +2691,7 @@ app.post('/api/support/tickets', auth, async (req, res) => {
     const ticket = await SupportTicket.create({
       userId: req.userId,
       subject,
-      message,
+      description: message, // Model uses 'description' field
       category: category || 'general',
       status: 'open',
       createdAt: new Date()

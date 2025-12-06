@@ -169,25 +169,14 @@ export default function Divides({ onOpenChat }) {
     const socket = io(API_BASE, { withCredentials: true });
 
     socket.on("connect", () => {
-      console.log("🟢 Connected to Divide socket");
+      // Connected to socket
     });
 
     socket.on("voteUpdate", (updatedDivide) => {
-      console.log("🔁 Live update:", updatedDivide);
       try {
         // compute delta vs local copy in the state updater for accurate comparison
         setDivides((prev) => {
           const id = updatedDivide._id || updatedDivide.id;
-          const existing = prev.find((d) => d._id === id || d.id === id);
-          const prevA = existing ? (existing.votesA || 0) : 0;
-          const prevB = existing ? (existing.votesB || 0) : 0;
-          console.debug('[Divides] voteUpdate payload', {
-            id,
-            votesA: updatedDivide.votesA,
-            votesB: updatedDivide.votesB,
-            delta: { A: (updatedDivide.votesA || 0) - prevA, B: (updatedDivide.votesB || 0) - prevB },
-            time: new Date().toISOString()
-          });
           return prev.map((d) => (d._id === id || d.id === id ? { ...d, ...updatedDivide } : d));
         });
         // preload sounds if included in update
@@ -198,7 +187,6 @@ export default function Divides({ onOpenChat }) {
     });
 
     socket.on("newDivide", (newDivide) => {
-      console.log("🆕 New divide:", newDivide);
       setDivides((prev) => {
         const id = newDivide._id || newDivide.id;
         // replace if exists, otherwise append
@@ -210,7 +198,6 @@ export default function Divides({ onOpenChat }) {
     });
 
     socket.on("divideEnded", (ended) => {
-      console.log("🏁 Divide ended:", ended);
       const endedId = typeof ended === 'object' ? (ended._id || ended.id) : ended;
       setDivides((prev) => prev.filter((d) => d._id !== endedId && d.id !== endedId));
       // refresh treasury totals when a round ends
@@ -233,7 +220,6 @@ export default function Divides({ onOpenChat }) {
     // ensure we have the latest divide locally before attempting to vote
     let target = divides.find((d) => d._id === divideId || d.id === divideId);
     if (!target) {
-      console.log('Target divide missing locally, refreshing list...', { divideId });
       await fetchDivides();
       target = divides.find((d) => d._id === divideId || d.id === divideId);
       if (!target) {
@@ -245,7 +231,6 @@ export default function Divides({ onOpenChat }) {
     // Note: play sound only after vote succeeds (avoid playing on accidental clicks)
 
     if (target.status && target.status !== "active") {
-      console.log('Client prevented vote: target not active', { divideId, status: target.status });
       alert("This divide is no longer active");
       return;
     }

@@ -8,6 +8,7 @@ import AdminLedger from "./pages/AdminLedger.jsx";
 import AuthModal from "./components/AuthModal.jsx";
 import Header from "./components/Header.jsx";
 import ChatSidebar from "./components/ChatSidebar.jsx";
+import Footer from "./components/Footer.jsx";
 import ProfilePage from "./pages/ProfileNew.jsx";
 import Support from "./pages/Support.jsx";
 import SupportDashboard from "./pages/SupportDashboard.jsx";
@@ -25,6 +26,13 @@ import OAuthLoginHandler from "./components/OAuthLoginHandler.jsx";
 import SocialFeed from "./components/SocialFeed.jsx";
 import PostDetail from "./pages/PostDetail.jsx";
 import WalletPage from "./pages/WalletPage.jsx";
+// Legal pages
+import TermsOfService from "./pages/TermsOfService.jsx";
+import PrivacyPolicy from "./pages/PrivacyPolicy.jsx";
+import CookiePolicy from "./pages/CookiePolicy.jsx";
+import Disclaimer from "./pages/Disclaimer.jsx";
+import AMLPolicy from "./pages/AMLPolicy.jsx";
+import ResponsibleGaming from "./pages/ResponsibleGaming.jsx";
 
 function ProtectedRoute({ children, requiredRole = null }) {
   const { user } = React.useContext(AuthContext);
@@ -78,6 +86,14 @@ export default function DesktopApp() {
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/link-discord" element={<DiscordLinkHandler />} />
 
+            {/* Legal pages */}
+            <Route path="/terms" element={<TermsOfService />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/cookies" element={<CookiePolicy />} />
+            <Route path="/disclaimer" element={<Disclaimer />} />
+            <Route path="/aml" element={<AMLPolicy />} />
+            <Route path="/responsible-gaming" element={<ResponsibleGaming />} />
+
             {/* Admin routes */}
             <Route
               path="/admin"
@@ -104,6 +120,9 @@ export default function DesktopApp() {
               }
             />
           </Routes>
+          
+          {/* Footer - visible on all pages */}
+          <Footer />
         </main>
 
         {/* Right chat sidebar */}
