@@ -67,8 +67,8 @@ export default function Header() {
         }}>
 
           {/* Logo */}
-          <Link 
-            to="/" 
+          <Link
+            to="/"
             style={{
               textDecoration: 'none',
               display: 'flex',
@@ -93,35 +93,75 @@ export default function Header() {
           <nav style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '24px',
+            gap: '8px',
             marginLeft: '32px',
           }}>
             <Link
               to="/"
               style={{
                 textDecoration: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px 16px',
+                borderRadius: '10px',
                 fontSize: '14px',
-                fontWeight: '500',
-                color: 'rgba(255,255,255,0.6)',
-                transition: 'color 0.15s ease',
+                fontWeight: '600',
+                color: 'rgba(255,255,255,0.85)',
+                background: 'linear-gradient(135deg, rgba(255,23,68,0.15) 0%, rgba(124,77,255,0.15) 100%)',
+                border: '1px solid rgba(255,23,68,0.2)',
+                transition: 'all 0.2s ease',
               }}
-              onMouseEnter={(e) => e.currentTarget.style.color = '#fff'}
-              onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.6)'}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255,23,68,0.25) 0%, rgba(124,77,255,0.25) 100%)';
+                e.currentTarget.style.borderColor = 'rgba(255,23,68,0.4)';
+                e.currentTarget.style.color = '#fff';
+                e.currentTarget.style.transform = 'translateY(-1px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255,23,68,0.15) 0%, rgba(124,77,255,0.15) 100%)';
+                e.currentTarget.style.borderColor = 'rgba(255,23,68,0.2)';
+                e.currentTarget.style.color = 'rgba(255,255,255,0.85)';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
             >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+              </svg>
               Divides
             </Link>
             <Link
               to="/feed"
               style={{
                 textDecoration: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px 16px',
+                borderRadius: '10px',
                 fontSize: '14px',
-                fontWeight: '500',
-                color: 'rgba(255,255,255,0.6)',
-                transition: 'color 0.15s ease',
+                fontWeight: '600',
+                color: 'rgba(255,255,255,0.85)',
+                background: 'linear-gradient(135deg, rgba(41,121,255,0.15) 0%, rgba(0,230,118,0.15) 100%)',
+                border: '1px solid rgba(41,121,255,0.2)',
+                transition: 'all 0.2s ease',
               }}
-              onMouseEnter={(e) => e.currentTarget.style.color = '#fff'}
-              onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.6)'}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(41,121,255,0.25) 0%, rgba(0,230,118,0.25) 100%)';
+                e.currentTarget.style.borderColor = 'rgba(41,121,255,0.4)';
+                e.currentTarget.style.color = '#fff';
+                e.currentTarget.style.transform = 'translateY(-1px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(41,121,255,0.15) 0%, rgba(0,230,118,0.15) 100%)';
+                e.currentTarget.style.borderColor = 'rgba(41,121,255,0.2)';
+                e.currentTarget.style.color = 'rgba(255,255,255,0.85)';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
             >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2" />
+              </svg>
               Feed
             </Link>
           </nav>
@@ -193,7 +233,7 @@ export default function Header() {
               }}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
+                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
               </svg>
               <span>VIP</span>
             </button>
@@ -231,8 +271,6 @@ export default function Header() {
 
             {user ? (
               <>
-                {/* Notification Bell */}
-                <NotificationBell />
 
                 {/* Balance */}
                 <div style={{
@@ -304,26 +342,33 @@ export default function Header() {
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '8px',
-                      padding: '6px 12px',
-                      borderRadius: '8px',
-                      border: '1px solid rgba(255,255,255,0.08)',
-                      background: 'transparent',
-                      color: 'rgba(255,255,255,0.7)',
-                      fontSize: '13px',
-                      fontWeight: '500',
+                      gap: '10px',
+                      padding: '8px 16px',
+                      borderRadius: '12px',
+                      border: '1px solid rgba(255,255,255,0.12)',
+                      background: 'linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)',
+                      color: 'rgba(255,255,255,0.9)',
+                      fontSize: '14px',
+                      fontWeight: '600',
                       cursor: 'pointer',
-                      transition: 'all 0.15s ease',
+                      transition: 'all 0.2s ease',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+                      e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.04) 100%)';
+                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)';
+                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)';
+                      e.currentTarget.style.transform = 'translateY(0)';
                     }}
                   >
-                    <UserAvatar user={user} size={20} />
+                    <UserAvatar user={user} size={28} />
                     <span style={{ letterSpacing: '-0.01em' }}>{user.username}</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ opacity: 0.5 }}>
+                      <path d="M6 9l6 6 6-6" />
+                    </svg>
                   </button>
 
                   <AnimatePresence>
@@ -376,7 +421,7 @@ export default function Header() {
                           >
                             Profile
                           </Link>
-                          
+
                           {isAdmin && (
                             <Link
                               to="/admin"
@@ -403,7 +448,7 @@ export default function Header() {
                               Admin
                             </Link>
                           )}
-                          
+
                           {isModerator && (
                             <Link
                               to="/support"
@@ -430,13 +475,13 @@ export default function Header() {
                               Support Dashboard
                             </Link>
                           )}
-                          
+
                           <div style={{
                             height: '1px',
                             background: 'rgba(255,255,255,0.06)',
                             margin: '4px 0',
                           }} />
-                          
+
                           <button
                             onClick={handleLogout}
                             style={{
@@ -471,6 +516,9 @@ export default function Header() {
                     )}
                   </AnimatePresence>
                 </div>
+
+                {/* Notification Bell - Right of profile */}
+                <NotificationBell />
               </>
             ) : (
               <button
@@ -508,12 +556,12 @@ export default function Header() {
         )}
         <UserSettingsModal isOpen={showSettingsModal} onClose={() => setShowSettingsModal(false)} />
       </header>
-      
-      {showSupportModal && <SupportTicket onClose={() => setShowSupportModal(false)} />}
+
+      {showSupportModal && <SupportTicket isOpen={showSupportModal} onClose={() => setShowSupportModal(false)} />}
       <HowItWorksModal isOpen={showHowItWorks} onClose={() => setShowHowItWorks(false)} />
-      <VipModal 
-        isOpen={showVipModal} 
-        onClose={() => setShowVipModal(false)} 
+      <VipModal
+        isOpen={showVipModal}
+        onClose={() => setShowVipModal(false)}
         currentTier={user?.vipTier || 'none'}
         wagerLast30Days={user?.wagerLast30Days || 0}
       />
