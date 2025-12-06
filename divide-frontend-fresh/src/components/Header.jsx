@@ -14,6 +14,7 @@ import DepositWithdrawModal from './DepositWithdrawModal.jsx';
 import SupportTicket from './SupportTicket.jsx';
 import NotificationBell from './NotificationBell.jsx';
 import HowItWorksModal from './HowItWorksModal.jsx';
+import VipModal from './VipModal.jsx';
 
 export default function Header() {
   const { user, logout } = useAuth();
@@ -27,6 +28,7 @@ export default function Header() {
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
+  const [showVipModal, setShowVipModal] = useState(false);
 
   const handleUserButton = () => {
     if (!user) {
@@ -160,6 +162,40 @@ export default function Header() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <span>How It Works</span>
+            </button>
+
+            {/* VIP Button */}
+            <button
+              onClick={() => setShowVipModal(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 12px',
+                borderRadius: '8px',
+                border: '1px solid rgba(255,215,0,0.2)',
+                background: 'linear-gradient(135deg, rgba(255,215,0,0.1) 0%, rgba(255,165,0,0.05) 100%)',
+                color: 'rgba(255,215,0,0.8)',
+                fontSize: '12px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255,215,0,0.2) 0%, rgba(255,165,0,0.1) 100%)';
+                e.currentTarget.style.color = '#FFD700';
+                e.currentTarget.style.borderColor = 'rgba(255,215,0,0.4)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255,215,0,0.1) 0%, rgba(255,165,0,0.05) 100%)';
+                e.currentTarget.style.color = 'rgba(255,215,0,0.8)';
+                e.currentTarget.style.borderColor = 'rgba(255,215,0,0.2)';
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
+              </svg>
+              <span>VIP</span>
             </button>
 
             {/* Support Button */}
@@ -475,6 +511,12 @@ export default function Header() {
       
       {showSupportModal && <SupportTicket onClose={() => setShowSupportModal(false)} />}
       <HowItWorksModal isOpen={showHowItWorks} onClose={() => setShowHowItWorks(false)} />
+      <VipModal 
+        isOpen={showVipModal} 
+        onClose={() => setShowVipModal(false)} 
+        currentTier={user?.vipTier || 'none'}
+        wagerLast30Days={user?.wagerLast30Days || 0}
+      />
     </>
   );
 }

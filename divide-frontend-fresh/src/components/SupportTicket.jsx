@@ -27,13 +27,18 @@ export default function SupportTicket({ onClose }) {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/support/ticket`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/support/tickets`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(token && { 'Authorization': `Bearer ${token}` })
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          subject: formData.subject,
+          message: formData.description,
+          category: formData.category,
+          email: formData.email
+        })
       });
 
       const data = await response.json();

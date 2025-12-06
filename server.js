@@ -1690,12 +1690,12 @@ app.post('/divides/vote', auth, async (req, res) => {
     user.wagered = (user.wagered || 0) + boostCents;
     
     await awardXp(req.userId, 'usdWager', boostCents, { divideId: divide.id || divide._id, side, amount: boostAmount });
-    
-    // Award VIP rakeback to Dividends balance
-    await awardRakeback(req.userId, boostCents);
 
     await divide.save();
     await user.save();
+    
+    // Award VIP rakeback to Dividends balance (AFTER user.save to avoid race condition)
+    await awardRakeback(req.userId, boostCents);
 
     await Ledger.create({
       type: 'divides_bet',
@@ -1787,12 +1787,12 @@ app.post('/Divides/vote', auth, async (req, res) => {
     user.wagered = (user.wagered || 0) + boostCents;
     
     await awardXp(req.userId, 'usdWager', boostCents, { divideId: divide.id || divide._id, side, amount: boostAmount });
-    
-    // Award VIP rakeback to Dividends balance
-    await awardRakeback(req.userId, boostCents);
 
     await divide.save();
     await user.save();
+    
+    // Award VIP rakeback to Dividends balance (AFTER user.save to avoid race condition)
+    await awardRakeback(req.userId, boostCents);
 
     await Ledger.create({
       type: 'divides_bet',
@@ -1905,7 +1905,40 @@ async function endDivideById(divideId, userId) {
     }
 
     // Distribute 97% winner pool to minority side
-    if (totalWinnerVotes > 0) {
+    // EDGE CASE: If minority is 0% (all bets on one side), house takes 100% of the pot
+    if (totalWinnerVotes === 0) {
+      // No minority voters = everyone bet on the same side = house takes all
+      const fullPotToHouse = winnerPool; // The 97% that would have gone to winners
+      
+      await House.findOneAndUpdate(
+        { id: 'global' },
+        { 
+          $inc: { 
+            houseTotal: toCents(fullPotToHouse),
+            noMinorityPots: toCents(fullPotToHouse)  // Track this edge case separately
+          } 
+        },
+        { upsert: true }
+      );
+      
+      console.log(`[Divide ${divide.id}] No minority (0%) - house takes full pot: $${fullPotToHouse.toFixed(2)}`);
+      
+      // Log to ledger for transparency
+      await Ledger.create({
+        type: 'house_no_minority',
+        amount: Number(fullPotToHouse),
+        userId: null,
+        divideId: divide.id || divide._id,
+        meta: { 
+          pot, 
+          reason: 'All bets on one side (0% minority)',
+          winnerSide,
+          votesA: divide.votesA,
+          votesB: divide.votesB
+        }
+      });
+    } else {
+      // Normal case: distribute to minority winners
       for (const w of winners) {
         const share = (w.voteCount / totalWinnerVotes) * winnerPool;
         const shareCents = toCents(share);
