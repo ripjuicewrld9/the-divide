@@ -5,7 +5,6 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { formatCurrency } from '../utils/format';
 import api from '../services/api';
-import DualLineChart from './DualLineChart';
 
 export default function DivideCard({
   divideId,
@@ -48,18 +47,18 @@ export default function DivideCard({
     const delta = Math.floor((new Date(endTime) - Date.now()) / 1000);
     return Math.max(0, delta);
   });
-  
+
   const isLocked = status === 'active' && seconds > 0 && seconds <= 5;
   const { user } = useAuth();
   const navigate = useNavigate();
   const isAdmin = user && user.role === 'admin';
   const votesHidden = leftVotes === null || leftVotes === undefined;
-  
+
   useEffect(() => { setL(Number(leftVotes) || 0); }, [leftVotes]);
   useEffect(() => { setR(Number(rightVotes) || 0); }, [rightVotes]);
   useEffect(() => { setLocalLikes(Number(likes) || 0); }, [likes]);
   useEffect(() => { setLocalDislikes(Number(dislikes) || 0); }, [dislikes]);
-  
+
   useEffect(() => {
     if (user && user.id) {
       setUserLiked((likedBy || []).includes(user.id));
@@ -87,7 +86,7 @@ export default function DivideCard({
           setSentiment(data.current);
         }
       })
-      .catch(() => {}); // Silently fail if no sentiment
+      .catch(() => { }); // Silently fail if no sentiment
   }, [divideId]);
 
   const total = l + r || 1;
@@ -216,28 +215,28 @@ export default function DivideCard({
         border: `1px solid ${colors.border}`,
         position: 'relative',
         transform: isHovered ? 'translateY(-3px)' : 'translateY(0)',
-        boxShadow: isHovered 
-          ? '0 12px 40px rgba(0, 0, 0, 0.35), 0 0 60px rgba(255, 23, 68, 0.08), 0 0 60px rgba(41, 121, 255, 0.08)' 
+        boxShadow: isHovered
+          ? '0 12px 40px rgba(0, 0, 0, 0.35), 0 0 60px rgba(255, 23, 68, 0.08), 0 0 60px rgba(41, 121, 255, 0.08)'
           : '0 4px 16px rgba(0, 0, 0, 0.2)',
       }}
     >
       {/* Header Row */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        marginBottom: '14px' 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '14px'
       }}>
-        <span style={{ 
-          fontSize: '10px', 
-          fontWeight: '600', 
+        <span style={{
+          fontSize: '10px',
+          fontWeight: '600',
           color: colors.text.muted,
           textTransform: 'uppercase',
           letterSpacing: '0.06em',
         }}>
           {category}
         </span>
-        
+
         {status === 'active' ? (
           <div style={{
             display: 'flex',
@@ -245,11 +244,11 @@ export default function DivideCard({
             gap: '6px',
             padding: '5px 12px',
             borderRadius: '20px',
-            background: seconds <= 300 
-              ? 'linear-gradient(135deg, rgba(255,23,68,0.15) 0%, rgba(255,23,68,0.08) 100%)' 
+            background: seconds <= 300
+              ? 'linear-gradient(135deg, rgba(255,23,68,0.15) 0%, rgba(255,23,68,0.08) 100%)'
               : 'linear-gradient(135deg, rgba(0,230,118,0.15) 0%, rgba(0,230,118,0.08) 100%)',
-            border: `1px solid ${seconds <= 300 
-              ? 'rgba(255, 23, 68, 0.3)' 
+            border: `1px solid ${seconds <= 300
+              ? 'rgba(255, 23, 68, 0.3)'
               : 'rgba(0, 230, 118, 0.3)'}`,
           }}>
             {seconds <= 300 ? null : (
@@ -262,8 +261,8 @@ export default function DivideCard({
                 animation: 'pulse-dot 2s ease-in-out infinite',
               }} />
             )}
-            <span style={{ 
-              fontSize: '12px', 
+            <span style={{
+              fontSize: '12px',
               fontWeight: '700',
               fontFamily: "'SF Mono', 'JetBrains Mono', monospace",
               color: seconds <= 300 ? '#ff1744' : '#00e676',
@@ -273,9 +272,9 @@ export default function DivideCard({
             </span>
           </div>
         ) : (
-          <span style={{ 
-            fontSize: '10px', 
-            fontWeight: '600', 
+          <span style={{
+            fontSize: '10px',
+            fontWeight: '600',
             color: colors.text.muted,
             background: 'rgba(113, 113, 122, 0.1)',
             padding: '4px 10px',
@@ -351,13 +350,13 @@ export default function DivideCard({
       )}
 
       {/* Options */}
-      <div style={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        gap: '8px', 
-        marginBottom: '16px', 
-        opacity: isLocked ? 0.2 : 1, 
-        pointerEvents: isLocked ? 'none' : 'auto' 
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+        marginBottom: '16px',
+        opacity: isLocked ? 0.2 : 1,
+        pointerEvents: isLocked ? 'none' : 'auto'
       }}>
         {/* Option A */}
         <div
@@ -370,8 +369,8 @@ export default function DivideCard({
             borderRadius: '12px',
             cursor: (status === 'active' && !isLocked) ? 'pointer' : 'default',
             transition: 'all 150ms cubic-bezier(0.16, 1, 0.3, 1)',
-            background: editingSide === 'left' 
-              ? 'linear-gradient(135deg, rgba(255,23,68,0.2) 0%, rgba(255,23,68,0.1) 100%)' 
+            background: editingSide === 'left'
+              ? 'linear-gradient(135deg, rgba(255,23,68,0.2) 0%, rgba(255,23,68,0.1) 100%)'
               : 'linear-gradient(135deg, rgba(255,23,68,0.12) 0%, rgba(255,23,68,0.06) 100%)',
             border: `1px solid ${editingSide === 'left' ? colors.red.primary : colors.red.border}`,
             boxShadow: editingSide === 'left' ? '0 0 20px rgba(255, 23, 68, 0.15)' : 'none',
@@ -399,31 +398,31 @@ export default function DivideCard({
                   outline: 'none',
                 }}
               />
-              <button 
-                onClick={(e) => { e.stopPropagation(); setEditingSide(null); }} 
-                style={{ 
-                  background: 'rgba(255, 255, 255, 0.06)', 
-                  border: 'none', 
-                  borderRadius: '6px', 
-                  padding: '8px 10px', 
-                  color: '#71717a', 
-                  fontSize: '12px', 
+              <button
+                onClick={(e) => { e.stopPropagation(); setEditingSide(null); }}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.06)',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '8px 10px',
+                  color: '#71717a',
+                  fontSize: '12px',
                   cursor: 'pointer',
                   transition: 'all 150ms ease',
                 }}
               >
                 ✕
               </button>
-              <button 
-                onClick={(e) => handleSubmitBet('left', e)} 
-                style={{ 
-                  background: 'linear-gradient(135deg, #ff1744 0%, #d32f2f 100%)', 
-                  border: 'none', 
-                  borderRadius: '8px', 
-                  padding: '8px 18px', 
-                  color: '#fff', 
-                  fontSize: '12px', 
-                  fontWeight: '700', 
+              <button
+                onClick={(e) => handleSubmitBet('left', e)}
+                style={{
+                  background: 'linear-gradient(135deg, #ff1744 0%, #d32f2f 100%)',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '8px 18px',
+                  color: '#fff',
+                  fontSize: '12px',
+                  fontWeight: '700',
                   cursor: 'pointer',
                   transition: 'all 150ms ease',
                   boxShadow: '0 4px 12px rgba(255, 23, 68, 0.3)',
@@ -434,20 +433,20 @@ export default function DivideCard({
             </div>
           ) : (
             <>
-              <span style={{ 
-                fontSize: '14px', 
-                fontWeight: '600', 
-                color: colors.text.primary, 
-                overflow: 'hidden', 
-                textOverflow: 'ellipsis', 
-                whiteSpace: 'nowrap', 
-                maxWidth: '65%' 
+              <span style={{
+                fontSize: '14px',
+                fontWeight: '600',
+                color: colors.text.primary,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                maxWidth: '65%'
               }}>
                 {left}
               </span>
-              <span style={{ 
-                fontSize: '16px', 
-                fontWeight: '800', 
+              <span style={{
+                fontSize: '16px',
+                fontWeight: '800',
                 fontFamily: "'SF Mono', 'JetBrains Mono', monospace",
                 color: colors.red.primary,
                 letterSpacing: '-0.02em',
@@ -499,30 +498,30 @@ export default function DivideCard({
                   outline: 'none',
                 }}
               />
-              <button 
-                onClick={(e) => { e.stopPropagation(); setEditingSide(null); }} 
-                style={{ 
-                  background: 'rgba(255, 255, 255, 0.06)', 
-                  border: 'none', 
-                  borderRadius: '6px', 
-                  padding: '8px 10px', 
-                  color: '#71717a', 
-                  fontSize: '12px', 
+              <button
+                onClick={(e) => { e.stopPropagation(); setEditingSide(null); }}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.06)',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '8px 10px',
+                  color: '#71717a',
+                  fontSize: '12px',
                   cursor: 'pointer',
                 }}
               >
                 ✕
               </button>
-              <button 
-                onClick={(e) => handleSubmitBet('right', e)} 
-                style={{ 
-                  background: 'linear-gradient(135deg, #448aff 0%, #2979ff 100%)', 
-                  border: 'none', 
-                  borderRadius: '8px', 
-                  padding: '8px 18px', 
-                  color: '#fff', 
-                  fontSize: '12px', 
-                  fontWeight: '700', 
+              <button
+                onClick={(e) => handleSubmitBet('right', e)}
+                style={{
+                  background: 'linear-gradient(135deg, #448aff 0%, #2979ff 100%)',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '8px 18px',
+                  color: '#fff',
+                  fontSize: '12px',
+                  fontWeight: '700',
                   cursor: 'pointer',
                   boxShadow: '0 4px 12px rgba(41, 121, 255, 0.3)',
                 }}
@@ -532,20 +531,20 @@ export default function DivideCard({
             </div>
           ) : (
             <>
-              <span style={{ 
-                fontSize: '14px', 
-                fontWeight: '600', 
-                color: colors.text.primary, 
-                overflow: 'hidden', 
-                textOverflow: 'ellipsis', 
-                whiteSpace: 'nowrap', 
-                maxWidth: '65%' 
+              <span style={{
+                fontSize: '14px',
+                fontWeight: '600',
+                color: colors.text.primary,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                maxWidth: '65%'
               }}>
                 {right}
               </span>
-              <span style={{ 
-                fontSize: '16px', 
-                fontWeight: '800', 
+              <span style={{
+                fontSize: '16px',
+                fontWeight: '800',
                 fontFamily: "'SF Mono', 'JetBrains Mono', monospace",
                 color: colors.blue.primary,
                 letterSpacing: '-0.02em',
@@ -591,9 +590,9 @@ export default function DivideCard({
               <span style={{
                 fontSize: '10px',
                 fontWeight: '700',
-                color: sentiment.optionA.label === 'bullish' ? '#22c55e' 
-                     : sentiment.optionA.label === 'bearish' ? '#ef4444' 
-                     : 'rgba(255,255,255,0.5)',
+                color: sentiment.optionA.label === 'bullish' ? '#22c55e'
+                  : sentiment.optionA.label === 'bearish' ? '#ef4444'
+                    : 'rgba(255,255,255,0.5)',
                 textTransform: 'uppercase',
               }}>
                 {sentiment.optionA.label === 'bullish' ? '↑' : sentiment.optionA.label === 'bearish' ? '↓' : '•'}
@@ -613,9 +612,9 @@ export default function DivideCard({
               <span style={{
                 fontSize: '10px',
                 fontWeight: '700',
-                color: sentiment.optionB.label === 'bullish' ? '#22c55e' 
-                     : sentiment.optionB.label === 'bearish' ? '#ef4444' 
-                     : 'rgba(255,255,255,0.5)',
+                color: sentiment.optionB.label === 'bullish' ? '#22c55e'
+                  : sentiment.optionB.label === 'bearish' ? '#ef4444'
+                    : 'rgba(255,255,255,0.5)',
                 textTransform: 'uppercase',
               }}>
                 {sentiment.optionB.label === 'bullish' ? '↑' : sentiment.optionB.label === 'bearish' ? '↓' : '•'}
@@ -633,46 +632,20 @@ export default function DivideCard({
         </div>
       )}
 
-      {/* Vote History Chart - Only show for ended divides with history */}
-      {status !== 'active' && voteHistory && voteHistory.length >= 1 && (
-        <div style={{
-          marginBottom: '12px',
-          padding: '12px',
-          borderRadius: '10px',
-          background: 'rgba(255, 255, 255, 0.02)',
-          border: '1px solid rgba(255, 255, 255, 0.04)',
-        }}>
-          <div style={{
-            fontSize: '9px',
-            fontWeight: '600',
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            color: 'rgba(255, 255, 255, 0.4)',
-            marginBottom: '8px',
-          }}>
-            Price History
-          </div>
-          <DualLineChart 
-            voteHistory={voteHistory}
-            optionALabel={left}
-            optionBLabel={right}
-            height={100}
-          />
-        </div>
-      )}
+
 
       {/* Footer */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
         alignItems: 'center',
         paddingTop: '16px',
         borderTop: '1px solid rgba(255, 255, 255, 0.06)',
       }}>
         {/* Volume */}
         <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-          <span style={{ 
-            fontSize: '11px', 
+          <span style={{
+            fontSize: '11px',
             color: colors.text.muted,
             fontWeight: '600',
             textTransform: 'uppercase',
@@ -680,8 +653,8 @@ export default function DivideCard({
           }}>
             Vol
           </span>
-          <span style={{ 
-            fontSize: '18px', 
+          <span style={{
+            fontSize: '18px',
             fontWeight: '800',
             fontFamily: "'SF Mono', 'JetBrains Mono', monospace",
             background: 'linear-gradient(135deg, #ff1744 0%, #d32f2f 35%, #7c4dff 65%, #2979ff 100%)',
@@ -693,13 +666,13 @@ export default function DivideCard({
             ${formatCurrency(pot, 0)}
           </span>
         </div>
-        
+
         {/* Reactions & Share */}
         <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-          <button 
+          <button
             onClick={handleLike}
             disabled={userLiked || userDisliked || status !== 'active'}
-            style={{ 
+            style={{
               background: 'transparent',
               border: 'none',
               padding: '4px 8px',
@@ -717,10 +690,10 @@ export default function DivideCard({
             <span style={{ fontSize: '11px' }}>↑</span>
             <span style={{ fontFamily: "'SF Mono', monospace", fontSize: '11px' }}>{localLikes}</span>
           </button>
-          <button 
+          <button
             onClick={handleDislike}
             disabled={userLiked || userDisliked || status !== 'active'}
-            style={{ 
+            style={{
               background: 'transparent',
               border: 'none',
               padding: '4px 8px',
@@ -738,7 +711,7 @@ export default function DivideCard({
             <span style={{ fontSize: '11px' }}>↓</span>
             <span style={{ fontFamily: "'SF Mono', monospace", fontSize: '11px' }}>{localDislikes}</span>
           </button>
-          
+
           {/* Share Button */}
           <button
             onClick={handleShare}
@@ -756,14 +729,14 @@ export default function DivideCard({
             }}
             title={copied ? 'Copied!' : 'Copy link'}
           >
-            <svg 
-              width="14" 
-              height="14" 
-              viewBox="0 0 24 24" 
-              fill="none" 
-              stroke="currentColor" 
-              strokeWidth="2" 
-              strokeLinecap="round" 
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
               strokeLinejoin="round"
             >
               <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
@@ -788,16 +761,16 @@ export default function DivideCard({
               alert('Market cancelled');
             } catch (err) { alert(err.message || 'Failed'); }
           }}
-          style={{ 
-            position: 'absolute', 
-            top: '10px', 
-            right: '10px', 
-            background: 'transparent', 
-            border: 'none', 
-            color: '#52525b', 
-            padding: '4px', 
-            borderRadius: '4px', 
-            fontSize: '10px', 
+          style={{
+            position: 'absolute',
+            top: '10px',
+            right: '10px',
+            background: 'transparent',
+            border: 'none',
+            color: '#52525b',
+            padding: '4px',
+            borderRadius: '4px',
+            fontSize: '10px',
             cursor: 'pointer',
             opacity: 0.5,
             transition: 'opacity 150ms ease',
