@@ -16,6 +16,8 @@ import { AuthContext } from '../context/AuthContext';
 import api from '../services/api';
 import html2canvas from 'html2canvas';
 import { formatCurrency } from '../utils/format';
+import DivideResolutionAnimation from '../components/DivideResolutionAnimation';
+import { SEODivide } from '../components/SEO';
 
 // Register Chart.js components
 ChartJS.register(
@@ -41,8 +43,11 @@ export default function DivideDetailPage() {
   const [loading, setLoading] = useState(true);
   const [betAmount, setBetAmount] = useState('');
   const [selectedSide, setSelectedSide] = useState(null);
+  const [positionMode, setPositionMode] = useState('short'); // 'long' or 'short' - default short
   const [seconds, setSeconds] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [showResolutionAnimation, setShowResolutionAnimation] = useState(false);
+  const [userPosition, setUserPosition] = useState(null);
 
   // Fetch divide details
   useEffect(() => {
@@ -54,6 +59,26 @@ export default function DivideDetailPage() {
           const delta = Math.floor((new Date(data.endTime) - Date.now()) / 1000);
           setSeconds(Math.max(0, delta));
         }
+
+        // If divide has ended and has a winner, show animation
+        // Check sessionStorage to avoid showing animation repeatedly
+        const animationKey = `divide_animation_shown_${id}`;
+        if (data.status !== 'active' && data.winnerSide && !sessionStorage.getItem(animationKey)) {
+          // Find user's position in this divide
+          if (user && data.voteHistory) {
+            const userVotes = data.voteHistory.filter(v =>
+              v.oddsMultiplier?.userId === user.id || v.userId === user.id
+            );
+            if (userVotes.length > 0) {
+              const totalAmount = userVotes.reduce((sum, v) => sum + (v.amount || 0), 0);
+              const userSide = userVotes[0].side;
+              setUserPosition({ side: userSide, amount: totalAmount });
+            }
+          }
+
+          setShowResolutionAnimation(true);
+          sessionStorage.setItem(animationKey, 'true');
+        }
       } catch (err) {
         console.error('Failed to fetch divide:', err);
       } finally {
@@ -61,7 +86,7 @@ export default function DivideDetailPage() {
       }
     };
     fetchDivide();
-  }, [id]);
+  }, [id, user]);
 
   // Fetch comments
   useEffect(() => {
@@ -100,14 +125,27 @@ export default function DivideDetailPage() {
   const handleVote = async () => {
     if (!user) return alert('Please log in');
     if (!selectedSide) return alert('Select a side');
+    if (!positionMode) return alert('Select Long or Short');
     const amount = parseFloat(betAmount);
     if (!amount || amount <= 0) return alert('Enter a valid amount');
+
+    // Map Long/Short + Side to actual betting side
+    // Long A = money to B (expect A majority, B minority wins)
+    // Short A = money to A (expect A minority wins)
+    // Long B = money to A (expect B majority, A minority wins)
+    // Short B = money to B (expect B minority wins)
+    let actualSide;
+    if (positionMode === 'long') {
+      actualSide = selectedSide === 'A' ? 'B' : 'A';
+    } else {
+      actualSide = selectedSide;
+    }
 
     setSubmitting(true);
     try {
       await api.post('/Divides/vote', {
         divideId: divide._id || divide.id,
-        side: selectedSide,
+        side: actualSide,
         boostAmount: amount,
       });
       // Refresh divide
@@ -115,8 +153,9 @@ export default function DivideDetailPage() {
       setDivide(updated);
       setBetAmount('');
       setSelectedSide(null);
+      setPositionMode(null);
     } catch (err) {
-      alert(err.message || 'Failed to place short');
+      alert(err.message || 'Failed to place position');
     } finally {
       setSubmitting(false);
     }
@@ -252,6 +291,14 @@ export default function DivideDetailPage() {
 
   return (
     <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto', color: '#e0e0e0' }}>
+      {/* Resolution Animation */}
+      <DivideResolutionAnimation
+        isOpen={showResolutionAnimation}
+        onClose={() => setShowResolutionAnimation(false)}
+        divide={divide}
+        userPosition={userPosition}
+      />
+
       {/* Back button */}
       <button
         onClick={() => navigate('/')}
@@ -263,6 +310,7 @@ export default function DivideDetailPage() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '24px' }}>
         {/* Main content */}
         <div>
+          <SEODivide divide={divide} />
           {/* Divide Card for snapshot */}
           <div ref={cardRef} style={{ background: '#16161a', borderRadius: '12px', padding: '20px', border: '1px solid #2a2a30', marginBottom: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
@@ -322,10 +370,13 @@ export default function DivideDetailPage() {
           {divide.status !== 'active' && (
             <div style={{ background: '#16161a', borderRadius: '12px', border: '1px solid #2a2a30', marginBottom: '20px', overflow: 'hidden' }}>
               {/* Header */}
-              <div style={{ 
-                padding: '16px 20px', 
+              <div style={{
+                padding: '16px 20px',
                 borderBottom: '1px solid #2a2a30',
                 background: 'linear-gradient(135deg, rgba(229, 57, 53, 0.1) 0%, rgba(30, 136, 229, 0.1) 100%)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style={{ width: '18px', height: '18px', color: '#888' }}><path fillRule="evenodd" d="M10.5 3.75a6.75 6.75 0 100 13.5 6.75 6.75 0 000-13.5zM2.25 10.5a8.25 8.25 0 1114.59 5.28l4.69 4.69a.75.75 0 11-1.06 1.06l-4.69-4.69A8.25 8.25 0 012.25 10.5z" clipRule="evenodd" /></svg>
@@ -334,24 +385,45 @@ export default function DivideDetailPage() {
                     <p style={{ fontSize: '10px', color: '#888', margin: '4px 0 0 0' }}>Every short, every payout, fully auditable</p>
                   </div>
                 </div>
+                {divide.winnerSide && (
+                  <button
+                    onClick={() => setShowResolutionAnimation(true)}
+                    style={{
+                      background: 'linear-gradient(135deg, #e53935 0%, #1e88e5 100%)',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '8px 16px',
+                      color: '#fff',
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      boxShadow: '0 4px 12px rgba(229, 57, 53, 0.3)',
+                    }}
+                  >
+                    <span>🎬</span> Replay Result
+                  </button>
+                )}
               </div>
 
               <div style={{ padding: '20px' }}>
                 {/* Final Amounts Per Side */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
-                  <div style={{ 
-                    background: 'rgba(229, 57, 53, 0.1)', 
+                  <div style={{
+                    background: 'rgba(229, 57, 53, 0.1)',
                     border: `2px solid ${divide.winnerSide === 'A' ? '#4ade80' : 'rgba(229, 57, 53, 0.3)'}`,
-                    borderRadius: '10px', 
+                    borderRadius: '10px',
                     padding: '16px',
                     position: 'relative',
                   }}>
                     {divide.winnerSide === 'A' && (
-                      <div style={{ 
-                        position: 'absolute', top: '-8px', right: '-8px', 
-                        background: '#4ade80', color: '#000', 
-                        padding: '2px 8px', borderRadius: '12px', 
-                        fontSize: '9px', fontWeight: '700' 
+                      <div style={{
+                        position: 'absolute', top: '-8px', right: '-8px',
+                        background: '#4ade80', color: '#000',
+                        padding: '2px 8px', borderRadius: '12px',
+                        fontSize: '9px', fontWeight: '700'
                       }}>
                         ✓ WINNER
                       </div>
@@ -368,19 +440,19 @@ export default function DivideDetailPage() {
                       })()}
                     </div>
                   </div>
-                  <div style={{ 
-                    background: 'rgba(30, 136, 229, 0.1)', 
+                  <div style={{
+                    background: 'rgba(30, 136, 229, 0.1)',
                     border: `2px solid ${divide.winnerSide === 'B' ? '#4ade80' : 'rgba(30, 136, 229, 0.3)'}`,
-                    borderRadius: '10px', 
+                    borderRadius: '10px',
                     padding: '16px',
                     position: 'relative',
                   }}>
                     {divide.winnerSide === 'B' && (
-                      <div style={{ 
-                        position: 'absolute', top: '-8px', right: '-8px', 
-                        background: '#4ade80', color: '#000', 
-                        padding: '2px 8px', borderRadius: '12px', 
-                        fontSize: '9px', fontWeight: '700' 
+                      <div style={{
+                        position: 'absolute', top: '-8px', right: '-8px',
+                        background: '#4ade80', color: '#000',
+                        padding: '2px 8px', borderRadius: '12px',
+                        fontSize: '9px', fontWeight: '700'
                       }}>
                         ✓ WINNER
                       </div>
@@ -400,10 +472,10 @@ export default function DivideDetailPage() {
                 </div>
 
                 {/* Pot Breakdown */}
-                <div style={{ 
-                  background: '#0d0d0f', 
-                  borderRadius: '10px', 
-                  padding: '16px', 
+                <div style={{
+                  background: '#0d0d0f',
+                  borderRadius: '10px',
+                  padding: '16px',
                   marginBottom: '20px',
                   border: '1px solid #1a1a1a',
                 }}>
@@ -434,10 +506,10 @@ export default function DivideDetailPage() {
 
                 {/* All Shorts - Timestamped Transaction Log */}
                 {divide.voteHistory && divide.voteHistory.length > 0 && (
-                  <div style={{ 
-                    background: '#0d0d0f', 
-                    borderRadius: '10px', 
-                    padding: '16px', 
+                  <div style={{
+                    background: '#0d0d0f',
+                    borderRadius: '10px',
+                    padding: '16px',
                     border: '1px solid #1a1a1a',
                   }}>
                     <h4 style={{ fontSize: '12px', fontWeight: '700', color: '#888', marginBottom: '12px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -461,7 +533,7 @@ export default function DivideDetailPage() {
                             const timestamp = new Date(vote.timestamp);
                             const timeStr = timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                             const dateStr = timestamp.toLocaleDateString([], { month: 'short', day: 'numeric' });
-                            
+
                             return (
                               <tr key={i} style={{ borderBottom: '1px solid #1a1a1a' }}>
                                 <td style={{ padding: '8px 4px', color: '#666' }}>
@@ -472,9 +544,9 @@ export default function DivideDetailPage() {
                                   {vote.username || vote.oddsMultiplier?.username || `User ${(vote.oddsMultiplier?.oddsAt || '').toString().slice(-4)}`}
                                 </td>
                                 <td style={{ padding: '8px 4px', textAlign: 'center' }}>
-                                  <span style={{ 
+                                  <span style={{
                                     display: 'inline-block',
-                                    padding: '2px 8px', 
+                                    padding: '2px 8px',
                                     borderRadius: '4px',
                                     fontSize: '10px',
                                     fontWeight: '600',
@@ -612,103 +684,208 @@ export default function DivideDetailPage() {
           </div>
         </div>
 
-        {/* Sidebar - Short Area */}
+        {/* Sidebar - Position Panel */}
         <div style={{ position: 'sticky', top: '24px', alignSelf: 'start' }}>
           <div style={{ background: '#16161a', borderRadius: '12px', padding: '20px', border: '1px solid #2a2a30' }}>
-            <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#888', marginBottom: '16px' }}>Place Your Short</h3>
+            <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#888', marginBottom: '16px' }}>Take a Position</h3>
 
             {divide.status !== 'active' ? (
               <p style={{ color: '#666', textAlign: 'center', padding: '20px' }}>This divide has ended</p>
             ) : (
               <>
-                {/* Side selection */}
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-                  <button
-                    onClick={() => setSelectedSide('A')}
-                    style={{
-                      flex: 1,
-                      padding: '12px',
-                      borderRadius: '8px',
-                      border: selectedSide === 'A' ? '2px solid #e53935' : '1px solid #2a2a30',
-                      background: selectedSide === 'A' ? 'rgba(229, 57, 53, 0.2)' : '#0d0d0f',
-                      color: selectedSide === 'A' ? '#ff5252' : '#888',
-                      cursor: 'pointer',
-                      fontWeight: '600',
-                      fontSize: '13px',
-                    }}
-                  >
-                    {divide.optionA}
-                  </button>
-                  <button
-                    onClick={() => setSelectedSide('B')}
-                    style={{
-                      flex: 1,
-                      padding: '12px',
-                      borderRadius: '8px',
-                      border: selectedSide === 'B' ? '2px solid #1e88e5' : '1px solid #2a2a30',
-                      background: selectedSide === 'B' ? 'rgba(30, 136, 229, 0.2)' : '#0d0d0f',
-                      color: selectedSide === 'B' ? '#42a5f5' : '#888',
-                      cursor: 'pointer',
-                      fontWeight: '600',
-                      fontSize: '13px',
-                    }}
-                  >
-                    {divide.optionB}
-                  </button>
-                </div>
+                {/* Toggle Switch */}
+                {!selectedSide && (
+                  <div style={{ marginBottom: '16px' }}>
+                    <div
+                      onClick={() => setPositionMode(positionMode === 'long' ? 'short' : 'long')}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0',
+                        background: 'rgba(0,0,0,0.4)',
+                        borderRadius: '20px',
+                        padding: '3px',
+                        cursor: 'pointer',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        marginBottom: '12px',
+                      }}
+                    >
+                      <div style={{
+                        flex: 1,
+                        padding: '10px 14px',
+                        borderRadius: '17px',
+                        background: positionMode === 'long'
+                          ? 'linear-gradient(135deg, #4ade80 0%, #22c55e 100%)'
+                          : 'transparent',
+                        color: positionMode === 'long' ? '#000' : '#666',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        textAlign: 'center',
+                        transition: 'all 200ms ease',
+                      }}>
+                        📈 LONG
+                      </div>
+                      <div style={{
+                        flex: 1,
+                        padding: '10px 14px',
+                        borderRadius: '17px',
+                        background: positionMode === 'short'
+                          ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
+                          : 'transparent',
+                        color: positionMode === 'short' ? '#fff' : '#666',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        textAlign: 'center',
+                        transition: 'all 200ms ease',
+                      }}>
+                        📉 SHORT
+                      </div>
+                    </div>
+
+                    <div style={{ fontSize: '10px', color: '#888', textAlign: 'center', lineHeight: 1.5, marginBottom: '12px' }}>
+                      {positionMode === 'long'
+                        ? 'Long = expect this side to be majority'
+                        : 'Short = expect this side to be minority'
+                      }
+                      <span style={{ color: '#fbbf24', display: 'block' }}>Minority eats 97% of pot</span>
+                    </div>
+
+                    {/* Side Selection */}
+                    <p style={{ fontSize: '11px', color: '#888', marginBottom: '8px', textAlign: 'center' }}>
+                      Select a side to {positionMode.toUpperCase()}:
+                    </p>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={() => setSelectedSide('A')}
+                        style={{
+                          flex: 1,
+                          padding: '14px 8px',
+                          borderRadius: '8px',
+                          border: '1px solid #2a2a30',
+                          background: 'rgba(229, 57, 53, 0.1)',
+                          color: '#ff5252',
+                          cursor: 'pointer',
+                          fontWeight: '600',
+                          fontSize: '13px',
+                        }}
+                      >
+                        {divide.optionA}
+                      </button>
+                      <button
+                        onClick={() => setSelectedSide('B')}
+                        style={{
+                          flex: 1,
+                          padding: '14px 8px',
+                          borderRadius: '8px',
+                          border: '1px solid #2a2a30',
+                          background: 'rgba(30, 136, 229, 0.1)',
+                          color: '#42a5f5',
+                          cursor: 'pointer',
+                          fontWeight: '600',
+                          fontSize: '13px',
+                        }}
+                      >
+                        {divide.optionB}
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Amount input */}
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '6px' }}>Amount ($)</label>
-                  <input
-                    type="number"
-                    value={betAmount}
-                    onChange={(e) => setBetAmount(e.target.value)}
-                    placeholder="0.00"
-                    min="0.01"
-                    step="0.01"
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      background: '#0d0d0f',
-                      border: '1px solid #2a2a30',
+                {selectedSide && (
+                  <div style={{ marginBottom: '16px' }}>
+                    <div style={{
+                      background: positionMode === 'long' ? 'rgba(74,222,128,0.1)' : 'rgba(239,68,68,0.1)',
+                      border: `1px solid ${positionMode === 'long' ? 'rgba(74,222,128,0.3)' : 'rgba(239,68,68,0.3)'}`,
                       borderRadius: '8px',
-                      color: '#e0e0e0',
-                      fontSize: '14px',
-                    }}
-                  />
-                  {user && (
-                    <span style={{ display: 'block', fontSize: '11px', color: '#555', marginTop: '4px' }}>
-                      Balance: ${(user.balance / 100).toFixed(2)}
-                    </span>
-                  )}
-                </div>
+                      padding: '12px',
+                      marginBottom: '12px',
+                    }}>
+                      <div style={{ fontSize: '12px', color: '#888', marginBottom: '4px' }}>Your position:</div>
+                      <div style={{
+                        fontSize: '14px',
+                        fontWeight: '700',
+                        color: positionMode === 'long' ? '#4ade80' : '#ef4444',
+                      }}>
+                        {positionMode === 'long' ? '📈 LONG' : '📉 SHORT'} {selectedSide === 'A' ? divide.optionA : divide.optionB}
+                      </div>
+                    </div>
 
-                {/* Submit button */}
-                <button
-                  onClick={handleVote}
-                  disabled={!user || !selectedSide || !betAmount || submitting}
-                  style={{
-                    width: '100%',
-                    padding: '14px',
-                    background: selectedSide === 'A' ? 'linear-gradient(135deg, #e53935 0%, #c62828 100%)'
-                      : selectedSide === 'B' ? 'linear-gradient(135deg, #1e88e5 0%, #1565c0 100%)'
-                      : '#2a2a30',
-                    border: 'none',
-                    borderRadius: '8px',
-                    color: '#fff',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    cursor: user && selectedSide && betAmount && !submitting ? 'pointer' : 'default',
-                    opacity: user && selectedSide && betAmount && !submitting ? 1 : 0.5,
-                  }}
-                >
-                  {submitting ? 'Placing Short...' : 'Place Short'}
-                </button>
+                    <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '6px' }}>Amount ($)</label>
+                    <input
+                      type="number"
+                      value={betAmount}
+                      onChange={(e) => setBetAmount(e.target.value)}
+                      placeholder="0.00"
+                      min="0.01"
+                      step="0.01"
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        background: '#0d0d0f',
+                        border: '1px solid #2a2a30',
+                        borderRadius: '8px',
+                        color: '#e0e0e0',
+                        fontSize: '14px',
+                      }}
+                    />
+                    {user && (
+                      <span style={{ display: 'block', fontSize: '11px', color: '#555', marginTop: '4px' }}>
+                        Balance: ${(user.balance / 100).toFixed(2)}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Submit buttons */}
+                {selectedSide && (
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={() => {
+                        setSelectedSide(null);
+                        setBetAmount('');
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: '12px',
+                        borderRadius: '8px',
+                        border: '1px solid #2a2a30',
+                        background: 'transparent',
+                        color: '#888',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleVote}
+                      disabled={!user || !betAmount || submitting}
+                      style={{
+                        flex: 2,
+                        padding: '12px',
+                        background: positionMode === 'long'
+                          ? 'linear-gradient(135deg, #4ade80 0%, #22c55e 100%)'
+                          : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                        border: 'none',
+                        borderRadius: '8px',
+                        color: positionMode === 'long' ? '#000' : '#fff',
+                        fontSize: '13px',
+                        fontWeight: '700',
+                        cursor: user && betAmount && !submitting ? 'pointer' : 'default',
+                        opacity: user && betAmount && !submitting ? 1 : 0.5,
+                      }}
+                    >
+                      {submitting ? 'Confirming...' : (positionMode === 'long' ? '📈 Confirm Long' : '📉 Confirm Short')}
+                    </button>
+                  </div>
+                )}
 
                 {!user && (
                   <p style={{ fontSize: '12px', color: '#666', textAlign: 'center', marginTop: '12px' }}>
-                    Log in to place a short
+                    Log in to take a position
                   </p>
                 )}
               </>

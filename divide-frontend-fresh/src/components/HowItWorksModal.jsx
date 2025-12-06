@@ -37,21 +37,19 @@ export default function HowItWorksModal({ isOpen, onClose }) {
         <div className="flex border-b border-white/10">
           <button
             onClick={() => setActiveTab('how')}
-            className={`flex-1 py-4 text-sm font-bold transition-colors ${
-              activeTab === 'how'
-                ? 'text-white border-b-2 border-red-500'
-                : 'text-gray-400 hover:text-white'
-            }`}
+            className={`flex-1 py-4 text-sm font-bold transition-colors ${activeTab === 'how'
+              ? 'text-white border-b-2 border-red-500'
+              : 'text-gray-400 hover:text-white'
+              }`}
           >
             The Game
           </button>
           <button
             onClick={() => setActiveTab('rake')}
-            className={`flex-1 py-4 text-sm font-bold transition-colors ${
-              activeTab === 'rake'
-                ? 'text-white border-b-2 border-purple-500'
-                : 'text-gray-400 hover:text-white'
-            }`}
+            className={`flex-1 py-4 text-sm font-bold transition-colors ${activeTab === 'rake'
+              ? 'text-white border-b-2 border-purple-500'
+              : 'text-gray-400 hover:text-white'
+              }`}
           >
             Rake & Fees
           </button>
@@ -72,8 +70,8 @@ export default function HowItWorksModal({ isOpen, onClose }) {
                 <div className="p-5 rounded-xl bg-gradient-to-br from-red-500/10 via-purple-500/10 to-blue-500/10 border border-white/10">
                   <div className="flex items-center gap-2 mb-3">
                     <svg className="w-5 h-5 text-yellow-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-                      <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                      <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                      <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
                     </svg>
                     <h3 className="text-lg font-bold text-white">BLIND PLAY — MINORITY WINS</h3>
                   </div>
@@ -82,14 +80,30 @@ export default function HowItWorksModal({ isOpen, onClose }) {
                   </p>
                 </div>
 
+                {/* The Bulletproof Rule */}
+                <div className="p-5 rounded-xl bg-gradient-to-r from-green-500/10 via-yellow-500/10 to-red-500/10 border border-yellow-500/30">
+                  <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">The One-Line Rule</h3>
+                  <div className="space-y-2">
+                    <p className="text-sm">
+                      <span className="text-green-400 font-bold">📈 LONG</span> <span className="text-white">=</span> <span className="text-gray-300">you expect this side to be the <span className="font-semibold text-white">majority</span></span>
+                    </p>
+                    <p className="text-sm">
+                      <span className="text-red-400 font-bold">📉 SHORT</span> <span className="text-white">=</span> <span className="text-gray-300">you expect this side to be the <span className="font-semibold text-white">minority</span></span>
+                    </p>
+                    <p className="text-sm mt-3">
+                      <span className="text-yellow-400 font-bold">Minority eats 97% of the pot.</span>
+                    </p>
+                  </div>
+                </div>
+
                 {/* The Setup */}
                 <div className="p-4 rounded-xl bg-white/5 border border-white/10">
                   <p className="text-gray-300 text-sm leading-relaxed">
-                    <span className="text-white font-semibold">Create a Divide.</span> Pick a side. Seed the pot.<br/>
+                    <span className="text-white font-semibold">Create a Divide.</span> Go Long or Short on your side. Seed the pot.<br />
                     iPhone vs Android · Trump vs Biden · Cats vs Dogs · <span className="text-gray-500">anything tribal</span>
                   </p>
                   <p className="text-white font-semibold mt-3">
-                    The side with <span className="text-green-400">fewer shorts</span> wins <span className="text-green-400">97%</span> of the pot. All plays are blind.
+                    The side with <span className="text-green-400">fewer longs</span> wins <span className="text-green-400">97%</span> of the pot. All plays are blind.
                   </p>
                 </div>
 
@@ -98,7 +112,7 @@ export default function HowItWorksModal({ isOpen, onClose }) {
                   <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">
                     The Sacrifice — You Can't Have Both
                   </h3>
-                  
+
                   <div className="space-y-4">
                     {/* Scenario 1 */}
                     <div className="p-4 rounded-xl bg-white/5 border border-white/10">
@@ -107,9 +121,9 @@ export default function HowItWorksModal({ isOpen, onClose }) {
                         <h4 className="font-bold text-white">The True Believer</h4>
                       </div>
                       <p className="text-gray-300 text-sm leading-relaxed">
-                        You LOVE iPhones → you short iPhone, hoping to be the minority<br/>
-                        <span className="text-gray-500">But if you WIN the money... it means most people DIDN'T pick iPhone</span><br/>
-                        <span className="text-yellow-400 font-semibold">You won cash but your tribe lost the popularity war</span> — ego wounded
+                        You LOVE iPhones → you Long iPhone, hoping the herd follows<br />
+                        <span className="text-gray-500">But if you end up in the majority... you LOSE your money</span><br />
+                        <span className="text-yellow-400 font-semibold">You won the popularity war but the minority ate your stake</span> — betrayed by loyalty
                       </p>
                     </div>
 
@@ -120,9 +134,9 @@ export default function HowItWorksModal({ isOpen, onClose }) {
                         <h4 className="font-bold text-white">The Mercenary</h4>
                       </div>
                       <p className="text-gray-300 text-sm leading-relaxed">
-                        You think Android will be minority → you short Android even though you're an iPhone person<br/>
-                        <span className="text-gray-500">If Android wins (minority), you get paid</span><br/>
-                        <span className="text-yellow-400 font-semibold">But you just funded the enemy and betrayed your tribe</span> — ego sacrificed for profit
+                        You think iPhone will be minority → you Long iPhone even though you're an Android person<br />
+                        <span className="text-gray-500">If iPhone ends up minority, you get paid</span><br />
+                        <span className="text-yellow-400 font-semibold">But you just publicly backed the enemy to profit</span> — ego sacrificed for greed
                       </p>
                     </div>
 
@@ -133,9 +147,9 @@ export default function HowItWorksModal({ isOpen, onClose }) {
                         <h4 className="font-bold text-white">The Manipulator</h4>
                       </div>
                       <p className="text-gray-300 text-sm leading-relaxed">
-                        You short your true side, then try to flip people to the other side<br/>
-                        <span className="text-gray-500">You're literally convincing people your thing sucks so you can profit</span><br/>
-                        <span className="text-yellow-400 font-semibold">You have to trash-talk your own belief to win</span> — ultimate ego death
+                        You Long the side you secretly want to lose, then shill the other side to pull the crowd<br />
+                        <span className="text-gray-500">You're convincing everyone to go Long on something you're betting against</span><br />
+                        <span className="text-yellow-400 font-semibold">You have to hype your opposition to win</span> — ultimate betrayal
                       </p>
                     </div>
                   </div>
@@ -147,19 +161,19 @@ export default function HowItWorksModal({ isOpen, onClose }) {
                   <ul className="space-y-2 text-sm">
                     <li className="flex items-center gap-2">
                       <svg className="w-4 h-4 text-green-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
+                        <line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
                       </svg>
                       <span className="text-gray-300">Win money? <span className="text-white">Your side lost the social war.</span></span>
                     </li>
                     <li className="flex items-center gap-2">
                       <svg className="w-4 h-4 text-red-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M12 22V12"/><path d="M20 7v10"/><path d="M4 7v10"/>
+                        <path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M12 22V12" /><path d="M20 7v10" /><path d="M4 7v10" />
                       </svg>
                       <span className="text-gray-300">Win the social war? <span className="text-white">You lost your money.</span></span>
                     </li>
                     <li className="flex items-center gap-2">
                       <svg className="w-4 h-4 text-purple-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>
+                        <circle cx="12" cy="12" r="10" /><path d="M8 14s1.5 2 4 2 4-2 4-2" /><line x1="9" y1="9" x2="9.01" y2="9" /><line x1="15" y1="9" x2="15.01" y2="9" />
                       </svg>
                       <span className="text-gray-300">Try to manipulate? <span className="text-white">You betray your own beliefs publicly.</span></span>
                     </li>
@@ -169,12 +183,12 @@ export default function HowItWorksModal({ isOpen, onClose }) {
                 {/* No House Edge */}
                 <div className="p-5 rounded-xl bg-black/50 border border-white/5">
                   <p className="text-gray-400 text-sm leading-relaxed">
-                    We keep <span className="text-white font-semibold">2-3%</span> to run the arena depending on Creator Rake.<br/>
+                    We keep <span className="text-white font-semibold">2-3%</span> to run the arena depending on Creator Rake.<br />
                     Everything else is pure player-vs-player betrayal.
                   </p>
                   <div className="mt-4 pt-4 border-t border-white/5">
                     <p className="text-gray-500 text-xs">
-                      No house edge. No RNG.<br/>
+                      No house edge. No RNG.<br />
                       Just you, the herd, and chaos.
                     </p>
                   </div>
@@ -220,7 +234,7 @@ export default function HowItWorksModal({ isOpen, onClose }) {
                   <p className="text-gray-400 text-sm mb-4">
                     Creators earn from the 0.5% pool based on their skin in the game
                   </p>
-                  
+
                   <div className="space-y-2">
                     <div className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20">
                       <div>
@@ -232,7 +246,7 @@ export default function HowItWorksModal({ isOpen, onClose }) {
                         <span className="text-gray-500 text-xs ml-1">of 0.5%</span>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center justify-between p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
                       <div>
                         <span className="font-semibold text-purple-400">High Roller</span>
@@ -243,7 +257,7 @@ export default function HowItWorksModal({ isOpen, onClose }) {
                         <span className="text-gray-500 text-xs ml-1">of 0.5%</span>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center justify-between p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
                       <div>
                         <span className="font-semibold text-blue-400">Player</span>
@@ -254,7 +268,7 @@ export default function HowItWorksModal({ isOpen, onClose }) {
                         <span className="text-gray-500 text-xs ml-1">of 0.5%</span>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center justify-between p-3 rounded-lg bg-gray-500/10 border border-gray-500/20">
                       <div>
                         <span className="font-semibold text-gray-400">No Skin</span>

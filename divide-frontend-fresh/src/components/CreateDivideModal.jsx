@@ -1,5 +1,6 @@
 import React, { useContext, useState } from 'react';
 import { AuthContext } from '../context/AuthContext';
+import { formatDivideText } from '../utils/textFormat';
 import '../styles/CreateDivideModal.css';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -14,6 +15,7 @@ export default function CreateDivideModal({ isOpen, onClose, onDivideCreated }) 
   const [category, setCategory] = useState('Other');
   const [bet, setBet] = useState('1');
   const [side, setSide] = useState('A');
+  const [positionMode, setPositionMode] = useState('short'); // 'long' or 'short' - default to short
   const [duration, setDuration] = useState('10');
   const [durationUnit, setDurationUnit] = useState('minutes');
   const [loading, setLoading] = useState(false);
@@ -46,6 +48,21 @@ export default function CreateDivideModal({ isOpen, onClose, onDivideCreated }) 
         return;
       }
 
+      // Format text with smart capitalization and spell correction
+      const formattedTitle = formatDivideText(title);
+      const formattedOptionA = formatDivideText(optionA);
+      const formattedOptionB = formatDivideText(optionB);
+
+      // Map Long/Short + Side to actual betting side
+      // Long A = money to B (expect A majority, B minority wins)
+      // Short A = money to A (expect A minority wins)
+      let actualSide;
+      if (positionMode === 'long') {
+        actualSide = side === 'A' ? 'B' : 'A';
+      } else {
+        actualSide = side;
+      }
+
       const response = await fetch(`${API_BASE}/Divides/create-user`, {
         method: 'POST',
         headers: {
@@ -53,12 +70,12 @@ export default function CreateDivideModal({ isOpen, onClose, onDivideCreated }) 
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
-          title,
-          optionA,
-          optionB,
+          title: formattedTitle,
+          optionA: formattedOptionA,
+          optionB: formattedOptionB,
           category,
           bet: betAmount,
-          side,
+          side: actualSide,
           durationValue: parseInt(duration),
           durationUnit
         })
@@ -75,7 +92,7 @@ export default function CreateDivideModal({ isOpen, onClose, onDivideCreated }) 
       // Refresh user balance and close modal
       await refreshUser();
       onDivideCreated?.(data);
-      
+
       // Reset form
       setTitle('');
       setOptionA('');
@@ -83,6 +100,7 @@ export default function CreateDivideModal({ isOpen, onClose, onDivideCreated }) 
       setCategory('Other');
       setBet('1');
       setSide('A');
+      setPositionMode('short');
       setDuration('10');
       setDurationUnit('minutes');
       setError('');
@@ -108,7 +126,7 @@ export default function CreateDivideModal({ isOpen, onClose, onDivideCreated }) 
       justifyContent: 'center',
       zIndex: 9999,
       padding: '20px',
-    }} onClick={onClose}>
+    }}>
       <div style={{
         background: '#16161a',
         border: '1px solid #2a2a30',
@@ -148,10 +166,10 @@ export default function CreateDivideModal({ isOpen, onClose, onDivideCreated }) 
           lineHeight: '1.6'
         }}>
           {/* Core Rule */}
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '8px', 
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
             marginBottom: '10px',
             paddingBottom: '10px',
             borderBottom: '1px solid rgba(255,255,255,0.1)'
@@ -161,48 +179,48 @@ export default function CreateDivideModal({ isOpen, onClose, onDivideCreated }) 
             </svg>
             <span style={{ color: '#fff', fontWeight: '700', fontSize: '13px' }}>BLIND PLAY — MINORITY WINS</span>
           </div>
-          
+
           {/* The Hook */}
           <p style={{ color: '#e0e0e0', marginBottom: '12px', fontWeight: '500' }}>
-            Every play is a sacrifice. <span style={{ color: '#4ade80' }}>Win the money, lose the war.</span> <span style={{ color: '#f87171' }}>Win the war, lose your stake.</span>
+            Go Long on your side. <span style={{ color: '#4ade80' }}>Win the money if you're the minority.</span> <span style={{ color: '#f87171' }}>Lose it all if you're the majority.</span>
           </p>
-          
+
           {/* The Rules */}
-          <div style={{ 
-            background: 'rgba(0,0,0,0.3)', 
-            borderRadius: '8px', 
+          <div style={{
+            background: 'rgba(0,0,0,0.3)',
+            borderRadius: '8px',
             padding: '10px 12px',
             marginBottom: '12px'
           }}>
             <p style={{ color: '#a0a0a0', margin: 0 }}>
-              The side with <span style={{ color: '#4ade80', fontWeight: '600' }}>fewer shorts</span> wins <span style={{ color: '#4ade80', fontWeight: '600' }}>97%</span> of the pot. All plays are blind — you can't see how others chose.
+              The side with <span style={{ color: '#4ade80', fontWeight: '600' }}>fewer longs</span> wins <span style={{ color: '#4ade80', fontWeight: '600' }}>97%</span> of the pot. All plays are blind — you can't see how others chose.
             </p>
           </div>
-          
+
           {/* The Sacrifice */}
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: '1fr 1fr', 
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
             gap: '8px',
             fontSize: '11px'
           }}>
-            <div style={{ 
-              background: 'rgba(239, 68, 68, 0.15)', 
-              borderRadius: '6px', 
+            <div style={{
+              background: 'rgba(74, 222, 128, 0.15)',
+              borderRadius: '6px',
+              padding: '8px',
+              border: '1px solid rgba(74, 222, 128, 0.2)'
+            }}>
+              <span style={{ color: '#4ade80', fontWeight: '600' }}>💰 MINORITY WINS:</span>
+              <p style={{ color: '#a0a0a0', margin: '4px 0 0 0' }}>Fewer longs = you split the entire pot</p>
+            </div>
+            <div style={{
+              background: 'rgba(239, 68, 68, 0.15)',
+              borderRadius: '6px',
               padding: '8px',
               border: '1px solid rgba(239, 68, 68, 0.2)'
             }}>
-              <span style={{ color: '#f87171', fontWeight: '600' }}>🏆 If you WIN:</span>
-              <p style={{ color: '#a0a0a0', margin: '4px 0 0 0' }}>Your tribe lost the popularity war — ego wounded</p>
-            </div>
-            <div style={{ 
-              background: 'rgba(59, 130, 246, 0.15)', 
-              borderRadius: '6px', 
-              padding: '8px',
-              border: '1px solid rgba(59, 130, 246, 0.2)'
-            }}>
-              <span style={{ color: '#60a5fa', fontWeight: '600' }}>💸 If you LOSE:</span>
-              <p style={{ color: '#a0a0a0', margin: '4px 0 0 0' }}>Your tribe won but you funded the enemy's payout</p>
+              <span style={{ color: '#f87171', fontWeight: '600' }}>💸 MAJORITY LOSES:</span>
+              <p style={{ color: '#a0a0a0', margin: '4px 0 0 0' }}>More longs = you funded the winner's payout</p>
             </div>
           </div>
         </div>
@@ -273,7 +291,7 @@ export default function CreateDivideModal({ isOpen, onClose, onDivideCreated }) 
           </div>
 
           <div className="form-group">
-            <label>Your Initial Short ($)</label>
+            <label>Your Initial Position ($)</label>
             <input
               type="number"
               value={bet}
@@ -286,8 +304,68 @@ export default function CreateDivideModal({ isOpen, onClose, onDivideCreated }) 
             <small>Your balance: ${user?.balance?.toFixed(2) || '0.00'}</small>
           </div>
 
+          {/* Long/Short Toggle */}
           <div className="form-group">
-            <label>Pick a Side</label>
+            <label>Position Type</label>
+            {/* Toggle Switch */}
+            <div
+              onClick={() => setPositionMode(positionMode === 'long' ? 'short' : 'long')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0',
+                background: 'rgba(0,0,0,0.4)',
+                borderRadius: '20px',
+                padding: '3px',
+                cursor: 'pointer',
+                border: '1px solid rgba(255,255,255,0.1)',
+                marginBottom: '12px',
+              }}
+            >
+              <div style={{
+                flex: 1,
+                padding: '10px 14px',
+                borderRadius: '17px',
+                background: positionMode === 'long'
+                  ? 'linear-gradient(135deg, #4ade80 0%, #22c55e 100%)'
+                  : 'transparent',
+                color: positionMode === 'long' ? '#000' : '#666',
+                fontSize: '12px',
+                fontWeight: '700',
+                textAlign: 'center',
+                transition: 'all 200ms ease',
+              }}>
+                📈 LONG
+              </div>
+              <div style={{
+                flex: 1,
+                padding: '10px 14px',
+                borderRadius: '17px',
+                background: positionMode === 'short'
+                  ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
+                  : 'transparent',
+                color: positionMode === 'short' ? '#fff' : '#666',
+                fontSize: '12px',
+                fontWeight: '700',
+                textAlign: 'center',
+                transition: 'all 200ms ease',
+              }}>
+                📉 SHORT
+              </div>
+            </div>
+            <small style={{ color: '#888', lineHeight: 1.5 }}>
+              {positionMode === 'long'
+                ? 'Long = expect this side to be majority'
+                : 'Short = expect this side to be minority'
+              }
+              <span style={{ color: '#fbbf24', display: 'block' }}>Minority eats 97% of the pot.</span>
+            </small>
+          </div>
+
+          {/* Side Selection */}
+          <div className="form-group">
+            <label>Select Side to {positionMode === 'long' ? 'Long' : 'Short'}</label>
             <div className="side-selector">
               <button
                 type="button"
@@ -314,9 +392,6 @@ export default function CreateDivideModal({ isOpen, onClose, onDivideCreated }) 
                 {optionB || 'Option B'}
               </button>
             </div>
-            <small style={{ color: '#888' }}>
-              Remember: minority side wins — short what you think others WON'T pick
-            </small>
           </div>
 
           <div className="form-row">

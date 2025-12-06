@@ -1,0 +1,54 @@
+{
+    "name": "The Divide",
+    "short_name": "Divide",
+    "description": "The first social betting game where minority wins 97% of the pot. Go Long or Short on tribal debates and beat the crowd.",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#0b0b0b",
+    "theme_color": "#0b0b0b",
+    "orientation": "portrait-primary",
+    "scope": "/",
+    "lang": "en-US",
+    "categories": [
+        "games",
+        "entertainment",
+        "social"
+    ],
+    "icons": [
+        {
+            "src": "/favicon.ico",
+            "sizes": "64x64 32x32 24x24 16x16",
+            "type": "image/x-icon"
+        },
+        {
+            "src": "/icon-192.png",
+            "type": "image/png",
+            "sizes": "192x192",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/icon-512.png",
+            "type": "image/png",
+            "sizes": "512x512",
+            "purpose": "any maskable"
+        }
+    ],
+    "screenshots": [
+        {
+            "src": "/screenshot-wide.png",
+            "sizes": "1280x720",
+            "type": "image/png",
+            "form_factor": "wide",
+            "label": "The Divide - Home Screen"
+        },
+        {
+            "src": "/screenshot-mobile.png",
+            "sizes": "750x1334",
+            "type": "image/png",
+            "form_factor": "narrow",
+            "label": "The Divide - Mobile View"
+        }
+    ],
+    "related_applications": [],
+    "prefer_related_applications": false
+}

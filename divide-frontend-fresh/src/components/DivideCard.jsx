@@ -34,6 +34,7 @@ export default function DivideCard({
   const [l, setL] = useState(Number(leftVotes) || 0);
   const [r, setR] = useState(Number(rightVotes) || 0);
   const [editingSide, setEditingSide] = useState(null);
+  const [positionMode, setPositionMode] = useState('short'); // 'long' or 'short' - default short
   const [betAmount, setBetAmount] = useState('');
   const [localLikes, setLocalLikes] = useState(Number(likes) || 0);
   const [localDislikes, setLocalDislikes] = useState(Number(dislikes) || 0);
@@ -349,7 +350,7 @@ export default function DivideCard({
         </div>
       )}
 
-      {/* Options */}
+      {/* Position Selection */}
       <div style={{
         display: 'flex',
         flexDirection: 'column',
@@ -358,126 +359,228 @@ export default function DivideCard({
         opacity: isLocked ? 0.2 : 1,
         pointerEvents: isLocked ? 'none' : 'auto'
       }}>
-        {/* Option A */}
+
+        {/* LONG / SHORT Toggle Switch */}
+        {status === 'active' && !isLocked && !editingSide && (
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '6px',
+            marginBottom: '4px',
+          }}>
+            {/* Toggle Switch */}
+            <div
+              onClick={(e) => {
+                e.stopPropagation();
+                setPositionMode(positionMode === 'long' ? 'short' : 'long');
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0',
+                background: 'rgba(0,0,0,0.4)',
+                borderRadius: '20px',
+                padding: '3px',
+                cursor: 'pointer',
+                border: '1px solid rgba(255,255,255,0.1)',
+              }}
+            >
+              {/* Long side */}
+              <div style={{
+                flex: 1,
+                padding: '8px 12px',
+                borderRadius: '17px',
+                background: positionMode === 'long'
+                  ? 'linear-gradient(135deg, #4ade80 0%, #22c55e 100%)'
+                  : 'transparent',
+                color: positionMode === 'long' ? '#000' : '#666',
+                fontSize: '11px',
+                fontWeight: '700',
+                textAlign: 'center',
+                transition: 'all 200ms ease',
+              }}>
+                📈 LONG
+              </div>
+              {/* Short side */}
+              <div style={{
+                flex: 1,
+                padding: '8px 12px',
+                borderRadius: '17px',
+                background: positionMode === 'short'
+                  ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
+                  : 'transparent',
+                color: positionMode === 'short' ? '#fff' : '#666',
+                fontSize: '11px',
+                fontWeight: '700',
+                textAlign: 'center',
+                transition: 'all 200ms ease',
+              }}>
+                📉 SHORT
+              </div>
+            </div>
+            {/* Helper text */}
+            <div style={{
+              fontSize: '9px',
+              color: '#666',
+              textAlign: 'center',
+              lineHeight: 1.4,
+            }}>
+              {positionMode === 'long'
+                ? 'Long = expect this side to be majority'
+                : 'Short = expect this side to be minority'
+              }
+              <span style={{ color: '#fbbf24', display: 'block' }}>Minority eats 97%</span>
+            </div>
+          </div>
+        )}
+
+        {/* Option A Row */}
         <div
-          onClick={(e) => handleStartEdit('left', e)}
+          onClick={(e) => {
+            if (status !== 'active' || isLocked) return;
+            e.stopPropagation();
+            if (positionMode) {
+              setEditingSide(positionMode === 'long' ? 'longA' : 'shortA');
+              setBetAmount('');
+            }
+          }}
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: editingSide === 'left' ? '10px 14px' : '14px 16px',
+            padding: '12px 14px',
             borderRadius: '12px',
-            cursor: (status === 'active' && !isLocked) ? 'pointer' : 'default',
-            transition: 'all 150ms cubic-bezier(0.16, 1, 0.3, 1)',
-            background: editingSide === 'left'
-              ? 'linear-gradient(135deg, rgba(255,23,68,0.2) 0%, rgba(255,23,68,0.1) 100%)'
+            cursor: positionMode && status === 'active' && !isLocked ? 'pointer' : 'default',
+            background: editingSide === 'longA' || editingSide === 'shortA'
+              ? 'linear-gradient(135deg, rgba(255,23,68,0.25) 0%, rgba(255,23,68,0.15) 100%)'
               : 'linear-gradient(135deg, rgba(255,23,68,0.12) 0%, rgba(255,23,68,0.06) 100%)',
-            border: `1px solid ${editingSide === 'left' ? colors.red.primary : colors.red.border}`,
-            boxShadow: editingSide === 'left' ? '0 0 20px rgba(255, 23, 68, 0.15)' : 'none',
+            border: editingSide === 'longA' || editingSide === 'shortA'
+              ? `2px solid ${colors.red.primary}`
+              : `1px solid ${colors.red.border}`,
+            transition: 'all 150ms ease',
           }}
         >
-          {editingSide === 'left' ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }} onClick={(e) => e.stopPropagation()}>
-              <input
-                type="number"
-                min="0.01"
-                step="0.01"
-                placeholder="Amount"
-                value={betAmount}
-                onChange={(e) => setBetAmount(e.target.value)}
-                autoFocus
-                style={{
-                  flex: 1,
-                  background: 'rgba(0, 0, 0, 0.4)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '6px',
-                  padding: '8px 12px',
-                  color: '#fafafa',
-                  fontSize: '13px',
-                  fontFamily: "'SF Mono', monospace",
-                  outline: 'none',
-                }}
-              />
-              <button
-                onClick={(e) => { e.stopPropagation(); setEditingSide(null); }}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.06)',
-                  border: 'none',
-                  borderRadius: '6px',
-                  padding: '8px 10px',
-                  color: '#71717a',
-                  fontSize: '12px',
-                  cursor: 'pointer',
-                  transition: 'all 150ms ease',
-                }}
-              >
-                ✕
-              </button>
-              <button
-                onClick={(e) => handleSubmitBet('left', e)}
-                style={{
-                  background: 'linear-gradient(135deg, #ff1744 0%, #d32f2f 100%)',
-                  border: 'none',
-                  borderRadius: '8px',
-                  padding: '8px 18px',
-                  color: '#fff',
-                  fontSize: '12px',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  transition: 'all 150ms ease',
-                  boxShadow: '0 4px 12px rgba(255, 23, 68, 0.3)',
-                }}
-              >
-                Buy
-              </button>
-            </div>
-          ) : (
-            <>
-              <span style={{
-                fontSize: '14px',
-                fontWeight: '600',
-                color: colors.text.primary,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                maxWidth: '65%'
-              }}>
-                {left}
-              </span>
-              <span style={{
-                fontSize: '16px',
-                fontWeight: '800',
-                fontFamily: "'SF Mono', 'JetBrains Mono', monospace",
-                color: colors.red.primary,
-                letterSpacing: '-0.02em',
-                textShadow: '0 0 20px rgba(255, 23, 68, 0.3)',
-              }}>
-                {votesHidden ? '—' : `${leftPct}%`}
-              </span>
-            </>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1 }}>
+            <span style={{
+              fontSize: '14px',
+              fontWeight: '600',
+              color: colors.text.primary,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}>
+              {left}
+            </span>
+            <span style={{
+              fontSize: '11px',
+              color: '#666',
+            }}>
+              {votesHidden ? '—' : `${leftPct}% · $${formatCurrency(l, 0)}`}
+            </span>
+          </div>
+
+          {/* Show selected action */}
+          {positionMode && status === 'active' && !isLocked && !editingSide && (
+            <span style={{
+              fontSize: '10px',
+              fontWeight: '600',
+              color: positionMode === 'long' ? '#4ade80' : '#ef4444',
+              background: positionMode === 'long' ? 'rgba(74,222,128,0.15)' : 'rgba(239,68,68,0.15)',
+              padding: '4px 8px',
+              borderRadius: '4px',
+            }}>
+              {positionMode === 'long' ? 'LONG' : 'SHORT'}
+            </span>
           )}
         </div>
 
-        {/* Option B */}
+        {/* Option B Row */}
         <div
-          onClick={(e) => handleStartEdit('right', e)}
+          onClick={(e) => {
+            if (status !== 'active' || isLocked) return;
+            e.stopPropagation();
+            if (positionMode) {
+              setEditingSide(positionMode === 'long' ? 'longB' : 'shortB');
+              setBetAmount('');
+            }
+          }}
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: editingSide === 'right' ? '10px 14px' : '14px 16px',
+            padding: '12px 14px',
             borderRadius: '12px',
-            cursor: (status === 'active' && !isLocked) ? 'pointer' : 'default',
-            transition: 'all 150ms cubic-bezier(0.16, 1, 0.3, 1)',
-            background: editingSide === 'right'
-              ? 'linear-gradient(135deg, rgba(41,121,255,0.2) 0%, rgba(41,121,255,0.1) 100%)'
+            cursor: positionMode && status === 'active' && !isLocked ? 'pointer' : 'default',
+            background: editingSide === 'longB' || editingSide === 'shortB'
+              ? 'linear-gradient(135deg, rgba(41,121,255,0.25) 0%, rgba(41,121,255,0.15) 100%)'
               : 'linear-gradient(135deg, rgba(41,121,255,0.12) 0%, rgba(41,121,255,0.06) 100%)',
-            border: `1px solid ${editingSide === 'right' ? colors.blue.primary : colors.blue.border}`,
-            boxShadow: editingSide === 'right' ? '0 0 20px rgba(41, 121, 255, 0.15)' : 'none',
+            border: editingSide === 'longB' || editingSide === 'shortB'
+              ? `2px solid ${colors.blue.primary}`
+              : `1px solid ${colors.blue.border}`,
+            transition: 'all 150ms ease',
           }}
         >
-          {editingSide === 'right' ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }} onClick={(e) => e.stopPropagation()}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1 }}>
+            <span style={{
+              fontSize: '14px',
+              fontWeight: '600',
+              color: colors.text.primary,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}>
+              {right}
+            </span>
+            <span style={{
+              fontSize: '11px',
+              color: '#666',
+            }}>
+              {votesHidden ? '—' : `${rightPct}% · $${formatCurrency(r, 0)}`}
+            </span>
+          </div>
+
+          {/* Show selected action */}
+          {positionMode && status === 'active' && !isLocked && !editingSide && (
+            <span style={{
+              fontSize: '10px',
+              fontWeight: '600',
+              color: positionMode === 'long' ? '#4ade80' : '#ef4444',
+              background: positionMode === 'long' ? 'rgba(74,222,128,0.15)' : 'rgba(239,68,68,0.15)',
+              padding: '4px 8px',
+              borderRadius: '4px',
+            }}>
+              {positionMode === 'long' ? 'LONG' : 'SHORT'}
+            </span>
+          )}
+        </div>
+
+        {/* Amount Input + Confirm - shows when side is selected */}
+        {editingSide && (
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+              padding: '12px',
+              background: 'rgba(0,0,0,0.4)',
+              borderRadius: '10px',
+              border: editingSide.includes('long')
+                ? '1px solid rgba(74, 222, 128, 0.3)'
+                : '1px solid rgba(239, 68, 68, 0.3)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Explanation of what this bet does */}
+            <div style={{ fontSize: '11px', color: '#888', textAlign: 'center' }}>
+              {editingSide === 'longA' && `Long ${left} = betting ${right} will be minority`}
+              {editingSide === 'shortA' && `Short ${left} = betting ${left} will be minority`}
+              {editingSide === 'longB' && `Long ${right} = betting ${left} will be minority`}
+              {editingSide === 'shortB' && `Short ${right} = betting ${right} will be minority`}
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '14px', color: '#888' }}>$</span>
               <input
                 type="number"
                 min="0.01"
@@ -488,73 +591,73 @@ export default function DivideCard({
                 autoFocus
                 style={{
                   flex: 1,
-                  background: 'rgba(0, 0, 0, 0.4)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.1)',
                   borderRadius: '6px',
-                  padding: '8px 12px',
+                  padding: '10px 12px',
                   color: '#fafafa',
-                  fontSize: '13px',
+                  fontSize: '16px',
                   fontFamily: "'SF Mono', monospace",
                   outline: 'none',
                 }}
               />
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px' }}>
               <button
-                onClick={(e) => { e.stopPropagation(); setEditingSide(null); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEditingSide(null);
+                  setPositionMode(null);
+                }}
                 style={{
-                  background: 'rgba(255, 255, 255, 0.06)',
-                  border: 'none',
-                  borderRadius: '6px',
-                  padding: '8px 10px',
-                  color: '#71717a',
+                  flex: 1,
+                  padding: '10px',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: 'rgba(255,255,255,0.05)',
+                  color: '#888',
                   fontSize: '12px',
+                  fontWeight: '600',
                   cursor: 'pointer',
                 }}
               >
-                ✕
+                Cancel
               </button>
               <button
-                onClick={(e) => handleSubmitBet('right', e)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!betAmount || Number(betAmount) <= 0) return;
+                  // Determine which side money goes to
+                  // Long A = money to B, Short A = money to A
+                  // Long B = money to A, Short B = money to B
+                  const moneyGoesTo =
+                    editingSide === 'longA' || editingSide === 'shortB' ? 'right' : 'left';
+                  handleSubmitBet(moneyGoesTo, e);
+                  setEditingSide(null);
+                  setPositionMode(null);
+                }}
+                disabled={!betAmount || Number(betAmount) <= 0}
                 style={{
-                  background: 'linear-gradient(135deg, #448aff 0%, #2979ff 100%)',
-                  border: 'none',
+                  flex: 2,
+                  padding: '10px',
                   borderRadius: '8px',
-                  padding: '8px 18px',
-                  color: '#fff',
-                  fontSize: '12px',
+                  border: 'none',
+                  background: editingSide.includes('long')
+                    ? 'linear-gradient(135deg, #4ade80 0%, #22c55e 100%)'
+                    : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                  color: editingSide.includes('long') ? '#000' : '#fff',
+                  fontSize: '13px',
                   fontWeight: '700',
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(41, 121, 255, 0.3)',
+                  cursor: betAmount && Number(betAmount) > 0 ? 'pointer' : 'default',
+                  opacity: betAmount && Number(betAmount) > 0 ? 1 : 0.5,
                 }}
               >
-                Buy
+                {editingSide.includes('long') ? '📈 Confirm Long' : '📉 Confirm Short'}
               </button>
             </div>
-          ) : (
-            <>
-              <span style={{
-                fontSize: '14px',
-                fontWeight: '600',
-                color: colors.text.primary,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                maxWidth: '65%'
-              }}>
-                {right}
-              </span>
-              <span style={{
-                fontSize: '16px',
-                fontWeight: '800',
-                fontFamily: "'SF Mono', 'JetBrains Mono', monospace",
-                color: colors.blue.primary,
-                letterSpacing: '-0.02em',
-                textShadow: '0 0 20px rgba(41, 121, 255, 0.3)',
-              }}>
-                {votesHidden ? '—' : `${rightPct}%`}
-              </span>
-            </>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Sentiment Indicator */}

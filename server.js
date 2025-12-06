@@ -526,8 +526,12 @@ app.get('/api/treasury', async (req, res) => {
     const activePotsInDollars = activeDivides.length > 0 ? (activeDivides[0].totalPot || 0) : 0;
     const activePotsInCents = Math.round(activePotsInDollars * 100);
 
-    // Treasury = User Balances + Money in Active Pots (both in cents, excludes house revenue)
-    const treasury = totalUserBalances + activePotsInCents;
+    // Get simulated treasury from House (for showcase purposes)
+    const house = await House.findOne({ id: 'global' });
+    const simulatedTreasury = house?.simulatedTreasury || 0;
+
+    // Treasury = User Balances + Money in Active Pots + Simulated (both in cents, excludes house revenue)
+    const treasury = totalUserBalances + activePotsInCents + simulatedTreasury;
 
     res.json({
       treasury: toDollars(treasury),
@@ -2677,6 +2681,138 @@ app.get('/api/recent-games', async (req, res) => {
 });
 
 // ==========================================
+// SENTIMENT ANALYSIS ROUTES
+// ==========================================
+
+// GET /api/divides/:id/sentiment - Get sentiment data for a divide
+app.get('/api/divides/:id/sentiment', async (req, res) => {
+  try {
+    const sentiment = await DivideSentiment.findOne({ divide: req.params.id })
+      .select('-history -rawAnalysis') // Exclude heavy fields
+      .lean();
+
+    if (!sentiment) {
+      return res.json({
+        current: {
+          optionA: { score: 50, label: 'neutral' },
+          optionB: { score: 50, label: 'neutral' },
+          themes: []
+        }
+      });
+    }
+
+    res.json(sentiment);
+  } catch (err) {
+    console.error('GET /api/divides/:id/sentiment', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// POST /api/divides/:id/sentiment/analyze - Trigger sentiment analysis (admin or auto)
+app.post('/api/divides/:id/sentiment/analyze', auth, async (req, res) => {
+  try {
+    const divideId = req.params.id;
+    const divide = await Divide.findOne({ id: divideId }) || await Divide.findById(divideId);
+
+    if (!divide) return res.status(404).json({ error: 'Divide not found' });
+
+    // Fetch recent comments and posts related to this divide
+    const comments = await DivideComment.find({ divideId })
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .select('text createdAt')
+      .lean();
+
+    // Find social posts linking to this divide
+    const posts = await SocialPost.find({ linkedDivide: divide._id, isDeleted: false })
+      .sort({ createdAt: -1 })
+      .limit(20)
+      .select('content createdAt')
+      .lean();
+
+    // Prepare data for Gemini
+    const analysisData = {
+      divideTitle: divide.title,
+      optionA: divide.optionA,
+      optionB: divide.optionB,
+      comments: comments.map(c => ({ content: c.text, createdAt: c.createdAt })),
+      posts: posts.map(p => ({ content: p.content, createdAt: p.createdAt }))
+    };
+
+    // Call Gemini API
+    const analysis = await analyzeDivideSentiment(analysisData);
+
+    if (analysis.error) {
+      console.error('Gemini analysis failed:', analysis.error);
+      return res.status(500).json({ error: analysis.error });
+    }
+
+    const now = new Date();
+    const sentimentData = {
+      optionA: {
+        score: analysis.optionA.score,
+        confidence: analysis.optionA.confidence,
+        sampleSize: analysis.optionA.sampleSize,
+        label: analysis.optionA.label,
+      },
+      optionB: {
+        score: analysis.optionB.score,
+        confidence: analysis.optionB.confidence,
+        sampleSize: analysis.optionB.sampleSize,
+        label: analysis.optionB.label,
+      },
+      themes: analysis.themes,
+      analyzedAt: now,
+    };
+
+    let sentiment = await DivideSentiment.findOne({ divide: divide._id });
+
+    if (sentiment) {
+      // Update existing
+      sentiment.history.push({
+        timestamp: now,
+        optionA: sentimentData.optionA,
+        optionB: sentimentData.optionB,
+        themes: sentimentData.themes,
+        rawAnalysis: analysis.rawAnalysis,
+      });
+
+      // Keep only last 50 history entries
+      if (sentiment.history.length > 50) {
+        sentiment.history = sentiment.history.slice(-50);
+      }
+
+      sentiment.current = sentimentData;
+      sentiment.totalCommentsAnalyzed += comments.length;
+      sentiment.totalPostsAnalyzed += posts.length;
+      sentiment.updatedAt = now;
+    } else {
+      // Create new
+      sentiment = new DivideSentiment({
+        divide: divide._id,
+        current: sentimentData,
+        history: [{
+          timestamp: now,
+          optionA: sentimentData.optionA,
+          optionB: sentimentData.optionB,
+          themes: sentimentData.themes,
+          rawAnalysis: analysis.rawAnalysis,
+        }],
+        totalCommentsAnalyzed: comments.length,
+        totalPostsAnalyzed: posts.length,
+      });
+    }
+
+    await sentiment.save();
+
+    res.json(sentiment);
+  } catch (err) {
+    console.error('Error analyzing sentiment:', err);
+    res.status(500).json({ error: 'Failed to analyze sentiment' });
+  }
+});
+
+// ==========================================
 // ADMIN ROUTES
 // ==========================================
 
@@ -2698,6 +2834,265 @@ app.get('/admin/stats', auth, adminOnly, async (req, res) => {
     });
   } catch (err) {
     console.error('GET /admin/stats', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ==============================================
+// SEED SHOWCASE DIVIDES (admin-only, one-time)
+// ==============================================
+app.post('/admin/seed-showcase', auth, adminOnly, async (req, res) => {
+  try {
+    // Generate realistic vote history
+    function generateVoteHistory(optionA, optionB, finalShortsA, finalShortsB, votes = 50) {
+      const history = [];
+      let runningA = 0;
+      let runningB = 0;
+      const startTime = Date.now() - (24 * 60 * 60 * 1000);
+
+      for (let i = 0; i < votes; i++) {
+        const targetA = finalShortsA * ((i + 1) / votes);
+        const targetB = finalShortsB * ((i + 1) / votes);
+        const addA = Math.max(0, targetA - runningA + (Math.random() - 0.5) * 20);
+        const addB = Math.max(0, targetB - runningB + (Math.random() - 0.5) * 20);
+
+        const side = Math.random() > (finalShortsA / (finalShortsA + finalShortsB)) ? 'B' : 'A';
+        const amount = side === 'A' ? addA : addB;
+
+        if (side === 'A') runningA += amount;
+        else runningB += amount;
+
+        history.push({
+          timestamp: new Date(startTime + (i * (24 * 60 * 60 * 1000 / votes))),
+          username: `player${Math.floor(Math.random() * 9000) + 1000}`,
+          userId: `user_${Math.random().toString(36).substr(2, 9)}`,
+          side,
+          amount: Math.round(amount * 100) / 100,
+          shortsA: Math.round(runningA * 100) / 100,
+          shortsB: Math.round(runningB * 100) / 100,
+          pot: Math.round((runningA + runningB) * 100) / 100,
+        });
+      }
+      return history;
+    }
+
+    const showcaseDivides = [
+      {
+        title: "The eternal tech debate",
+        optionA: "iPhone",
+        optionB: "Android",
+        imageA: "https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg",
+        imageB: "https://upload.wikimedia.org/wikipedia/commons/d/d7/Android_robot.svg",
+        category: "Entertainment",
+        shortsA: 8472.50,
+        shortsB: 1893.25,
+        pot: 10365.75,
+        status: "ended",
+        winnerSide: "B",
+        loserSide: "A",
+        paidOut: 10054.78,
+        houseCut: 310.97,
+        likes: 847,
+        dislikes: 23,
+      },
+      {
+        title: "The gaming wars continue",
+        optionA: "PC",
+        optionB: "Console",
+        imageA: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/Nvidia_GeForce_RTX_3090.jpg/1280px-Nvidia_GeForce_RTX_3090.jpg",
+        imageB: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/da/PlayStation_5_and_DualSense_controller.png/800px-PlayStation_5_and_DualSense_controller.png",
+        category: "Entertainment",
+        shortsA: 12847.00,
+        shortsB: 845.50,
+        pot: 13692.50,
+        status: "ended",
+        winnerSide: "B",
+        loserSide: "A",
+        paidOut: 13281.73,
+        houseCut: 410.77,
+        likes: 1203,
+        dislikes: 156,
+      },
+      {
+        title: "2024 Election: Who wins?",
+        optionA: "Trump",
+        optionB: "Kamala",
+        imageA: "https://upload.wikimedia.org/wikipedia/commons/5/56/Donald_Trump_official_portrait.jpg",
+        imageB: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Kamala_Harris_Vice_Presidential_Portrait.jpg/800px-Kamala_Harris_Vice_Presidential_Portrait.jpg",
+        category: "Politics",
+        shortsA: 15234.00,
+        shortsB: 31847.50,
+        pot: 47081.50,
+        status: "ended",
+        winnerSide: "A",
+        loserSide: "B",
+        paidOut: 45669.06,
+        houseCut: 1412.44,
+        likes: 3421,
+        dislikes: 892,
+      },
+      {
+        title: "Was it the Salute?",
+        optionA: "Yes",
+        optionB: "No",
+        imageA: "https://media.cnn.com/api/v1/images/stellar/prod/gettyimages-2194760984.jpg",
+        imageB: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/X_Corporate_Logo.svg/1200px-X_Corporate_Logo.svg.png",
+        category: "Politics",
+        shortsA: 2341.00,
+        shortsB: 24567.75,
+        pot: 26908.75,
+        status: "ended",
+        winnerSide: "A",
+        loserSide: "B",
+        paidOut: 26101.49,
+        houseCut: 807.26,
+        likes: 5678,
+        dislikes: 2341,
+      },
+      {
+        title: "Best fast food",
+        optionA: "McDonald's",
+        optionB: "Chick-fil-A",
+        imageA: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/McDonald%27s_Golden_Arches.svg/1200px-McDonald%27s_Golden_Arches.svg.png",
+        imageB: "https://upload.wikimedia.org/wikipedia/en/thumb/0/02/Chick-fil-A_Logo.svg/1200px-Chick-fil-A_Logo.svg.png",
+        category: "Entertainment",
+        shortsA: 3421.25,
+        shortsB: 7823.50,
+        pot: 11244.75,
+        status: "ended",
+        winnerSide: "A",
+        loserSide: "B",
+        paidOut: 10907.41,
+        houseCut: 337.34,
+        likes: 432,
+        dislikes: 67,
+      },
+      {
+        title: "Will BTC hit $100k in 2024?",
+        optionA: "Yes",
+        optionB: "No",
+        imageA: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/46/Bitcoin.svg/1200px-Bitcoin.svg.png",
+        imageB: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/Red_X.svg/1200px-Red_X.svg.png",
+        category: "Crypto",
+        shortsA: 18923.00,
+        shortsB: 67234.50,
+        pot: 86157.50,
+        status: "ended",
+        winnerSide: "A",
+        loserSide: "B",
+        paidOut: 83572.78,
+        houseCut: 2584.72,
+        likes: 8934,
+        dislikes: 234,
+      },
+    ];
+
+    const results = [];
+
+    for (const divideData of showcaseDivides) {
+      // Check if already exists
+      const existing = await Divide.findOne({ title: divideData.title, status: 'ended' });
+      if (existing) {
+        results.push({ title: divideData.title, status: 'skipped', reason: 'already exists' });
+        continue;
+      }
+
+      const voteHistory = generateVoteHistory(
+        divideData.optionA,
+        divideData.optionB,
+        divideData.shortsA,
+        divideData.shortsB,
+        Math.floor(40 + Math.random() * 60)
+      );
+
+      const shortId = (Date.now().toString(36) + Math.random().toString(36).slice(2, 8)).slice(0, 16);
+
+      const divide = new Divide({
+        id: shortId,
+        ...divideData,
+        totalShorts: divideData.shortsA + divideData.shortsB,
+        voteHistory,
+        endTime: new Date(Date.now() - Math.floor(Math.random() * 7 * 24 * 60 * 60 * 1000)),
+        createdAt: new Date(Date.now() - Math.floor(7 + Math.random() * 7) * 24 * 60 * 60 * 1000),
+        likedBy: [],
+        dislikedBy: [],
+        shorts: [],
+        isUserCreated: false,
+      });
+
+      await divide.save();
+      results.push({ title: divideData.title, status: 'created', pot: divideData.pot, winner: divideData.winnerSide });
+    }
+
+    // Calculate total payouts from showcase divides (simulated potential withdrawals)
+    // This represents the winnings that "users" would have from these ended divides
+    const totalSimulatedPayouts = showcaseDivides.reduce((sum, d) => sum + (d.paidOut || 0), 0);
+    const simulatedTreasuryCents = Math.round(totalSimulatedPayouts * 100);
+
+    // Update House with simulated treasury
+    await House.findOneAndUpdate(
+      { id: 'global' },
+      { $set: { simulatedTreasury: simulatedTreasuryCents } },
+      { upsert: true }
+    );
+
+    console.log('[ADMIN] Showcase divides seeded:', results);
+    console.log(`[ADMIN] Simulated treasury set to: $${totalSimulatedPayouts.toFixed(2)}`);
+    res.json({ success: true, results, simulatedTreasury: totalSimulatedPayouts });
+  } catch (err) {
+    console.error('POST /admin/seed-showcase', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ==============================================
+// ADMIN EDIT DIVIDE (update images, title, etc)
+// ==============================================
+app.patch('/admin/divides/:id', auth, adminOnly, async (req, res) => {
+  try {
+    const id = (req.params.id || '').toString();
+    let divide = await Divide.findOne({ id });
+    if (!divide) divide = await Divide.findById(id).catch(() => null);
+    if (!divide) return res.status(404).json({ error: 'Divide not found' });
+
+    // Allowed fields to update
+    const allowed = ['title', 'optionA', 'optionB', 'imageA', 'imageB', 'soundA', 'soundB', 'category', 'endTime', 'status'];
+
+    for (const key of allowed) {
+      if (typeof req.body[key] !== 'undefined') {
+        divide[key] = req.body[key];
+      }
+    }
+
+    await divide.save();
+
+    console.log(`[ADMIN] Divide ${id} updated:`, Object.keys(req.body).filter(k => allowed.includes(k)));
+
+    // Emit update to all clients
+    io.emit('newDivide', sanitizeDivide(divide));
+
+    res.json({ success: true, divide: sanitizeDivide(divide) });
+  } catch (err) {
+    console.error('PATCH /admin/divides/:id', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get all divides for admin (including ended)
+app.get('/admin/divides', auth, adminOnly, async (req, res) => {
+  try {
+    const { status, limit = 50 } = req.query;
+    const filter = {};
+    if (status) filter.status = status;
+
+    const divides = await Divide.find(filter)
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit))
+      .lean();
+
+    res.json(divides);
+  } catch (err) {
+    console.error('GET /admin/divides', err);
     res.status(500).json({ error: 'Server error' });
   }
 });

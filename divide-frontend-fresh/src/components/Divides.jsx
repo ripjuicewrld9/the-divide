@@ -13,6 +13,7 @@ import { AuthContext } from "../context/AuthContext";
 import AuthModal from "./AuthModal.jsx";
 import MobileGameHeader from "./MobileGameHeader";
 import MobileFooter from "./MobileFooter.jsx";
+import { SEODivides } from "./SEO";
 import "../styles/Divides.css";
 import { useAuth } from '../context/AuthContext';
 
@@ -307,6 +308,7 @@ export default function Divides({ onOpenChat }) {
   return (
     isMobile() ? (
       <div className="divides-mobile-container">
+        <SEODivides />
         {/* Mobile Header - only shows on mobile */}
         <MobileGameHeader title="Divides" onOpenChat={onOpenChat} className="md:hidden mb-4" />
 
@@ -499,6 +501,7 @@ export default function Divides({ onOpenChat }) {
     ) : (
       // Desktop layout - Centered like Polymarket
       <div className="divides-desktop-container">
+        <SEODivides />
         {/* Premium Treasury Banner - Desktop */}
         {treasury && (
           <div style={{

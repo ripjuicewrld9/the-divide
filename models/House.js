@@ -13,6 +13,9 @@ const houseSchema = new mongoose.Schema({
   fiftyFiftyCurse: { type: Number, default: 0 },       // Total revenue from 50/50 curse (50% of tied pots)
   fiftyFiftyCurseCount: { type: Number, default: 0 },  // Number of curse occurrences
 
+  // Simulated treasury boost for showcase purposes (in cents)
+  simulatedTreasury: { type: Number, default: 0 },
+
   totalRedemptions: { type: Number, default: 0 }, // count of all user withdrawals
   totalRedemptionAmount: { type: Number, default: 0 }, // total amount withdrawn in cents
 
