@@ -5,15 +5,20 @@ import mongoose from "mongoose";
  * DIVIDE GAME MECHANICS - SHORT POSITIONS:
  * - Players "short" one side (bet against it), cannot see positions during active game
  * - You SHORT the side you think will LOSE (minority-wins mechanic)
- * - If shorts are TIED: 50/50 coin flip determines loser (provably fair crypto random)
  * - If shorts are IMBALANCED: The side with FEWER shorts wins (their opponents lose)
- * - All shorts on winning side split the entire pot proportionally
+ * - All shorts on winning side split 97% of the pot proportionally
  * - All shorts on losing side get liquidated (lose everything)
  * 
+ * 💀 THE 50/50 CURSE 💀
+ * If the final split is exactly 50.00% / 50.00%:
+ * - House keeps 50% of the entire pot
+ * - The other 50% is returned pro-rata to both sides (you get back exactly half your bet)
+ * - Everyone loses half. No exceptions.
+ * 
  * PAYOUT EXAMPLES:
- * - 50/50 split (tied shorts): Random coin flip, winners get 2x
- * - 90 short A / 10 short B: If B wins (fewer shorts), 10x multiplier
- * - 95 short A / 5 short B: If B wins (fewer shorts), 20x multiplier
+ * - 50/50 split: THE CURSE - house takes 50%, everyone loses half
+ * - 90 short A / 10 short B: If B wins (fewer shorts), ~10x multiplier
+ * - 95 short A / 5 short B: If B wins (fewer shorts), ~20x multiplier
  * 
  * Think of it like shorting stocks: you want FEWER people betting against your target.
  * The more crowded the short, the worse your payout. Contrarian shorts = huge gains.
@@ -44,6 +49,10 @@ const divideSchema = new mongoose.Schema({
   paidOut: { type: Number, default: 0 },     // amount actually paid to winners when divide ended
   houseCut: { type: Number, default: 0 },    // house cut recorded at end
   jackpotCut: { type: Number, default: 0 },  // jackpot contribution recorded at end
+  // Outcome fields
+  winnerSide: { type: String },    // 'A', 'B', or 'TIE' (for 50/50 curse)
+  loserSide: { type: String },     // 'A', 'B', or 'BOTH' (for 50/50 curse)
+  isTie: { type: Boolean, default: false },  // true if 50/50 curse was triggered
   shorts: [ // renamed from 'votes'
     {
       userId: String,
@@ -57,7 +66,6 @@ const divideSchema = new mongoose.Schema({
   creatorBet: { type: Number, default: 0 }, // initial bet placed by creator (dollars)
   creatorSide: { type: String }, // 'A' or 'B' - which side creator is shorting
   isUserCreated: { type: Boolean, default: false }, // true if created by user, false if admin-created
-  loserSide: { type: String }, // the side that got shorted and lost (renamed from winnerSide for clarity)
   // Social engagement (free, awards XP to reactor and creator)
   likes: { type: Number, default: 0 },
   dislikes: { type: Number, default: 0 },

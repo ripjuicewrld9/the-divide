@@ -6,6 +6,7 @@ import UserAvatar from './UserAvatar.jsx';
 import AuthModal from './AuthModal.jsx';
 import DepositWithdrawModal from './DepositWithdrawModal.jsx';
 import GlobalLeaderboard from './GlobalLeaderboard.jsx';
+import MobileFooter from './MobileFooter.jsx';
 import LiveGames from './LiveGames.jsx';
 
 export default function MobileMainLayout({ onOpenChat }) {
@@ -49,7 +50,7 @@ export default function MobileMainLayout({ onOpenChat }) {
         <div className="flex h-14 items-center justify-between px-4">
           {/* Logo */}
           <Link to="/" className="flex items-center">
-            <span style={{ 
+            <span style={{
               background: 'linear-gradient(90deg, #ff1744 0%, #2979ff 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
@@ -149,7 +150,7 @@ export default function MobileMainLayout({ onOpenChat }) {
         {/* Hero Section - Larger */}
         <div className="px-4 pt-8 pb-6 text-center relative">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-red-500/10 rounded-full blur-3xl -z-10" />
-          <h1 className="text-4xl font-black mb-3 tracking-tight" style={{ 
+          <h1 className="text-4xl font-black mb-3 tracking-tight" style={{
             background: 'linear-gradient(90deg, #ff1744 0%, #2979ff 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
@@ -330,6 +331,9 @@ export default function MobileMainLayout({ onOpenChat }) {
           <div>
             <LiveGames isMobile={true} />
           </div>
+
+          {/* Mobile Footer with Legal Links, How it Works, VIP */}
+          <MobileFooter />
         </div>
       </main>
 

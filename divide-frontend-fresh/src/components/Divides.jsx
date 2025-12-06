@@ -12,6 +12,7 @@ import VoteWithBetModal from './VoteWithBetModal';
 import { AuthContext } from "../context/AuthContext";
 import AuthModal from "./AuthModal.jsx";
 import MobileGameHeader from "./MobileGameHeader";
+import MobileFooter from "./MobileFooter.jsx";
 import "../styles/Divides.css";
 import { useAuth } from '../context/AuthContext';
 
@@ -101,7 +102,7 @@ export default function Divides({ onOpenChat }) {
   // 🟢 Fetch Divides from backend
   const fetchDivides = async (category = 'All') => {
     try {
-      const url = category === 'All' 
+      const url = category === 'All'
         ? `${API_BASE}/Divides`
         : `${API_BASE}/Divides?category=${encodeURIComponent(category)}`;
       const res = await fetch(url);
@@ -308,7 +309,7 @@ export default function Divides({ onOpenChat }) {
       <div className="divides-mobile-container">
         {/* Mobile Header - only shows on mobile */}
         <MobileGameHeader title="Divides" onOpenChat={onOpenChat} className="md:hidden mb-4" />
-        
+
         {/* Treasury Banner - Mobile */}
         {treasury && (
           <div style={{
@@ -354,10 +355,10 @@ export default function Divides({ onOpenChat }) {
             </div>
           </div>
         )}
-        
+
         {/* Category Navigation */}
         <CategoryNav activeCategory={activeCategory} onCategoryChange={handleCategoryChange} />
-        
+
         <div className="create-divide-section flex justify-center mb-4">
           <button
             className="btn-create-divide font-bold px-6 py-3 rounded-xl text-sm"
@@ -424,10 +425,10 @@ export default function Divides({ onOpenChat }) {
             />
           ))}
         </div>
-        
+
         {/* Recent Eats - Last 10 completed divides */}
         <RecentEats />
-        
+
         {previousDivides.length > 0 && (
           <section className="previous-divides-mobile mt-6">
             <h3 className="text-lg font-bold text-gray-300 mb-2">Previous Divides</h3>
@@ -491,6 +492,9 @@ export default function Divides({ onOpenChat }) {
             setSelectedDivideForVote(null);
           }}
         />
+
+        {/* Mobile Footer with Legal Links, How it Works, VIP */}
+        <MobileFooter />
       </div>
     ) : (
       // Desktop layout - Centered like Polymarket
@@ -540,10 +544,10 @@ export default function Divides({ onOpenChat }) {
             </div>
           </div>
         )}
-        
+
         {/* Category Navigation */}
         <CategoryNav activeCategory={activeCategory} onCategoryChange={handleCategoryChange} />
-        
+
         <div className="create-divide-section flex justify-center mb-8">
           <button
             className="btn-create-divide font-bold px-8 py-3.5 rounded-xl text-base"
@@ -610,10 +614,10 @@ export default function Divides({ onOpenChat }) {
             />
           ))}
         </div>
-        
+
         {/* Recent Eats - Last 10 completed divides */}
         <RecentEats />
-        
+
         {previousDivides.length > 0 && (
           <section className="previous-divides-desktop mt-10">
             <h3 className="text-xl font-bold text-gray-300 mb-4">Previous Divides</h3>

@@ -4,6 +4,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+import { isMobile } from '../utils/deviceDetect';
+import MobileFooter from './MobileFooter.jsx';
 import '../styles/premium.css';
 
 // Format relative time
@@ -11,7 +13,7 @@ const formatRelativeTime = (date) => {
   const now = new Date();
   const then = new Date(date);
   const seconds = Math.floor((now - then) / 1000);
-  
+
   if (seconds < 60) return 'just now';
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
   if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`;
@@ -92,8 +94,8 @@ function CreatePost({ onPostCreated }) {
               padding: '10px 24px',
               borderRadius: '20px',
               border: 'none',
-              background: content.trim() 
-                ? 'linear-gradient(135deg, #ff1744 0%, #2979ff 100%)' 
+              background: content.trim()
+                ? 'linear-gradient(135deg, #ff1744 0%, #2979ff 100%)'
                 : 'rgba(255,255,255,0.1)',
               color: content.trim() ? '#fff' : 'rgba(255,255,255,0.4)',
               fontSize: '14px',
@@ -212,7 +214,7 @@ function PostCard({ post, onUpdate }) {
   const isAdmin = user && user.role === 'admin';
 
   return (
-    <div 
+    <div
       onClick={handleCardClick}
       style={{
         background: 'rgba(12, 12, 15, 1)',
@@ -222,7 +224,7 @@ function PostCard({ post, onUpdate }) {
         border: '1px solid rgba(255, 255, 255, 0.06)',
         transition: 'all 200ms ease',
         cursor: 'pointer',
-    }}>
+      }}>
       {/* Header */}
       <div style={{
         display: 'flex',
@@ -290,7 +292,7 @@ function PostCard({ post, onUpdate }) {
             </div>
           </div>
         </div>
-        
+
         {(isAuthor || isAdmin) && (
           <button
             onClick={handleDeletePost}
@@ -569,7 +571,7 @@ export default function SocialFeed() {
       else setLoadingMore(true);
 
       const res = await api.get(`/api/social/posts?page=${page}&limit=20`);
-      
+
       if (append) {
         setPosts(prev => [...prev, ...res.posts]);
       } else {
@@ -713,6 +715,9 @@ export default function SocialFeed() {
           </>
         )}
       </div>
+
+      {/* Mobile Footer with Legal Links, How it Works, VIP */}
+      {isMobile() && <MobileFooter />}
     </div>
   );
 }

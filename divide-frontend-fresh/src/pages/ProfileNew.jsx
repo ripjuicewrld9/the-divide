@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import UserAvatar from '../components/UserAvatar';
 import { formatCurrency } from '../utils/format';
 import MobileGameHeader from '../components/MobileGameHeader';
+import MobileFooter from '../components/MobileFooter.jsx';
 import DiscordOAuthButton from '../components/DiscordOAuthButton';
 import DiscordLinkHandler from '../components/DiscordLinkHandler';
 import SecuritySettings from '../components/SecuritySettings';
@@ -19,11 +20,11 @@ export default function ProfilePage({ onOpenChat }) {
     const handleUsernameChange = async () => {
         setUsernameError('');
         setIsChangingUsername(true);
-        
+
         try {
             const API_BASE = import.meta.env.VITE_API_URL || '';
             const token = localStorage.getItem('token');
-            
+
             const response = await fetch(`${API_BASE}/api/change-username`, {
                 method: 'POST',
                 headers: {
@@ -80,7 +81,7 @@ export default function ProfilePage({ onOpenChat }) {
         <div className="min-h-screen bg-[#0b0b0b] text-white pb-24">
             {/* Discord Link Handler - handles Discord account linking */}
             <DiscordLinkHandler />
-            
+
             {/* Mobile Header */}
             <MobileGameHeader title="Profile V2" onOpenChat={onOpenChat} className="md:hidden" />
 
@@ -102,11 +103,10 @@ export default function ProfilePage({ onOpenChat }) {
                                 <button
                                     onClick={() => canChangeUsername() ? setShowUsernameModal(true) : null}
                                     disabled={!canChangeUsername()}
-                                    className={`p-2 rounded-lg transition-all ${
-                                        canChangeUsername() 
-                                            ? 'bg-white/5 hover:bg-white/10 cursor-pointer' 
-                                            : 'bg-white/5 opacity-50 cursor-not-allowed'
-                                    }`}
+                                    className={`p-2 rounded-lg transition-all ${canChangeUsername()
+                                        ? 'bg-white/5 hover:bg-white/10 cursor-pointer'
+                                        : 'bg-white/5 opacity-50 cursor-not-allowed'
+                                        }`}
                                     title={canChangeUsername() ? 'Change username' : `Change username in ${getDaysUntilUsernameChange()} days`}
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -158,21 +158,21 @@ export default function ProfilePage({ onOpenChat }) {
                         </h2>
                         <div className="space-y-3">
                             <DiscordOAuthButton />
-                            <button 
+                            <button
                                 onClick={() => setShowSecurityModal(true)}
                                 className="w-full text-left p-3 rounded-lg bg-white/5 hover:bg-white/10 transition flex justify-between items-center group"
                             >
                                 <span>Change Password</span>
                                 <span className="text-gray-500 group-hover:text-white transition">→</span>
                             </button>
-                            <button 
+                            <button
                                 onClick={() => setShowEmailPrefsModal(true)}
                                 className="w-full text-left p-3 rounded-lg bg-white/5 hover:bg-white/10 transition flex justify-between items-center group"
                             >
                                 <span>Email Preferences</span>
                                 <span className="text-gray-500 group-hover:text-white transition">→</span>
                             </button>
-                            <button 
+                            <button
                                 onClick={() => setShowSecurityModal(true)}
                                 className="w-full text-left p-3 rounded-lg bg-white/5 hover:bg-white/10 transition flex justify-between items-center group"
                             >
@@ -214,9 +214,9 @@ export default function ProfilePage({ onOpenChat }) {
                 </button>
             </div>
 
-            <SecuritySettings 
-                isOpen={showSecurityModal} 
-                onClose={() => setShowSecurityModal(false)} 
+            <SecuritySettings
+                isOpen={showSecurityModal}
+                onClose={() => setShowSecurityModal(false)}
             />
 
             {/* Username Change Modal */}
@@ -281,6 +281,9 @@ export default function ProfilePage({ onOpenChat }) {
                     </div>
                 </div>
             )}
+
+            {/* Mobile Footer with Legal Links, How it Works, VIP */}
+            <MobileFooter />
         </div>
     );
 }

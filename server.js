@@ -86,7 +86,7 @@ const toDollars = (cents) => Number(((Number(cents) || 0) / 100).toFixed(2));
 function sanitizeDivide(divide, forceHideVotes = false) {
   if (!divide) return divide;
   const d = divide.toObject ? divide.toObject() : { ...divide };
-  
+
   // Only hide votes if divide is still active
   if (d.status === 'active' || forceHideVotes) {
     // Hide all vote-related data that could reveal which side is winning
@@ -103,10 +103,10 @@ function sanitizeDivide(divide, forceHideVotes = false) {
     // Do NOT hide pot - total volume is safe and expected for UX
     // Do NOT hide likes/dislikes - those are social engagement, not vote data
   }
-  
+
   // Never expose sensitive internal fields
   delete d.__v;
-  
+
   return d;
 }
 
@@ -176,13 +176,13 @@ async function awardRakeback(userId, wagerCents) {
   try {
     const user = await User.findById(userId);
     if (!user) return 0;
-    
+
     // Update rolling wager and VIP tier
     user.wagerHistory = addDailyWager(user.wagerHistory || [], wagerCents);
     const { wagerLast30Days, cleanedHistory } = updateRollingWager(user.wagerHistory);
     user.wagerHistory = cleanedHistory;
     user.wagerLast30Days = wagerLast30Days;
-    
+
     // Calculate new VIP tier
     const newTier = getVipTier(wagerLast30Days, user.diamondApproved);
     if (user.vipTier !== newTier) {
@@ -192,15 +192,15 @@ async function awardRakeback(userId, wagerCents) {
       }
     }
     user.vipTier = newTier;
-    
+
     // Calculate and award rakeback to Dividends
     const rakeback = calculateRakeback(wagerCents, newTier);
     if (rakeback > 0) {
       user.dividends = (user.dividends || 0) + rakeback;
       user.totalDividendsEarned = (user.totalDividendsEarned || 0) + rakeback;
-      console.log(`[VIP] User ${user.username} earned ${(rakeback/100).toFixed(2)} dividends (${newTier} tier)`);
+      console.log(`[VIP] User ${user.username} earned ${(rakeback / 100).toFixed(2)} dividends (${newTier} tier)`);
     }
-    
+
     await user.save();
     return rakeback;
   } catch (err) {
@@ -349,7 +349,7 @@ app.post('/register', async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const role = (adminCode === process.env.ADMIN_CODE) ? 'admin' : 'user';
-    
+
     const user = await User.create({
       username,
       email,
@@ -360,7 +360,7 @@ app.post('/register', async (req, res) => {
     });
 
     const token = jwt.sign({ userId: user._id.toString() }, JWT_SECRET, { expiresIn: '30d' });
-    
+
     res.json({
       token,
       userId: user._id.toString(),
@@ -377,13 +377,13 @@ app.post('/login', async (req, res) => {
   try {
     const { email, username, password } = req.body;
     const identifier = email || username; // Accept either email or username
-    
+
     if (!identifier || !password) {
       return res.status(400).json({ error: 'Missing email/username or password' });
     }
 
     // Try to find user by email or username
-    const user = await User.findOne({ 
+    const user = await User.findOne({
       $or: [
         { email: identifier },
         { username: identifier }
@@ -403,7 +403,7 @@ app.post('/login', async (req, res) => {
     }
 
     const token = jwt.sign({ userId: user._id.toString() }, JWT_SECRET, { expiresIn: '30d' });
-    
+
     res.json({
       token,
       userId: user._id.toString(),
@@ -440,7 +440,7 @@ app.post('/verify-2fa', async (req, res) => {
     }
 
     const token = jwt.sign({ userId: user._id.toString() }, JWT_SECRET, { expiresIn: '30d' });
-    
+
     res.json({
       token,
       userId: user._id.toString(),
@@ -726,13 +726,13 @@ app.get('/api/security/2fa/status', auth, async (req, res) => {
 app.post('/api/auth/forgot-password', async (req, res) => {
   try {
     const { username } = req.body || {};
-    
+
     if (!username) {
       return res.status(400).json({ error: 'Username is required' });
     }
 
     const user = await User.findOne({ username: username.trim() });
-    
+
     // Always return success to prevent username enumeration
     if (!user) {
       return res.json({ success: true, message: 'If that username exists, a reset link has been sent to the associated email' });
@@ -754,7 +754,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 
     // Send email
     const resetUrl = `${process.env.FRONTEND_URL || 'https://thedivide.us'}/reset-password?token=${resetToken}`;
-    
+
     try {
       await emailTransporter.sendMail({
         from: process.env.SMTP_FROM || process.env.SMTP_USER,
@@ -775,7 +775,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
           </div>
         `
       });
-      
+
       console.log(`Password reset email sent to ${user.email} for user ${user.username}`);
     } catch (emailError) {
       console.error('Failed to send reset email:', emailError);
@@ -793,7 +793,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 app.post('/api/auth/reset-password', async (req, res) => {
   try {
     const { token, newPassword } = req.body || {};
-    
+
     if (!token || !newPassword) {
       return res.status(400).json({ error: 'Token and new password are required' });
     }
@@ -837,7 +837,7 @@ app.get('/auth/discord', (req, res) => {
   const clientId = process.env.DISCORD_CLIENT_ID;
   const redirectUri = encodeURIComponent(process.env.DISCORD_REDIRECT_URI || 'https://thedivide.us/auth/discord/callback');
   const scope = encodeURIComponent('identify');
-  
+
   const discordAuthUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
   res.redirect(discordAuthUrl);
 });
@@ -845,7 +845,7 @@ app.get('/auth/discord', (req, res) => {
 // Step 2: Handle Discord OAuth callback
 app.get('/auth/discord/callback', async (req, res) => {
   const { code } = req.query;
-  
+
   if (!code) {
     return res.redirect(`${process.env.FRONTEND_URL || 'https://thedivide.us'}?error=discord_auth_failed`);
   }
@@ -896,7 +896,7 @@ app.get('/auth/discord/callback', async (req, res) => {
 
     // Create a temporary token to link this Discord account to website account
     const linkToken = jwt.sign(
-      { 
+      {
         discordId: discordUser.id,
         discordUsername: `${discordUser.username}#${discordUser.discriminator}`,
         discordAvatar: discordAvatarUrl,
@@ -970,7 +970,7 @@ app.get('/auth/discord/login', (req, res) => {
   const clientId = process.env.DISCORD_CLIENT_ID;
   const redirectUri = encodeURIComponent(process.env.DISCORD_REDIRECT_URI_LOGIN || 'https://thedivide.us/auth/discord/login/callback');
   const scope = encodeURIComponent('identify email');
-  
+
   const discordAuthUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
   res.redirect(discordAuthUrl);
 });
@@ -978,7 +978,7 @@ app.get('/auth/discord/login', (req, res) => {
 // Step 2: Handle Discord login callback
 app.get('/auth/discord/login/callback', async (req, res) => {
   const { code } = req.query;
-  
+
   if (!code) {
     return res.redirect(`${process.env.FRONTEND_URL || 'https://thedivide.us'}?error=discord_login_failed`);
   }
@@ -1074,7 +1074,7 @@ app.get('/auth/google/login', (req, res) => {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const redirectUri = encodeURIComponent(process.env.GOOGLE_REDIRECT_URI || 'https://thedivide.us/auth/google/login/callback');
   const scope = encodeURIComponent('openid email profile');
-  
+
   const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
   res.redirect(googleAuthUrl);
 });
@@ -1082,7 +1082,7 @@ app.get('/auth/google/login', (req, res) => {
 // Step 2: Handle Google login callback
 app.get('/auth/google/login/callback', async (req, res) => {
   const { code, error } = req.query;
-  
+
   if (!code) {
     console.error('❌ No authorization code received from Google');
     return res.redirect(`${process.env.FRONTEND_URL || 'https://thedivide.us'}?error=google_login_failed`);
@@ -1209,20 +1209,20 @@ app.post("/api/withdraw", auth, async (req, res) => {
     if (!user) return res.status(404).json({ error: "User not found" });
 
     const amountCents = Math.round(amount * 100);
-    
+
     // Check balance
     if (user.balance < amountCents) {
-      return res.status(400).json({ 
-        success: false, 
-        error: "Insufficient balance" 
+      return res.status(400).json({
+        success: false,
+        error: "Insufficient balance"
       });
     }
 
     // Check wager requirement
     if ((user.wagerRequirement || 0) > 0) {
-      return res.status(400).json({ 
-        success: false, 
-        error: `You must wager $${toDollars(user.wagerRequirement)} before withdrawing (1x playthrough requirement)` 
+      return res.status(400).json({
+        success: false,
+        error: `You must wager $${toDollars(user.wagerRequirement)} before withdrawing (1x playthrough requirement)`
       });
     }
 
@@ -1244,12 +1244,12 @@ app.post("/api/withdraw", auth, async (req, res) => {
     } else {
       baseFeePercent = 0;           // FREE for $250k+
     }
-    
+
     // Apply VIP discount to withdrawal fee
     const vipTier = user.vipTier || 'none';
     const feePercent = applyVipWithdrawalDiscount(baseFeePercent, vipTier);
     const vipDiscount = baseFeePercent > 0 ? Math.round((1 - feePercent / baseFeePercent) * 100) : 0;
-    
+
     const feeAmount = amount * feePercent;
     const feeCents = Math.round(feeAmount * 100);
     const netAmount = amount - feeAmount;
@@ -1267,12 +1267,12 @@ app.post("/api/withdraw", auth, async (req, res) => {
         { $inc: { houseTotal: feeCents, withdrawalFees: feeCents } },
         { upsert: true }
       );
-      
+
       await Ledger.create({
         type: 'withdrawal_fee',
         amount: feeAmount,
         userId: req.userId,
-        meta: { 
+        meta: {
           grossAmount: amount,
           feePercent: feePercent * 100,
           feeAmount,
@@ -1286,7 +1286,7 @@ app.post("/api/withdraw", auth, async (req, res) => {
       type: 'withdrawal',
       amount: netAmount,
       userId: req.userId,
-      meta: { 
+      meta: {
         grossAmount: amount,
         feePercent: feePercent * 100,
         feeAmount,
@@ -1296,16 +1296,16 @@ app.post("/api/withdraw", auth, async (req, res) => {
 
     console.log(`[WITHDRAW] User ${user.username} withdrew $${amount} (fee: $${feeAmount.toFixed(2)}, net: $${netAmount.toFixed(2)}), new balance: $${toDollars(user.balance)}`);
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       balance: toDollars(user.balance),
       grossAmount: amount,
       feePercent: feePercent * 100,
       feeAmount: Number(feeAmount.toFixed(2)),
       netAmount: Number(netAmount.toFixed(2)),
-      message: feeAmount > 0 
+      message: feeAmount > 0
         ? `Withdrew $${netAmount.toFixed(2)} (${(feePercent * 100).toFixed(1)}% fee: $${feeAmount.toFixed(2)})`
-        : `Successfully withdrew $${amount} (no fee for $250k+ withdrawals)` 
+        : `Successfully withdrew $${amount} (no fee for $250k+ withdrawals)`
     });
   } catch (err) {
     console.error('[POST /api/withdraw] error:', err);
@@ -1337,15 +1337,15 @@ app.get("/api/vip/tiers", (req, res) => {
 app.get("/api/vip/status", auth, async (req, res) => {
   try {
     if (!req.userId) return res.status(401).json({ error: 'Not authenticated' });
-    
+
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
-    
+
     const { wagerLast30Days } = updateRollingWager(user.wagerHistory || []);
     const currentTier = getVipTier(wagerLast30Days, user.diamondApproved);
     const tierInfo = getVipTierInfo(currentTier);
     const progress = getVipProgress(wagerLast30Days, currentTier);
-    
+
     res.json({
       tier: currentTier,
       tierInfo,
@@ -1369,29 +1369,29 @@ app.get("/api/vip/status", auth, async (req, res) => {
 app.post("/api/vip/claim-dividends", auth, async (req, res) => {
   try {
     if (!req.userId) return res.status(401).json({ error: 'Not authenticated' });
-    
+
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
-    
+
     const dividendsCents = user.dividends || 0;
     if (dividendsCents <= 0) {
       return res.status(400).json({ error: 'No dividends to claim' });
     }
-    
+
     // Transfer dividends to main balance
     user.balance += dividendsCents;
     user.dividends = 0;
     await user.save();
-    
+
     await Ledger.create({
       type: 'dividends_claimed',
       amount: toDollars(dividendsCents),
       userId: req.userId,
       meta: { vipTier: user.vipTier }
     });
-    
+
     console.log(`[VIP] User ${user.username} claimed $${toDollars(dividendsCents)} dividends`);
-    
+
     res.json({
       success: true,
       claimed: toDollars(dividendsCents),
@@ -1417,7 +1417,7 @@ app.get('/Divides', async (req, res) => {
   if (acceptHeader.includes('text/html') && !acceptHeader.includes('application/json')) {
     return res.sendFile(path.join(__dirname, 'divide-frontend-fresh', 'dist', 'index.html'));
   }
-  
+
   try {
     // Support category filtering via query parameter
     const { category } = req.query;
@@ -1425,7 +1425,7 @@ app.get('/Divides', async (req, res) => {
     if (category && category !== 'All') {
       matchStage.category = category;
     }
-    
+
     const pipeline = [];
     if (Object.keys(matchStage).length > 0) {
       pipeline.push({ $match: matchStage });
@@ -1449,7 +1449,7 @@ app.get('/Divides', async (req, res) => {
       { $addFields: { creatorUsername: { $ifNull: [{ $arrayElemAt: ['$creator.username', 0] }, null] } } },
       { $project: { creator: 0 } }
     );
-    
+
     const list = await Divide.aggregate(pipeline).allowDiskUse(true);
     // SECURITY: Sanitize all divides to hide vote data for active ones
     res.json(sanitizeDivides(list) || []);
@@ -1634,7 +1634,7 @@ app.post('/Divides/create-user', auth, async (req, res) => {
 
     await awardXp(req.userId, 'divideCreated', 0, { divideId: doc.id || doc._id, title, pot: bet });
     await awardXp(req.userId, 'usdWager', betCents, { divideId: doc.id || doc._id, side, amount: bet });
-    
+
     // Award VIP rakeback for the initial bet
     await awardRakeback(req.userId, betCents);
 
@@ -1683,10 +1683,10 @@ app.post('/divides/vote', auth, async (req, res) => {
 
     let shortAmount = actualBetAmount;
     let boostCents = toCents(actualBetAmount);
-    
+
     if (user.balance < boostCents) return res.status(400).json({ error: 'Insufficient balance' });
     user.balance = Math.max(0, user.balance - boostCents);
-    
+
     if (user.wagerRequirement > 0) {
       user.wagerRequirement = Math.max(0, user.wagerRequirement - boostCents);
     }
@@ -1725,12 +1725,12 @@ app.post('/divides/vote', auth, async (req, res) => {
 
     user.totalBets = (user.totalBets || 0) + 1;
     user.wagered = (user.wagered || 0) + boostCents;
-    
+
     await awardXp(req.userId, 'usdWager', boostCents, { divideId: divide.id || divide._id, side, amount: actualBetAmount });
 
     await divide.save();
     await user.save();
-    
+
     // Award VIP rakeback to Dividends balance (AFTER user.save to avoid race condition)
     await awardRakeback(req.userId, boostCents);
 
@@ -1784,10 +1784,10 @@ app.post('/Divides/vote', auth, async (req, res) => {
 
     let shortAmount = actualBetAmount;
     let boostCents = toCents(actualBetAmount);
-    
+
     if (user.balance < boostCents) return res.status(400).json({ error: 'Insufficient balance' });
     user.balance = Math.max(0, user.balance - boostCents);
-    
+
     if (user.wagerRequirement > 0) {
       user.wagerRequirement = Math.max(0, user.wagerRequirement - boostCents);
     }
@@ -1826,12 +1826,12 @@ app.post('/Divides/vote', auth, async (req, res) => {
 
     user.totalBets = (user.totalBets || 0) + 1;
     user.wagered = (user.wagered || 0) + boostCents;
-    
+
     await awardXp(req.userId, 'usdWager', boostCents, { divideId: divide.id || divide._id, side, amount: actualBetAmount });
 
     await divide.save();
     await user.save();
-    
+
     // Award VIP rakeback to Dividends balance (AFTER user.save to avoid race condition)
     await awardRakeback(req.userId, boostCents);
 
@@ -1865,6 +1865,12 @@ function getCreatorBonusTier(creatorContribution) {
 }
 
 // END divide helper function
+// ═══════════════════════════════════════════════════════════════════════════
+// THE 50/50 CURSE - God-tier house rule (NEVER CHANGE THIS)
+// Perfect 50/50 = House takes 50% of pot, both sides split remaining 50%
+// Everyone loses half. No exceptions. Maximum rage. Maximum profit.
+// "50/50 curse will live in degen lore forever"
+// ═══════════════════════════════════════════════════════════════════════════
 async function endDivideById(divideId, userId) {
   try {
     let divide = await Divide.findOne({ id: divideId });
@@ -1872,148 +1878,214 @@ async function endDivideById(divideId, userId) {
     if (!divide || divide.status !== 'active') return null;
 
     divide.status = 'ended';
-    // Use model field names: shortsA, shortsB
-    const minority = (divide.shortsA || 0) < (divide.shortsB || 0) ? 'A' : 'B';
-    const winnerSide = minority;
-    divide.winnerSide = winnerSide;
-    divide.loserSide = winnerSide === 'A' ? 'B' : 'A'; // The side with more shorts loses
 
-    // Use 'shorts' array and 'shortAmount' field (model field names)
-    const winners = (divide.shorts || []).filter(s => s.side === winnerSide);
-    const totalWinnerShorts = winners.reduce((sum, w) => sum + (w.shortAmount || 0), 0);
-
+    const shortsA = divide.shortsA || 0;
+    const shortsB = divide.shortsB || 0;
     const pot = Number(divide.pot);
-    
-    // GOD-TIER RAKE STRUCTURE (2025 whale-approved - never touch again):
-    // - 2.5% House Fee (fixed, Rollbit/Stake/Duelbits standard)
-    // - 0.5% Creator Bonus Pool (split between creator & house based on skin-in-the-game)
-    // - 97% Winner Pool (SACRED - untouchable, goes to minority side)
-    
-    const houseFee = pot * 0.025;            // 2.5% fixed house fee
-    const creatorBonusPool = pot * 0.005;    // 0.5% creator bonus pool
-    const winnerPool = pot * 0.97;           // 97% winner pool (sacred, never changes)
-    
-    // Calculate creator's contribution to the pot (use 'shorts' array)
+    const allParticipants = divide.shorts || [];
+    const totalShorts = allParticipants.reduce((sum, s) => sum + (s.shortAmount || 0), 0);
+
+    // THE 50/50 CURSE CHECK - Perfect tie detection
+    const isTie = shortsA === shortsB && shortsA > 0;
+
+    // Calculate creator's contribution for bonus calculation
     let creatorContribution = 0;
     if (divide.creatorId) {
-      const creatorShort = (divide.shorts || []).find(s => s.userId === divide.creatorId);
+      const creatorShort = allParticipants.find(s => s.userId === divide.creatorId);
       if (creatorShort) {
         creatorContribution = creatorShort.shortAmount || 0;
       }
     }
-    
+
     // Get creator's tier percentage (0-100)
     const creatorTierPercent = getCreatorBonusTier(creatorContribution);
-    
-    // Split the 0.5% creator bonus pool
-    const creatorCut = (creatorBonusPool * creatorTierPercent) / 100;
-    const houseFromCreatorPool = creatorBonusPool - creatorCut;
-    
-    // Total house take = 2.5% fixed + whatever creator didn't qualify for from the 0.5%
-    const totalHouseCut = houseFee + houseFromCreatorPool;
 
-    // Track house revenue with breakdown
-    await House.findOneAndUpdate(
-      { id: 'global' },
-      { 
-        $inc: { 
-          houseTotal: toCents(totalHouseCut),
-          potFees: toCents(houseFee),              // 2.5% pot fee
-          creatorPoolKept: toCents(houseFromCreatorPool)  // Portion of 0.5% creator pool
-        } 
-      },
-      { upsert: true }
-    );
+    // ═══════════════════════════════════════════════════════════════════
+    // 💀 THE 50/50 CURSE 💀
+    // House eats half, everyone loses half. No exceptions.
+    // PERFECT 50/50 = HOUSE TAX
+    // ═══════════════════════════════════════════════════════════════════
+    if (isTie) {
+      divide.winnerSide = 'TIE';
+      divide.loserSide = 'BOTH';
+      divide.isTie = true;
 
-    // Pay creator their earned portion of the 1% bonus
-    if (divide.creatorId && creatorCut > 0) {
-      await User.findByIdAndUpdate(
-        divide.creatorId,
-        { $inc: { balance: toCents(creatorCut) } }
-      );
-      
-      await Ledger.create({
-        type: 'creator_rake',
-        amount: Number(creatorCut),
-        userId: divide.creatorId,
-        divideId: divide.id || divide._id,
-        meta: { 
-          pot, 
-          creatorCut, 
-          creatorContribution,
-          creatorTierPercent,
-          creatorBonusPool,
-          houseFromCreatorPool 
-        }
-      });
-    }
+      // THE CURSE: House takes 50% of the ENTIRE pot
+      const houseTake = pot * 0.50;           // 50% to house (THE CURSE)
+      const playerRefund = pot * 0.50;        // 50% returned to all players pro-rata
 
-    // Distribute 97% winner pool to minority side
-    // EDGE CASE: If minority is 0% (all bets on one side), house takes 100% of the pot
-    if (totalWinnerShorts === 0) {
-      // No minority = everyone shorted the same side = house takes all
-      const fullPotToHouse = winnerPool; // The 97% that would have gone to winners
-      
+      // Creator bonus comes from house's 50% cut (0.5% of original pot)
+      const creatorBonusPool = pot * 0.005;   // 0.5% of pot = creator bonus pool
+      const creatorCut = (creatorBonusPool * creatorTierPercent) / 100;
+      const netHouseTake = houseTake - creatorCut;  // House keeps 50% minus creator bonus
+
+      console.log(`💀 [Divide ${divide.id}] THE 50/50 CURSE! ${shortsA} vs ${shortsB}`);
+      console.log(`💀 House takes $${houseTake.toFixed(2)} (50%), players split $${playerRefund.toFixed(2)} (50%)`);
+      console.log(`💀 Everyone loses half their money. No exceptions.`);
+
+      // Track house revenue - THE BIG ONE
       await House.findOneAndUpdate(
         { id: 'global' },
-        { 
-          $inc: { 
-            houseTotal: toCents(fullPotToHouse),
-            noMinorityPots: toCents(fullPotToHouse)  // Track this edge case separately
-          } 
+        {
+          $inc: {
+            houseTotal: toCents(netHouseTake),
+            fiftyFiftyCurse: toCents(houseTake),     // Track curse revenue separately
+            fiftyFiftyCurseCount: 1                   // Count curse occurrences
+          }
         },
         { upsert: true }
       );
-      
-      console.log(`[Divide ${divide.id}] No minority (0%) - house takes full pot: $${fullPotToHouse.toFixed(2)}`);
-      
-      // Log to ledger for transparency
-      await Ledger.create({
-        type: 'house_no_minority',
-        amount: Number(fullPotToHouse),
-        userId: null,
-        divideId: divide.id || divide._id,
-        meta: { 
-          pot, 
-          reason: 'All shorts on one side (0% minority)',
-          winnerSide,
-          shortsA: divide.shortsA,
-          shortsB: divide.shortsB
-        }
-      });
-    } else {
-      // Normal case: distribute to minority winners (use shortAmount field)
-      for (const w of winners) {
-        const share = ((w.shortAmount || 0) / totalWinnerShorts) * winnerPool;
-        const shareCents = toCents(share);
 
-        await User.findByIdAndUpdate(w.userId, { $inc: { balance: shareCents } });
+      // Pay creator their bonus (from house's cut, not player funds)
+      if (divide.creatorId && creatorCut > 0) {
+        await User.findByIdAndUpdate(
+          divide.creatorId,
+          { $inc: { balance: toCents(creatorCut) } }
+        );
 
         await Ledger.create({
-          type: 'divides_win',
-          amount: Number(share),
-          userId: w.userId,
+          type: 'creator_rake',
+          amount: Number(creatorCut),
+          userId: divide.creatorId,
           divideId: divide.id || divide._id,
-          meta: { side: winnerSide, pot, houseFee, creatorCut, winnerPool }
+          meta: { pot, creatorCut, creatorContribution, creatorTierPercent, isTie: true, curse: true }
         });
+      }
+
+      // Distribute 50% back to ALL players pro-rata (they get half their bet back)
+      for (const participant of allParticipants) {
+        if (!participant.shortAmount || participant.shortAmount <= 0) continue;
+
+        // Everyone gets back exactly half their stake
+        const refund = (participant.shortAmount / totalShorts) * playerRefund;
+        const refundCents = toCents(refund);
+
+        await User.findByIdAndUpdate(participant.userId, { $inc: { balance: refundCents } });
+
+        await Ledger.create({
+          type: 'divides_curse_refund',
+          amount: Number(refund),
+          userId: participant.userId,
+          divideId: divide.id || divide._id,
+          meta: {
+            side: participant.side,
+            pot,
+            isTie: true,
+            curse: true,
+            originalStake: participant.shortAmount,
+            refunded: refund,
+            lost: participant.shortAmount - refund  // Half their money, gone forever
+          }
+        });
+      }
+
+      console.log(`💀 [Divide ${divide.id}] CURSE COMPLETE: ${allParticipants.length} players lost 50% of their bets`);
+
+    } else {
+      // ═══════════════════════════════════════════════════════════════════
+      // NORMAL CASE - Minority wins, majority loses (standard rules)
+      // 2.5% House + 0.5% Creator Pool + 97% Winner Pool
+      // ═══════════════════════════════════════════════════════════════════
+
+      const minority = shortsA < shortsB ? 'A' : 'B';
+      const winnerSide = minority;
+      divide.winnerSide = winnerSide;
+      divide.loserSide = winnerSide === 'A' ? 'B' : 'A';
+      divide.isTie = false;
+
+      const winners = allParticipants.filter(s => s.side === winnerSide);
+      const totalWinnerShorts = winners.reduce((sum, w) => sum + (w.shortAmount || 0), 0);
+
+      // Standard rake structure:
+      // - 2.5% House Fee
+      // - 0.5% Creator Bonus Pool
+      // - 97% Winner Pool
+      const houseFee = pot * 0.025;
+      const creatorBonusPool = pot * 0.005;
+      const winnerPool = pot * 0.97;
+
+      const creatorCut = (creatorBonusPool * creatorTierPercent) / 100;
+      const houseFromCreatorPool = creatorBonusPool - creatorCut;
+      const totalHouseCut = houseFee + houseFromCreatorPool;
+
+      // Track house revenue
+      await House.findOneAndUpdate(
+        { id: 'global' },
+        {
+          $inc: {
+            houseTotal: toCents(totalHouseCut),
+            potFees: toCents(houseFee),
+            creatorPoolKept: toCents(houseFromCreatorPool)
+          }
+        },
+        { upsert: true }
+      );
+
+      // Pay creator their bonus
+      if (divide.creatorId && creatorCut > 0) {
+        await User.findByIdAndUpdate(
+          divide.creatorId,
+          { $inc: { balance: toCents(creatorCut) } }
+        );
+
+        await Ledger.create({
+          type: 'creator_rake',
+          amount: Number(creatorCut),
+          userId: divide.creatorId,
+          divideId: divide.id || divide._id,
+          meta: { pot, creatorCut, creatorContribution, creatorTierPercent, creatorBonusPool, houseFromCreatorPool }
+        });
+      }
+
+      // Distribute 97% winner pool to minority side
+      if (totalWinnerShorts === 0) {
+        // No minority = house takes winner pool
+        await House.findOneAndUpdate(
+          { id: 'global' },
+          { $inc: { houseTotal: toCents(winnerPool), noMinorityPots: toCents(winnerPool) } },
+          { upsert: true }
+        );
+
+        console.log(`[Divide ${divide.id}] No minority - house takes winner pool: $${winnerPool.toFixed(2)}`);
+
+        await Ledger.create({
+          type: 'house_no_minority',
+          amount: Number(winnerPool),
+          userId: null,
+          divideId: divide.id || divide._id,
+          meta: { pot, reason: 'All shorts on one side', winnerSide, shortsA, shortsB }
+        });
+      } else {
+        // Normal distribution to minority winners
+        for (const w of winners) {
+          const share = ((w.shortAmount || 0) / totalWinnerShorts) * winnerPool;
+          const shareCents = toCents(share);
+
+          await User.findByIdAndUpdate(w.userId, { $inc: { balance: shareCents } });
+
+          await Ledger.create({
+            type: 'divides_win',
+            amount: Number(share),
+            userId: w.userId,
+            divideId: divide.id || divide._id,
+            meta: { side: winnerSide, pot, houseFee, creatorCut, winnerPool }
+          });
+        }
       }
     }
 
     await divide.save();
 
-    io.emit('divideEnded', { 
-      id: divide.id, 
-      _id: divide._id, 
-      winner: winnerSide, 
-      pot: divide.pot, 
-      houseCut: totalHouseCut,
-      creatorCut,
-      creatorContribution,
-      creatorTierPercent,
-      winnerPool 
+    io.emit('divideEnded', {
+      id: divide.id,
+      _id: divide._id,
+      winner: divide.winnerSide,
+      isTie: divide.isTie,
+      curse: divide.isTie,  // 50/50 curse flag for frontend
+      pot: divide.pot
     });
 
-    return { id: divide.id, winnerSide, pot: divide.pot };
+    return { id: divide.id, winnerSide: divide.winnerSide, isTie: divide.isTie, pot: divide.pot };
   } catch (err) {
     console.error('endDivideById error', err);
     return null;
@@ -2129,11 +2201,11 @@ app.post('/divides/:id/like', auth, async (req, res) => {
     if (!divide) return res.status(404).json({ error: 'Divide not found' });
 
     const userId = req.userId;
-    
+
     // Check if user already liked OR disliked (once you react, you're locked)
     const alreadyLiked = (divide.likedBy || []).includes(userId);
     const alreadyDisliked = (divide.dislikedBy || []).includes(userId);
-    
+
     if (alreadyLiked) {
       return res.status(400).json({ error: 'Already liked this divide' });
     }
@@ -2169,11 +2241,11 @@ app.post('/divides/:id/dislike', auth, async (req, res) => {
     if (!divide) return res.status(404).json({ error: 'Divide not found' });
 
     const userId = req.userId;
-    
+
     // Check if user already liked OR disliked (once you react, you're locked)
     const alreadyLiked = (divide.likedBy || []).includes(userId);
     const alreadyDisliked = (divide.dislikedBy || []).includes(userId);
-    
+
     if (alreadyDisliked) {
       return res.status(400).json({ error: 'Already disliked this divide' });
     }
@@ -2216,10 +2288,10 @@ app.post('/api/divides/:id/like', auth, async (req, res) => {
     if (!divide) return res.status(404).json({ error: 'Divide not found' });
 
     const userId = req.userId;
-    
+
     const alreadyLiked = (divide.likedBy || []).includes(userId);
     const alreadyDisliked = (divide.dislikedBy || []).includes(userId);
-    
+
     if (alreadyLiked) {
       return res.status(400).json({ error: 'Already liked this divide' });
     }
@@ -2252,10 +2324,10 @@ app.post('/api/divides/:id/dislike', auth, async (req, res) => {
     if (!divide) return res.status(404).json({ error: 'Divide not found' });
 
     const userId = req.userId;
-    
+
     const alreadyLiked = (divide.likedBy || []).includes(userId);
     const alreadyDisliked = (divide.dislikedBy || []).includes(userId);
-    
+
     if (alreadyDisliked) {
       return res.status(400).json({ error: 'Already disliked this divide' });
     }
@@ -2300,7 +2372,7 @@ app.get('/api/divides/:id', async (req, res) => {
 
     // SECURITY: Build response with vote data hidden for active divides
     const isActive = divide.status === 'active';
-    
+
     const response = {
       _id: divide._id,
       id: divide.id,
@@ -2357,17 +2429,17 @@ app.get('/api/divides/recent-eats', async (req, res) => {
         const shortsA = d.shortsA || 0;
         const shortsB = d.shortsB || 0;
         const pot = d.pot || (shortsA + shortsB) || 0;
-        
+
         // loserSide is the side that lost (had more shorts)
         // winnerSide is the minority (fewer shorts) - they win
         const loserSide = d.loserSide || 'A';
         const winnerSide = loserSide === 'A' ? 'B' : 'A';
-        
+
         // Count winners safely from shorts array
-        const winnerVotes = Array.isArray(d.shorts) 
+        const winnerVotes = Array.isArray(d.shorts)
           ? d.shorts.filter(v => v && v.side === winnerSide)
           : [];
-        
+
         // Calculate minority percentage (what % of pot was on minority/winning side)
         const minorityAmount = winnerSide === 'A' ? shortsA : shortsB;
         const minorityPct = pot > 0 ? Math.round((minorityAmount / pot) * 100) : 0;
@@ -2460,13 +2532,13 @@ app.post('/api/divides/:divideId/comments/:commentId/like', auth, async (req, re
     comment.likes = (comment.likes || 0) + 1;
 
     await comment.save();
-    
+
     // Award XP for liking a comment
     await awardXp(userId, 'likeGiven', 0, { commentId: comment._id });
     if (comment.userId && comment.userId !== userId) {
       await awardXp(comment.userId, 'likeReceived', 0, { commentId: comment._id });
     }
-    
+
     res.json({ success: true, likes: comment.likes, dislikes: comment.dislikes });
   } catch (err) {
     console.error('POST /api/divides/:divideId/comments/:commentId/like', err);
@@ -2493,13 +2565,13 @@ app.post('/api/divides/:divideId/comments/:commentId/dislike', auth, async (req,
     comment.dislikes = (comment.dislikes || 0) + 1;
 
     await comment.save();
-    
+
     // Award XP for disliking a comment (engagement is engagement!)
     await awardXp(userId, 'likeGiven', 0, { commentId: comment._id, type: 'dislike' });
     if (comment.userId && comment.userId !== userId) {
       await awardXp(comment.userId, 'dislikeReceived', 0, { commentId: comment._id });
     }
-    
+
     res.json({ success: true, likes: comment.likes, dislikes: comment.dislikes });
   } catch (err) {
     console.error('POST /api/divides/:divideId/comments/:commentId/dislike', err);
@@ -2531,15 +2603,17 @@ app.get('/api/recent-games', async (req, res) => {
       .sort({ endTime: -1 })
       .limit(20)
       .lean();
-    
-    res.json({ games: recentDivides.map(d => ({
-      type: 'divide',
-      id: d._id || d.id,
-      title: d.title,
-      pot: d.pot,
-      winner: d.loserSide,
-      endTime: d.endTime
-    })) });
+
+    res.json({
+      games: recentDivides.map(d => ({
+        type: 'divide',
+        id: d._id || d.id,
+        title: d.title,
+        pot: d.pot,
+        winner: d.loserSide,
+        endTime: d.endTime
+      }))
+    });
   } catch (err) {
     console.error('GET /api/recent-games', err);
     res.status(500).json({ error: 'Server error' });
@@ -2553,7 +2627,7 @@ app.get('/api/recent-games', async (req, res) => {
 app.get('/admin/stats', auth, adminOnly, async (req, res) => {
   try {
     const userCount = await User.countDocuments();
-    const activeUsers = await User.countDocuments({ lastActive: { $gt: new Date(Date.now() - 24*60*60*1000) } });
+    const activeUsers = await User.countDocuments({ lastActive: { $gt: new Date(Date.now() - 24 * 60 * 60 * 1000) } });
     const totalWagered = await User.aggregate([{ $group: { _id: null, total: { $sum: '$wagered' } } }]);
     const activeDivides = await Divide.countDocuments({ status: 'active' });
 
@@ -2586,25 +2660,25 @@ app.patch('/admin/users/:id', auth, adminOnly, async (req, res) => {
   try {
     const { balance, role } = req.body;
     const updates = {};
-    
+
     // Get current user to check balance change
     const currentUser = await User.findById(req.params.id);
     if (!currentUser) {
       return res.status(404).json({ error: 'User not found' });
     }
-    
+
     const oldBalance = currentUser.balance;
-    
+
     if (typeof balance !== 'undefined') updates.balance = toCents(balance);
     if (role) updates.role = role;
 
     const user = await User.findByIdAndUpdate(req.params.id, updates, { new: true }).select('-password -twoFactorSecret');
-    
+
     // If balance was increased, send notification
     if (typeof balance !== 'undefined') {
       const newBalanceCents = toCents(balance);
       const balanceDiff = newBalanceCents - oldBalance;
-      
+
       if (balanceDiff > 0) {
         // Balance was increased - send deposit notification
         await Notification.create({
@@ -2618,7 +2692,7 @@ app.patch('/admin/users/:id', auth, adminOnly, async (req, res) => {
         console.log(`[ADMIN CREDIT] User ${user.username} credited $${toDollars(balanceDiff)} by admin`);
       }
     }
-    
+
     res.json(user);
   } catch (err) {
     console.error('PATCH /admin/users/:id', err);
@@ -2644,10 +2718,10 @@ app.get('/admin/ledger', auth, adminOnly, async (req, res) => {
       .limit(limitNum)
       .lean();
 
-    res.json({ 
-      items, 
-      total, 
-      page: pageNum, 
+    res.json({
+      items,
+      total,
+      page: pageNum,
       limit: limitNum,
       pages: Math.ceil(total / limitNum)
     });
@@ -2801,7 +2875,7 @@ app.get('/api/team', auth, moderatorOnly, async (req, res) => {
 
 app.get('/api/chat/muted', auth, moderatorOnly, async (req, res) => {
   try {
-    const muted = await ChatMute.find({ 
+    const muted = await ChatMute.find({
       $or: [
         { expiresAt: { $gt: new Date() } },
         { expiresAt: null }
@@ -2851,7 +2925,7 @@ app.post('/api/chat/messages', auth, async (req, res) => {
     }
 
     const user = await User.findById(req.userId).select('username level currentBadge');
-    
+
     const msg = await ChatMessage.create({
       userId: req.userId,
       username: user.username,
@@ -2926,8 +3000,8 @@ app.post('/api/change-username', auth, async (req, res) => {
       const daysSinceLastChange = (Date.now() - new Date(user.lastUsernameChange).getTime()) / (1000 * 60 * 60 * 24);
       if (daysSinceLastChange < 30) {
         const daysRemaining = Math.ceil(30 - daysSinceLastChange);
-        return res.status(400).json({ 
-          error: `You can change your username again in ${daysRemaining} day${daysRemaining !== 1 ? 's' : ''}` 
+        return res.status(400).json({
+          error: `You can change your username again in ${daysRemaining} day${daysRemaining !== 1 ? 's' : ''}`
         });
       }
     }
@@ -2991,7 +3065,7 @@ app.get('/api/social/posts', async (req, res) => {
       // Populate comment authors
       { $lookup: { from: 'users', localField: 'comments.author', foreignField: '_id', as: 'commentAuthors', pipeline: [{ $project: { username: 1, profileImage: 1, level: 1, currentBadge: 1 } }] } },
     ]).allowDiskUse(true);
-    
+
     // Post-process to attach comment authors
     for (const post of posts) {
       if (post.comments && post.commentAuthors) {
@@ -3129,7 +3203,7 @@ app.post('/api/social/posts/:id/like', socialAuth, async (req, res) => {
 
     // Award XP for liking
     await awardXp(req.user.id, 'likeGiven', 0, { postId: post._id });
-    
+
     // Award XP to post author for receiving like
     if (post.author && post.author.toString() !== req.user.id) {
       await awardXp(post.author, 'likeReceived', 0, { postId: post._id });
@@ -3196,7 +3270,7 @@ app.post('/api/social/posts/:id/dislike', socialAuth, async (req, res) => {
 
     // Award XP for disliking (same as liking - engagement is engagement)
     await awardXp(req.user.id, 'likeGiven', 0, { postId: post._id, type: 'dislike' });
-    
+
     // Award XP to post author for receiving dislike (controversy = engagement!)
     if (post.author && post.author.toString() !== req.user.id) {
       await awardXp(post.author, 'dislikeReceived', 0, { postId: post._id });
@@ -3319,9 +3393,9 @@ app.get('/api/social/users/:userId/posts', async (req, res) => {
     const limit = parseInt(req.query.limit) || 20;
     const skip = (page - 1) * limit;
 
-    const posts = await SocialPost.find({ 
-      author: req.params.userId, 
-      isDeleted: false 
+    const posts = await SocialPost.find({
+      author: req.params.userId,
+      isDeleted: false
     })
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -3330,9 +3404,9 @@ app.get('/api/social/users/:userId/posts', async (req, res) => {
       .populate('linkedDivide', 'title status')
       .lean();
 
-    const total = await SocialPost.countDocuments({ 
-      author: req.params.userId, 
-      isDeleted: false 
+    const total = await SocialPost.countDocuments({
+      author: req.params.userId,
+      isDeleted: false
     });
 
     res.json({
@@ -3359,10 +3433,10 @@ app.get('/api/social/users/:userId/posts', async (req, res) => {
 app.get('/api/divides/:id/sentiment', async (req, res) => {
   try {
     const divideId = req.params.id;
-    
+
     // Get existing sentiment data
     let sentiment = await DivideSentiment.findOne({ divide: divideId }).lean();
-    
+
     if (!sentiment) {
       // Return default neutral sentiment if none exists
       return res.json({
@@ -3393,7 +3467,7 @@ app.get('/api/divides/:id/sentiment', async (req, res) => {
 app.post('/api/divides/:id/sentiment/analyze', auth, async (req, res) => {
   try {
     const divideId = req.params.id;
-    
+
     // Get the divide
     const divide = await Divide.findById(divideId);
     if (!divide) {
@@ -3453,7 +3527,7 @@ app.post('/api/divides/:id/sentiment/analyze', auth, async (req, res) => {
     };
 
     let sentiment = await DivideSentiment.findOne({ divide: divideId });
-    
+
     if (sentiment) {
       // Add current to history before updating
       sentiment.history.push({
@@ -3463,12 +3537,12 @@ app.post('/api/divides/:id/sentiment/analyze', auth, async (req, res) => {
         themes: sentiment.current.themes,
         rawAnalysis: analysis.rawAnalysis,
       });
-      
+
       // Keep only last 50 history entries
       if (sentiment.history.length > 50) {
         sentiment.history = sentiment.history.slice(-50);
       }
-      
+
       sentiment.current = sentimentData;
       sentiment.totalCommentsAnalyzed += comments.length;
       sentiment.totalPostsAnalyzed += posts.length;
@@ -3604,7 +3678,7 @@ setInterval(async () => {
   try {
     const now = new Date();
     const expired = await Divide.find({ status: 'active', endTime: { $lt: now } });
-    
+
     for (const divide of expired) {
       console.log(`Auto-ending expired divide: ${divide.id}`);
       await endDivideById(divide.id || divide._id, divide.creatorId);
