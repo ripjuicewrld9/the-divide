@@ -901,11 +901,19 @@ app.get('/auth/discord/callback', async (req, res) => {
       return res.redirect(`${process.env.FRONTEND_URL || 'https://thedivide.us'}?error=discord_user_failed`);
     }
 
+    // Build Discord avatar URL
+    let discordAvatarUrl = null;
+    if (discordUser.avatar) {
+      const ext = discordUser.avatar.startsWith('a_') ? 'gif' : 'png';
+      discordAvatarUrl = `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.${ext}?size=256`;
+    }
+
     // Create a temporary token to link this Discord account to website account
     const linkToken = jwt.sign(
       { 
         discordId: discordUser.id,
         discordUsername: `${discordUser.username}#${discordUser.discriminator}`,
+        discordAvatar: discordAvatarUrl,
         type: 'discord_link'
       },
       JWT_SECRET,
@@ -949,12 +957,17 @@ app.post('/api/link-discord', auth, async (req, res) => {
 
     user.discordId = linkData.discordId;
     user.discordUsername = linkData.discordUsername;
+    // Set profile image from Discord if user doesn't have one or wants to update
+    if (linkData.discordAvatar) {
+      user.profileImage = linkData.discordAvatar;
+    }
     await user.save();
 
     res.json({
       success: true,
       discordId: linkData.discordId,
-      discordUsername: linkData.discordUsername
+      discordUsername: linkData.discordUsername,
+      profileImage: user.profileImage
     });
   } catch (error) {
     console.error('Link Discord error:', error);
@@ -1024,6 +1037,14 @@ app.get('/auth/discord/login/callback', async (req, res) => {
     // Check if user exists with this Discord ID
     let user = await User.findOne({ discordId: discordUser.id });
 
+    // Build Discord avatar URL
+    // Discord CDN: https://cdn.discordapp.com/avatars/{user_id}/{avatar_hash}.png
+    let discordAvatarUrl = null;
+    if (discordUser.avatar) {
+      const ext = discordUser.avatar.startsWith('a_') ? 'gif' : 'png';
+      discordAvatarUrl = `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.${ext}?size=256`;
+    }
+
     if (!user) {
       // Create new user
       const username = discordUser.username + '_' + discordUser.discriminator;
@@ -1033,13 +1054,21 @@ app.get('/auth/discord/login/callback', async (req, res) => {
         password: crypto.randomBytes(32).toString('hex'), // Random password (they'll use Discord login)
         balance: 0, // Starting balance in cents (no free money)
         discordId: discordUser.id,
-        discordUsername: `${discordUser.username}#${discordUser.discriminator}`
+        discordUsername: `${discordUser.username}#${discordUser.discriminator}`,
+        profileImage: discordAvatarUrl // Use Discord avatar as profile image
       });
       await user.save();
       console.log(`✓ New user created via Discord: ${username} (${discordUser.id})`);
       
       // Create NOWPayments custody customer (async)
       createNowPaymentsCustomer(user).catch(err => console.error('[Discord] NOWPayments customer creation failed:', err));
+    } else {
+      // Update existing user's Discord info and avatar on each login
+      user.discordUsername = `${discordUser.username}#${discordUser.discriminator}`;
+      if (discordAvatarUrl) {
+        user.profileImage = discordAvatarUrl;
+      }
+      await user.save();
     }
 
     // Create JWT token
