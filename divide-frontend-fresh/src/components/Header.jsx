@@ -125,8 +125,42 @@ export default function Header() {
                 e.currentTarget.style.transform = 'translateY(0)';
               }}
             >
-              <img src="/hedge-icon.svg" width="18" height="18" alt="Hedge" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }} />
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+              </svg>
               Divides
+            </Link>
+            <Link
+              to="/hedge"
+              style={{
+                textDecoration: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px 16px',
+                borderRadius: '10px',
+                fontSize: '14px',
+                fontWeight: '600',
+                color: 'rgba(255,255,255,0.85)',
+                background: 'linear-gradient(135deg, rgba(255,193,7,0.15) 0%, rgba(255,111,0,0.15) 100%)',
+                border: '1px solid rgba(255,193,7,0.2)',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255,193,7,0.25) 0%, rgba(255,111,0,0.25) 100%)';
+                e.currentTarget.style.borderColor = 'rgba(255,193,7,0.4)';
+                e.currentTarget.style.color = '#fff';
+                e.currentTarget.style.transform = 'translateY(-1px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255,193,7,0.15) 0%, rgba(255,111,0,0.15) 100%)';
+                e.currentTarget.style.borderColor = 'rgba(255,193,7,0.2)';
+                e.currentTarget.style.color = 'rgba(255,255,255,0.85)';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
+              <img src="/hedge-icon.svg" width="18" height="18" alt="Hedge" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }} />
+              Hedge
             </Link>
             <Link
               to="/feed"

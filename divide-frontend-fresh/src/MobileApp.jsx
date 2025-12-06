@@ -34,11 +34,12 @@ export default function MobileApp() {
         <div className="min-h-screen bg-[#0b0b0b] text-white">
             {/* OAuth handler - processes login tokens from URL params on ALL routes */}
             <OAuthLoginHandler />
-            
+
             <Routes>
                 {/* Divides - Default landing page */}
-                <Route path="/" element={<Divides onOpenChat={() => setIsChatOpen(true)} />} />
-                <Route path="/divides" element={<Divides onOpenChat={() => setIsChatOpen(true)} />} />
+                <Route path="/" element={<Divides filterMode="classic" onOpenChat={() => setIsChatOpen(true)} />} />
+                <Route path="/divides" element={<Divides filterMode="classic" onOpenChat={() => setIsChatOpen(true)} />} />
+                <Route path="/hedge" element={<Divides filterMode="versus" pageTitle="Hedge" onOpenChat={() => setIsChatOpen(true)} />} />
                 <Route path="/feed" element={<SocialFeed />} />
                 <Route path="/post/:postId" element={<PostDetail />} />
                 <Route path="/wallet" element={<WalletPage onOpenChat={() => setIsChatOpen(true)} />} />

@@ -52,7 +52,7 @@ export default function DesktopApp() {
     <div className="h-screen bg-[#0b0b0b] text-white flex flex-col overflow-hidden">
       {/* OAuth handler - processes login tokens from URL params on ALL routes */}
       <OAuthLoginHandler />
-      
+
       {/* Global header */}
       <Header
         onOpenAuth={() => setShowAuthModal(true)}
@@ -64,14 +64,15 @@ export default function DesktopApp() {
         {/* Main content */}
         <main className="flex-1 overflow-y-auto">
           <Routes>
-            <Route path="/" element={<Divides />} />
-            <Route path="/divides" element={<Divides />} />
+            <Route path="/" element={<Divides filterMode="classic" />} />
+            <Route path="/divides" element={<Divides filterMode="classic" />} />
+            <Route path="/hedge" element={<Divides filterMode="versus" pageTitle="Hedge" />} />
             <Route path="/divide/:id" element={<DivideDetailPage />} />
             <Route path="/feed" element={<SocialFeed />} />
             <Route path="/post/:postId" element={<PostDetail />} />
             <Route path="/wallet" element={<WalletPage />} />
             <Route path="/profile" element={<ProfilePage />} />
-            
+
             {/* Support Routes - Moderators get full dashboard, users get simple view */}
             <Route path="/support" element={<SupportDashboard />} />
             <Route path="/support/tickets" element={<SupportTickets />} />
@@ -81,7 +82,7 @@ export default function DesktopApp() {
             <Route path="/support/teams" element={<SupportTeams />} />
             <Route path="/support/analytics" element={<SupportAnalytics />} />
             <Route path="/support/settings" element={<SupportSettings />} />
-            
+
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/link-discord" element={<DiscordLinkHandler />} />
@@ -120,7 +121,7 @@ export default function DesktopApp() {
               }
             />
           </Routes>
-          
+
           {/* Footer - visible on all pages */}
           <Footer />
         </main>

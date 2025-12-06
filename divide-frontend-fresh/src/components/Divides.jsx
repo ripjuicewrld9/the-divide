@@ -28,7 +28,7 @@ const randomColors = () => {
 // small client-side short id generator for temporary keys
 const shortId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
-export default function Divides({ onOpenChat }) {
+export default function Divides({ onOpenChat, filterMode = null, pageTitle = 'Divides' }) {
   const { user, refreshUser, updateUser } = useAuth();
   const location = useLocation();
   const [showModal, setShowModal] = useState(false);
@@ -117,7 +117,7 @@ export default function Divides({ onOpenChat }) {
       }
       const arr = Array.from(map.values());
       setDivides(arr);
-      setFilteredDivides(arr);
+      // Filtering happens in useEffect
       // preload any sounds referenced by divides
       for (const dd of arr) {
         if (dd.soundA) preloadAudio(dd.soundA);
@@ -130,14 +130,22 @@ export default function Divides({ onOpenChat }) {
     }
   };
 
-  // Filter divides by category
+  // Filter divides by category and mode
   useEffect(() => {
-    if (activeCategory === 'All') {
-      setFilteredDivides(divides);
-    } else {
-      setFilteredDivides(divides.filter(d => d.category === activeCategory));
+    let filtered = divides;
+
+    // Filter by category
+    if (activeCategory !== 'All') {
+      filtered = filtered.filter(d => d.category === activeCategory);
     }
-  }, [activeCategory, divides]);
+
+    // Filter by mode if specified
+    if (filterMode) {
+      filtered = filtered.filter(d => (d.mode || 'classic') === filterMode);
+    }
+
+    setFilteredDivides(filtered);
+  }, [activeCategory, divides, filterMode]);
 
   const handleCategoryChange = (category) => {
     setActiveCategory(category);
@@ -310,9 +318,9 @@ export default function Divides({ onOpenChat }) {
     isMobile() ? (
       <div className="divides-mobile-container">
         {location.pathname === '/' ? <SEOHome /> : <SEODivides />}
-        <h1 className="sr-only">The Divide App - Revolutionary Crypto Games & Social Betting</h1>
+        <h1 className="sr-only">{pageTitle} - Revolutionary Crypto Games & Social Betting</h1>
         {/* Mobile Header - only shows on mobile */}
-        <MobileGameHeader title="Divides" onOpenChat={onOpenChat} className="md:hidden mb-4" />
+        <MobileGameHeader title={pageTitle} onOpenChat={onOpenChat} className="md:hidden mb-4" />
 
         {/* Treasury Banner - Mobile */}
         {treasury && (
